@@ -17,8 +17,19 @@ public sealed class ProxyFixture : GatewayFixture
     public BackendServer B => _b ?? throw new InvalidOperationException("Not started.");
     public BackendServer Tls => _tls ?? throw new InvalidOperationException("Not started.");
 
+    // Bound but never listening: connections are refused, and no other server in the test run can take the
+    // port (a merely "free" port number could be reused by another fixture running in parallel).
+    private readonly System.Net.Sockets.Socket _deadPortReservation = ReserveDeadPort();
+
     /// <summary>A loopback port with no listener: connections are refused.</summary>
-    public int DeadPort { get; } = FreePort();
+    public int DeadPort => ((System.Net.IPEndPoint)_deadPortReservation.LocalEndPoint!).Port;
+
+    private static System.Net.Sockets.Socket ReserveDeadPort()
+    {
+        var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+        socket.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, 0));
+        return socket;
+    }
 
     protected override async ValueTask BeforeStartAsync()
     {
@@ -53,5 +64,6 @@ public sealed class ProxyFixture : GatewayFixture
         }
 
         _certificate?.Dispose();
+        _deadPortReservation.Dispose();
     }
 }

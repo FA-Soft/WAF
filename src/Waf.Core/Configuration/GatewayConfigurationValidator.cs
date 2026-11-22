@@ -29,9 +29,69 @@ public static class GatewayConfigurationValidator
 
         var routeNames = new HashSet<string>(configuration.Routes.Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
         ValidateRules(configuration.Rules, routeNames, errors);
+        ValidateRateLimits(configuration.RateLimits, routeNames, errors);
         ValidateCertificates(configuration.Certificates, configuration.Settings, errors);
 
         return errors;
+    }
+
+    /// <summary>Largest permit limit accepted for a rate limit.</summary>
+    public const int MaxPermitLimit = 1_000_000;
+
+    /// <summary>Longest rate-limit window: one day.</summary>
+    public const int MaxWindowSeconds = 86_400;
+
+    private static void ValidateRateLimits(IList<RateLimitRule> limits, HashSet<string> routeNames, List<string> errors)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 0; i < limits.Count; i++)
+        {
+            var limit = limits[i];
+            var label = string.IsNullOrWhiteSpace(limit.Name) ? $"Rate limit #{i + 1}" : $"Rate limit '{limit.Name}'";
+
+            if (string.IsNullOrWhiteSpace(limit.Name))
+            {
+                errors.Add($"{label}: a name is required.");
+            }
+            else if (!ProxyRouteValidator.IsValidName(limit.Name))
+            {
+                errors.Add($"{label}: the name may only contain letters, digits, '-', '_' and '.'.");
+            }
+            else if (!names.Add(limit.Name))
+            {
+                errors.Add($"{label}: the name is used by more than one rate limit.");
+            }
+
+            if (limit.PermitLimit is < 1 or > MaxPermitLimit)
+            {
+                errors.Add($"{label}: PermitLimit must be between 1 and {MaxPermitLimit} (was {limit.PermitLimit}).");
+            }
+
+            if (limit.WindowSeconds is < 1 or > MaxWindowSeconds)
+            {
+                errors.Add($"{label}: WindowSeconds must be between 1 and {MaxWindowSeconds} (one day; was {limit.WindowSeconds}).");
+            }
+
+            if (!Enum.IsDefined(limit.Key))
+            {
+                errors.Add($"{label}: Key must be ClientIp, ClientIpAndRoute or Route.");
+            }
+
+            foreach (var route in limit.Routes)
+            {
+                if (!routeNames.Contains(route))
+                {
+                    errors.Add($"{label}: route '{route}' does not exist.");
+                }
+            }
+
+            for (var c = 0; c < limit.Conditions.Count; c++)
+            {
+                var where = limit.Conditions.Count == 1 ? label : $"{label}, condition #{c + 1}";
+                ValidateCondition(where, limit.Conditions[c], errors);
+            }
+        }
     }
 
     private static void ValidateSettings(GatewaySettings? settings, List<string> errors)
@@ -48,6 +108,11 @@ public static class GatewayConfigurationValidator
             {
                 errors.Add($"Trusted proxy '{proxy}': {reason}.");
             }
+        }
+
+        if (settings.RateLimitMaxTrackedClients is < 1_000 or > 10_000_000)
+        {
+            errors.Add($"Settings.RateLimitMaxTrackedClients must be between 1000 and 10000000 (was {settings.RateLimitMaxTrackedClients}).");
         }
     }
 

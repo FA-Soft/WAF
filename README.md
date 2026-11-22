@@ -136,6 +136,8 @@ The complete configuration (`Settings`, `Routes`, `Rules`, `Certificates`) has o
 
 Evaluation cost per request (`tests/Waf.Benchmarks`, run with `dotnet run -c Release --project tests/Waf.Benchmarks -- --filter *RuleEvaluation* --inProcess`), measured on a laptop: about 0.1 µs with 10 rules, 1.6 µs with 100 and 24 µs with 1000 when no rule matches (every rule evaluated), with no memory allocated for requests that match nothing.
 
+**Rate limits** (`RateLimits`) allow at most `PermitLimit` requests per `WindowSeconds`, counted per `Key`: `ClientIp` (default), `ClientIpAndRoute`, or `Route` (all clients together, to protect a backend). Optional `Routes` and `Conditions` (same as rule conditions) select which requests count, e.g. only `POST /login`. Requests over the limit get `429 Too Many Requests` with `Retry-After`, or are only logged with `DetectionOnly`. The window slides, and rejected requests count too, so a client that keeps hammering stays limited until it slows down. IPv6 clients are counted per /64 network. Counters are kept in a memory-bounded table (`Settings.RateLimitMaxTrackedClients`, default 100,000): when full, expired counters and then the ones with the fewest requests are dropped, so a flood from many new addresses cannot reset the counter of a client that is already limited.
+
 Configuration is read strictly: misspelled setting names, invalid values (e.g. `"Action": "Deny"`) and `null` where a value is required are errors with their location, never silently ignored. After changing the model, regenerate the schema by running the tests with `WAF_UPDATE_SCHEMA=1`.
 
 ## AI configuration assistant

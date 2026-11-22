@@ -18,6 +18,9 @@ internal static class PublicPipeline
         // the admin branch's own routing would then be skipped.
         app.UseRouting();
 
+        // Rate limits (429). After routing, so per-route limits know the route.
+        app.UseWafRateLimiting();
+
         // Requests that match no route fall through to the default 404.
         app.MapWafProxy();
     }

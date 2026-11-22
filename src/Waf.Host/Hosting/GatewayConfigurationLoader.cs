@@ -38,9 +38,15 @@ internal static class GatewayConfigurationLoader
         }
 
         Bind(section, nameof(GatewayConfiguration.Settings), result.Settings, errors);
-        Bind(section, nameof(GatewayConfiguration.Routes), result.Routes, errors);
-        Bind(section, nameof(GatewayConfiguration.Rules), result.Rules, errors);
-        Bind(section, nameof(GatewayConfiguration.Certificates), result.Certificates, errors);
+
+        // Every list in the model (Routes, Rules, RateLimits, Certificates, ...), so new ones cannot be forgotten.
+        foreach (var property in typeof(GatewayConfiguration).GetProperties())
+        {
+            if (property.GetValue(result) is ICollection list)
+            {
+                Bind(section, property.Name, list, errors);
+            }
+        }
 
         var schemaVersion = section[nameof(GatewayConfiguration.SchemaVersion)];
         if (schemaVersion is not null)

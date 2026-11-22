@@ -4,6 +4,8 @@ using Waf.Core;
 using Waf.Core.Hosting;
 using Waf.Core.Net;
 using Waf.Core.Tls;
+using Waf.Engine;
+using Waf.Engine.RateLimiting;
 using Waf.Proxy;
 
 namespace Waf.Host.Hosting;
@@ -44,6 +46,9 @@ internal static partial class GatewayApplication
         var gatewayConfiguration = GatewayConfigurationLoader.Load(builder.Configuration);
         builder.Services.AddSingleton(gatewayConfiguration);
         builder.Services.AddSingleton(TrustedProxies.Parse(gatewayConfiguration.Settings.TrustedProxies));
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton(sp => new RateLimiter(gatewayConfiguration, sp.GetRequiredService<TimeProvider>()));
+        builder.Services.AddSingleton<IWafEventSink, LoggingWafEventSink>();
         builder.Services.AddWafProxy(gatewayConfiguration.Routes);
 
         var endpoints = builder.Configuration
