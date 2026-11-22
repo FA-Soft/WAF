@@ -1,0 +1,191 @@
+@page "/rate-limits/new"
+@page "/rate-limits/{LimitName}/edit"
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>@(LimitName is null ? "Add a rate limit" : $"Edit rate limit {LimitName}") · @ProductInfo.Name</PageTitle>
+
+<p><a href="rate-limits">← Rate limits</a></p>
+<h1>@(LimitName is null ? "Add a rate limit" : $"Edit rate limit '{LimitName}'")</h1>
+
+@if (_notFound)
+{
+    <div class="alert alert-danger" role="alert">Rate limit '@LimitName' does not exist (any more). <a href="rate-limits">Back to the rate limits</a>.</div>
+}
+else if (Model is not null)
+{
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>The rate limit was not saved.</strong> The running configuration is unchanged.
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <EditForm Model="Model" FormName="rate-limit-edit" OnSubmit="HandleAsync" Enhance class="form">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-danger validation-summary" />
+        <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
+        <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
+
+        <fieldset>
+            <legend>Rate limit</legend>
+            @if (Model.IsNew)
+            {
+                <FormField Id="name" Label="Name" Help="A short, unique name, e.g. login-attempts or per-client." For="() => Model.Name">
+                    <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
+                </FormField>
+            }
+            else
+            {
+                <p><strong>@Model.Name</strong></p>
+                <input type="hidden" name="Model.Name" value="@Model.Name" />
+            }
+
+            <FormField Id="description" Label="Description" Optional Help="Why this limit exists; shown in the list and the logs." For="() => Model.Description">
+                <InputText id="description" aria-describedby="description-help" @bind-Value="Model.Description" autocomplete="off" />
+            </FormField>
+
+            <div class="field-row">
+                <FormField Id="permit" Label="At most (requests)" For="() => Model.PermitLimit">
+                    <InputNumber id="permit" @bind-Value="Model.PermitLimit" min="1" />
+                </FormField>
+                <FormField Id="window" Label="Per" For="() => Model.WindowAmount">
+                    <InputNumber id="window" @bind-Value="Model.WindowAmount" min="1" />
+                </FormField>
+                <FormField Id="unit" Label="Unit" For="() => Model.WindowUnitSeconds">
+                    <InputSelect id="unit" @bind-Value="Model.WindowUnitSeconds">
+                        @foreach (var (seconds, label) in RateLimitFormModel.WindowUnits)
+                        {
+                            <option value="@seconds">@label</option>
+                        }
+                    </InputSelect>
+                </FormField>
+            </div>
+
+            <FormField Id="key" Label="Counted" Help="Per client IP is usual. Per route for all clients together protects a backend from being overloaded." For="() => Model.Key">
+                <InputSelect id="key" aria-describedby="key-help" @bind-Value="Model.Key">
+                    <option value="@RateLimitKey.ClientIp">per client IP</option>
+                    <option value="@RateLimitKey.ClientIpAndRoute">per client IP and route</option>
+                    <option value="@RateLimitKey.Route">per route, for all clients together</option>
+                </InputSelect>
+            </FormField>
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="enabled" @bind-Value="Model.Enabled" />
+                <label for="enabled">Enabled</label>
+                <p class="field-help">A disabled limit is kept but not applied.</p>
+            </div>
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="detection-only" @bind-Value="Model.DetectionOnly" aria-describedby="detection-only-help" />
+                <label for="detection-only">Detection only: log instead of rejecting</label>
+                <p class="field-help" id="detection-only-help">See how often the limit would be hit before enforcing it.</p>
+            </div>
+
+            <RouteScopeEditor Prefix="Model" Choices="Model.RouteChoices" />
+        </fieldset>
+
+        <ConditionListEditor Prefix="Model" Conditions="Model.Conditions" Legend="Only count requests where (optional)" />
+
+        <div class="actions">
+            <button type="submit" class="button">@(Model.IsNew ? "Add rate limit" : "Save changes")</button>
+            <a class="button button-secondary" href="rate-limits">Cancel</a>
+        </div>
+        <p class="muted">Saving creates a new configuration version and takes effect immediately. Counters of all limits start again after a change.</p>
+    </EditForm>
+}
+
+@code {
+    private IReadOnlyList<string> _errors = [];
+    private bool _notFound;
+
+    [Parameter]
+    public string? LimitName { get; set; }
+
+    [SupplyParameterFromForm(FormName = "rate-limit-edit")]
+    private RateLimitFormModel? Model { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Model is not null)
+        {
+            return;
+        }
+
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var routes = active?.Configuration.Routes.Select(r => r.Name).ToList() ?? [];
+        var version = active?.Version ?? 0;
+
+        if (LimitName is null)
+        {
+            Model = RateLimitFormModel.ForNewLimit(version, routes);
+            return;
+        }
+
+        var limit = active?.Configuration.RateLimits.FirstOrDefault(l => string.Equals(l.Name, LimitName, StringComparison.OrdinalIgnoreCase));
+        if (limit is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        Model = RateLimitFormModel.FromLimit(limit, version, routes);
+    }
+
+    private async Task HandleAsync(EditContext editContext)
+    {
+        var model = Model!;
+        if (ConditionCommands.TryApply(model.Command, model.Conditions))
+        {
+            model.Command = null;
+            return;
+        }
+
+        if (!await editContext.ValidateAsync())
+        {
+            return;
+        }
+
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        var limit = model.ToLimit();
+        var index = configuration.RateLimits.ToList().FindIndex(l => string.Equals(l.Name, limit.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (model.IsNew && index >= 0)
+        {
+            _errors = [$"A rate limit named '{limit.Name}' already exists. Choose another name."];
+            return;
+        }
+
+        if (!model.IsNew && index < 0)
+        {
+            _errors = [$"Rate limit '{limit.Name}' no longer exists; it was deleted in the meantime."];
+            return;
+        }
+
+        if (model.IsNew)
+        {
+            configuration.RateLimits.Add(limit);
+        }
+        else
+        {
+            configuration.RateLimits[index] = limit;
+        }
+
+        var verb = model.IsNew ? "added" : "changed";
+        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, "admin UI", $"Rate limit '{limit.Name}' {verb}.", CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"rate-limits?saved={Uri.EscapeDataString($"Rate limit '{limit.Name}' {verb} (version {result.Version!.Version}).")}");
+    }
+}
