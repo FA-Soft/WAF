@@ -10,6 +10,9 @@ internal static class PublicPipeline
 {
     public static void Configure(WebApplication app)
     {
+        // Pipeline step 2: real client IP (X-Forwarded-For honoured only from trusted proxies).
+        app.UseClientIpResolution();
+
         // Explicit UseRouting *after* the admin MapWhen branch. Without it, WebApplication inserts routing
         // at the very start of the pipeline, a proxy route would be selected for admin requests too, and
         // the admin branch's own routing would then be skipped.
