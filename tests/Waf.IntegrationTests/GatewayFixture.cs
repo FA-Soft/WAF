@@ -19,8 +19,12 @@ public class GatewayFixture : IAsyncLifetime
 
     internal WebApplication App => _app ?? throw new InvalidOperationException("Gateway not started.");
 
+    /// <summary>A fresh, empty data folder for this gateway (config.db is created there).</summary>
+    public string DataDirectory { get; } = NewDataDirectory();
+
     public string[] Args =>
     [
+        $"--Gateway:Storage:DataDirectory={DataDirectory}",
         $"--Gateway:Endpoints:HttpPort={HttpPort}",
         $"--Gateway:Endpoints:HttpsPort={HttpsPort}",
         $"--Gateway:Endpoints:AdminPort={AdminPort}",
@@ -53,7 +57,28 @@ public class GatewayFixture : IAsyncLifetime
         }
 
         await AfterStopAsync();
+        DeleteDataDirectory(DataDirectory);
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Path of a new, not yet existing folder under the temp directory.</summary>
+    public static string NewDataDirectory() => Path.Combine(Path.GetTempPath(), "waf-tests", Guid.NewGuid().ToString("N"));
+
+    /// <summary>Deletes a test data folder; SQLite connection pools are cleared first so no file is locked.</summary>
+    public static void DeleteDataDirectory(string path)
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+            // Best effort: a leftover temp folder must not fail the test run.
+        }
     }
 
     public static int FreePort()

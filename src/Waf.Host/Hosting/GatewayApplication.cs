@@ -6,6 +6,8 @@ using Waf.Core.Net;
 using Waf.Core.Tls;
 using Waf.Engine;
 using Waf.Core.Configuration;
+using Microsoft.Extensions.Configuration.Json;
+using Waf.Data;
 using Waf.Proxy;
 
 namespace Waf.Host.Hosting;
@@ -40,10 +42,14 @@ internal static partial class GatewayApplication
             .Validate(o => o.Validate().Count == 0, "Invalid Gateway:Endpoints configuration.")
             .ValidateOnStart();
 
+        var storagePaths = ConfigureStorage(builder);
+
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
         builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
         var gatewayConfiguration = GatewayConfigurationLoader.Load(builder.Configuration);
+        builder.Services.AddWafData(storagePaths);
+        builder.Services.AddHostedService<ConfigurationStorageService>();
         builder.Services.AddSingleton(gatewayConfiguration);
         builder.Services.AddSingleton(TrustedProxies.Parse(gatewayConfiguration.Settings.TrustedProxies));
         builder.Services.AddSingleton(TimeProvider.System);
@@ -103,10 +109,40 @@ internal static partial class GatewayApplication
                 LogStartupFailed(app.Logger, ex, ProductInfo.Name, message);
                 return StartupFailureExitCode;
             }
+            catch (StorageInitializationException ex)
+            {
+                LogStartupFailed(app.Logger, ex, ProductInfo.Name, ex.Message);
+                return StartupFailureExitCode;
+            }
 
             await app.WaitForShutdownAsync().ConfigureAwait(false);
             return 0;
         }
+    }
+
+    /// <summary>
+    /// Resolves the data and config folders and loads the administrator's <c>appsettings.json</c> from the
+    /// config folder (e.g. <c>/etc/wafgateway</c>). It overrides the built-in appsettings files but not
+    /// environment variables or command-line arguments, so those can still override it.
+    /// </summary>
+    private static StoragePaths ConfigureStorage(WebApplicationBuilder builder)
+    {
+        var contentRoot = builder.Environment.ContentRootPath;
+        var configDirectory = StoragePaths.Resolve(
+            builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>(), contentRoot).ConfigDirectory;
+        var settingsFile = Path.Combine(configDirectory, StoragePaths.SettingsFileName);
+
+        if (File.Exists(settingsFile))
+        {
+            var sources = builder.Configuration.Sources;
+            var lastJson = sources.Select((source, index) => (source, index)).LastOrDefault(s => s.source is JsonConfigurationSource).index;
+            var source = new JsonConfigurationSource { Path = settingsFile, Optional = true, ReloadOnChange = false };
+            source.ResolveFileProvider();
+            sources.Insert(lastJson + 1, source);
+        }
+
+        // Resolve again: the administrator file may itself set Gateway:Storage:DataDirectory.
+        return StoragePaths.Resolve(builder.Configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>(), contentRoot);
     }
 
     /// <summary>
