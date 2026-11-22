@@ -55,11 +55,17 @@ jobs:
         run: dotnet build WafGateway.sln -c "$CONFIGURATION" --no-restore
 
       - name: Test
+        id: test
         run: >
           dotnet test --solution WafGateway.sln -c "$CONFIGURATION" --no-build
           --results-directory "${{ github.workspace }}/TestResults"
           --report-xunit-trx
           --coverage --coverage-output-format cobertura
+
+      - name: Test summary
+        # Also runs when tests fail; skipped only if the test step itself never ran.
+        if: ${{ !cancelled() && steps.test.outcome != 'skipped' }}
+        run: python .github/scripts/test_summary.py TestResults "Tests (${{ matrix.os }})"
 
       - name: Upload test results
         if: always()
