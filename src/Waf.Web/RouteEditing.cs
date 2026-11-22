@@ -92,9 +92,13 @@ internal sealed class RouteFormModel : IValidatableObject
         }
     }
 
-    /// <summary>The form for a new route, with the recommended defaults ticked.</summary>
-    public static RouteFormModel ForNewRoute(long baseVersion) =>
-        new() { BaseVersion = baseVersion, IsNew = true, Enabled = true, PreserveHost = true };
+    /// <summary>The form for a new route, with the recommended defaults ticked, optionally pre-filled from a template.</summary>
+    public static RouteFormModel ForNewRoute(long baseVersion, string? template = null)
+    {
+        var model = new RouteFormModel { BaseVersion = baseVersion, IsNew = true, Enabled = true, PreserveHost = true };
+        TemplateLibrary.FindRoute(template)?.Apply(model);
+        return model;
+    }
 
     public static RouteFormModel FromRoute(ProxyRouteOptions route, long baseVersion)
     {

@@ -76,6 +76,17 @@ public class RuleEditingTests
         Assert.Single(form.ToRule().Conditions);
     }
 
+    [Fact]
+    public void A_condition_row_with_changed_choices_but_no_values_is_not_silently_dropped()
+    {
+        var form = RuleFormModel.ForNewRule(1, []);
+        form.Name = "lock";
+        form.Conditions = [new() { Values = "/admin" }, new() { Field = ConditionField.ClientIp, Operator = ConditionOperator.InCidr, Negate = true }];
+
+        // Dropping the IP row would turn "only these IPs may open /admin" into "nobody may open /admin".
+        Assert.Contains("Condition 2: enter at least one value.", Errors(form));
+    }
+
     [Theory]
     [InlineData("block-ips", "blocked-ips", RuleAction.Block, 10)]
     [InlineData("allow-ips", "trusted-ips", RuleAction.Allow, 5)]

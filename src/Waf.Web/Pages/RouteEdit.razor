@@ -14,6 +14,8 @@
 }
 else if (Model is not null)
 {
+    <TemplateNotice Title="@(IsNew ? TemplateLibrary.FindRoute(Template)?.Title : null)" />
+
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert" tabindex="-1">
@@ -147,6 +149,10 @@ else if (Model is not null)
     [Parameter]
     public string? RouteName { get; set; }
 
+    /// <summary>Pre-fills a new route from the template library, e.g. "website".</summary>
+    [SupplyParameterFromQuery]
+    public string? Template { get; set; }
+
     [SupplyParameterFromForm(FormName = "route-edit")]
     private RouteFormModel? Model { get; set; }
 
@@ -163,7 +169,7 @@ else if (Model is not null)
         var version = active?.Version ?? 0;
         if (IsNew)
         {
-            Model = RouteFormModel.ForNewRoute(version);
+            Model = RouteFormModel.ForNewRoute(version, Template);
             return;
         }
 
