@@ -1,19 +1,21 @@
 using Waf.Core.Configuration;
+using Waf.Core.Net;
 using Waf.Engine.Detection;
 using Waf.Engine.RateLimiting;
 
 namespace Waf.Engine;
 
 /// <summary>
-/// Everything the WAF needs to judge a request, built from one configuration: rules, rate limits and
-/// attack detection. Immutable; replaced as a whole via <see cref="WafEngineHolder"/>, so a request is
+/// Everything the WAF needs to judge a request, built from one configuration: trusted proxies, rules,
+/// rate limits and attack detection. Immutable; replaced as a whole via <see cref="WafEngineHolder"/>, so a request is
 /// always judged by one consistent configuration.
 /// </summary>
 public sealed class WafEngine
 {
-    private WafEngine(CompiledRuleSet rules, RateLimiter rateLimiter, AttackDetector detector, bool detectionOnly)
+    private WafEngine(CompiledRuleSet rules, RateLimiter rateLimiter, AttackDetector detector, TrustedProxies trustedProxies, bool detectionOnly)
     {
         Rules = rules;
+        TrustedProxies = trustedProxies;
         RateLimiter = rateLimiter;
         Detector = detector;
         DetectionOnly = detectionOnly;
@@ -24,6 +26,9 @@ public sealed class WafEngine
     public RateLimiter RateLimiter { get; }
 
     public AttackDetector Detector { get; }
+
+    /// <summary>Proxies allowed to report the client IP (X-Forwarded-For).</summary>
+    public TrustedProxies TrustedProxies { get; }
 
     /// <summary>Global detection-only mode: blocks are logged, not enforced.</summary>
     public bool DetectionOnly { get; }
@@ -37,6 +42,7 @@ public sealed class WafEngine
             CompiledRuleSet.Compile(configuration),
             new RateLimiter(configuration, timeProvider),
             new AttackDetector(configuration.Settings.AttackDetection),
+            TrustedProxies.Parse(configuration.Settings.TrustedProxies),
             configuration.Settings.DetectionOnly);
     }
 }
