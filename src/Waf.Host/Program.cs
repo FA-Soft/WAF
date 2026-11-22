@@ -1,9 +1,3 @@
-var builder = WebApplication.CreateBuilder(args);
+using Waf.Host.Hosting;
 
-builder.Services.AddHealthChecks();
-
-var app = builder.Build();
-
-app.MapHealthChecks("/healthz");
-
-app.Run();
+return await GatewayApplication.RunAsync(args).ConfigureAwait(false);
