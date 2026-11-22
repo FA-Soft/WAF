@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Options;
 using Waf.Core;
 using Waf.Core.Hosting;
+using Waf.Core.Net;
 using Waf.Core.Tls;
 using Waf.Proxy;
 
@@ -42,6 +43,7 @@ internal static partial class GatewayApplication
         builder.Services.AddHealthChecks();
         var gatewayConfiguration = GatewayConfigurationLoader.Load(builder.Configuration);
         builder.Services.AddSingleton(gatewayConfiguration);
+        builder.Services.AddSingleton(TrustedProxies.Parse(gatewayConfiguration.Settings.TrustedProxies));
         builder.Services.AddWafProxy(gatewayConfiguration.Routes);
 
         var endpoints = builder.Configuration
