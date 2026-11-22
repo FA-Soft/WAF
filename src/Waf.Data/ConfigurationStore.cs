@@ -193,6 +193,23 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
 
     private static string Hash(string json) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
 
+    /// <summary>SHA-256 (hex) of the canonical JSON of <paramref name="configuration"/>, as stored in <see cref="StoredConfiguration.Sha256"/>.</summary>
+    public static string ComputeHash(GatewayConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return Hash(Canonical(configuration));
+    }
+
+    /// <summary>
+    /// Short tag identifying a configuration's content (first 16 hex digits of its hash); used to pair the
+    /// WAF engine with the proxy routes of the same configuration.
+    /// </summary>
+    public static string ConfigTag(string sha256)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(sha256);
+        return sha256[..Math.Min(16, sha256.Length)];
+    }
+
     private static StoredConfiguration ToStored(ConfigurationVersion version)
     {
         var parsed = GatewayConfigurationJson.Parse(version.Json);

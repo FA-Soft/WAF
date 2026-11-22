@@ -16,7 +16,7 @@ public static class ProxyServiceCollectionExtensions
     /// (the hook for hot reload later).
     /// </summary>
     /// <exception cref="OptionsValidationException">The route configuration is invalid.</exception>
-    public static IServiceCollection AddWafProxy(this IServiceCollection services, IEnumerable<ProxyRouteOptions> routes)
+    public static IServiceCollection AddWafProxy(this IServiceCollection services, IEnumerable<ProxyRouteOptions> routes, string configTag = "")
     {
         ArgumentNullException.ThrowIfNull(routes);
 
@@ -27,7 +27,7 @@ public static class ProxyServiceCollectionExtensions
             throw new OptionsValidationException(ProxyRouteOptions.SectionName, typeof(ProxyRouteOptions), errors);
         }
 
-        var (yarpRoutes, clusters) = YarpConfigMapper.Map(list);
+        var (yarpRoutes, clusters) = YarpConfigMapper.Map(list, configTag);
         services.AddReverseProxy().LoadFromMemory(yarpRoutes, clusters);
         services.AddSingleton<ProxyRouteUpdater>();
         return services;

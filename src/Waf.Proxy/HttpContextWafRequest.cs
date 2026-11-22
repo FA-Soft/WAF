@@ -34,4 +34,11 @@ public sealed class HttpContextWafRequest(HttpContext context) : IWafRequest
     /// <summary>The name of the proxy route selected by routing, or null.</summary>
     public static string? GetRouteName(HttpContext context) =>
         context?.GetEndpoint()?.Metadata.GetMetadata<RouteModel>()?.Config.RouteId;
+
+    /// <summary>Tag of the configuration whose routes routed this request, or null when no route matched.</summary>
+    public static string? GetConfigTag(HttpContext context) =>
+        context?.GetEndpoint()?.Metadata.GetMetadata<RouteModel>()?.Config.Metadata is { } metadata
+        && metadata.TryGetValue(YarpConfigMapper.ConfigTagMetadataKey, out var tag)
+            ? tag
+            : null;
 }

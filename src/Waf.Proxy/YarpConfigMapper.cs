@@ -13,8 +13,13 @@ public static class YarpConfigMapper
     /// <summary>Catch-all segment appended to a path prefix.</summary>
     internal const string CatchAll = "{**rest}";
 
+    /// <summary>Route metadata key holding the configuration tag (see <c>WafEngine.ConfigTag</c>).</summary>
+    public const string ConfigTagMetadataKey = "WafConfigTag";
+
+    /// <param name="routes">The routes to translate.</param>
+    /// <param name="configTag">Tag of the configuration the routes belong to; stored in each route's metadata.</param>
     public static (IReadOnlyList<RouteConfig> Routes, IReadOnlyList<ClusterConfig> Clusters) Map(
-        IEnumerable<ProxyRouteOptions> routes)
+        IEnumerable<ProxyRouteOptions> routes, string configTag = "")
     {
         ArgumentNullException.ThrowIfNull(routes);
 
@@ -23,7 +28,10 @@ public static class YarpConfigMapper
 
         foreach (var route in routes)
         {
-            yarpRoutes.Add(MapRoute(route));
+            yarpRoutes.Add(MapRoute(route) with
+            {
+                Metadata = new Dictionary<string, string> { [ConfigTagMetadataKey] = configTag },
+            });
             clusters.Add(MapCluster(route));
         }
 

@@ -58,6 +58,11 @@ public sealed class BackendServer : IAsyncDisposable
         app.UseWebSockets();
         app.Map("/ws", ws => ws.Run(context => EchoWebSocketAsync(id, context)));
         app.MapGet("/health", () => "ok");
+        app.MapGet("/slow", async (int ms, HttpContext context) =>
+        {
+            await Task.Delay(ms, context.RequestAborted);
+            return Results.Json(new BackendEcho(id, "GET", "/slow", context.Request.Host.Value ?? string.Empty, null, null, null, null));
+        });
         app.Map("/{**path}", async (HttpContext context) =>
         {
             var headers = context.Request.Headers;

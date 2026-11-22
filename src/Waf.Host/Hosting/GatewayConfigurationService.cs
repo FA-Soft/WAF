@@ -50,27 +50,36 @@ internal sealed partial class GatewayConfigurationService(
                 return ActivationResult.Failed(errors);
             }
 
-            // 2. Build everything before changing anything.
+            // Identical to what is running: nothing to do (and rate-limit counters are kept).
+            var tag = ConfigurationStore.ConfigTag(ConfigurationStore.ComputeHash(candidate));
+            if (engines.Current?.ConfigTag == tag && await store.GetLastKnownGoodAsync(cancellationToken).ConfigureAwait(false) is { } running)
+            {
+                return new ActivationResult(true, [], running);
+            }
+
+            // 2. Build everything before changing anything. Engine and routes carry the same tag.
             WafEngine engine;
             try
             {
-                engine = WafEngine.Build(candidate, time);
+                engine = WafEngine.Build(candidate, time, tag);
             }
             catch (ArgumentException ex)
             {
                 return ActivationResult.Failed([$"The WAF engine could not be built: {ex.Message}"]);
             }
 
-            var (prepared, routeErrors) = await routes.PrepareAsync(candidate.Routes).ConfigureAwait(false);
+            var (prepared, routeErrors) = await routes.PrepareAsync(candidate.Routes, tag).ConfigureAwait(false);
             if (prepared is null)
             {
                 return ActivationResult.Failed(routeErrors);
             }
 
-            // 3. Store, then 4. swap. Nothing is swapped if storing fails.
+            // 3. Store, then 4. swap. Nothing is swapped if storing fails. The engine goes first: requests routed
+            // by the new routes then always find their engine, and requests still routed by the old routes are
+            // judged by the previous engine (WafEngineHolder.Resolve), so every request sees one configuration.
             var (stored, _) = await store.SaveIfChangedAsync(candidate, author, comment, cancellationToken).ConfigureAwait(false);
-            routes.Apply(prepared);
             engines.Activate(engine);
+            routes.Apply(prepared);
             await store.SetLastKnownGoodAsync(stored.Version, cancellationToken).ConfigureAwait(false);
 
             LogActivated(logger, stored.Version, author);
