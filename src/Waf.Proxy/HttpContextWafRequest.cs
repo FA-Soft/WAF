@@ -13,6 +13,9 @@ public sealed class HttpContextWafRequest(HttpContext context) : IWafRequest
 {
     private readonly HttpContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
+    /// <summary>The underlying request context.</summary>
+    public HttpContext Context => _context;
+
     public IPAddress ClientIp => _context.Connection.RemoteIpAddress ?? IPAddress.None;
 
     public string Host => _context.Request.Host.Host;

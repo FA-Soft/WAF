@@ -41,7 +41,7 @@ public sealed partial class WafMiddleware(
         bool proceed;
         try
         {
-            proceed = await JudgeAsync(context, engine).ConfigureAwait(false);
+            proceed = await JudgeAsync(context, new HttpContextWafRequest(context), engine).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
@@ -68,9 +68,8 @@ public sealed partial class WafMiddleware(
     }
 
     /// <summary>Returns true when the request may be forwarded; otherwise the response has been written.</summary>
-    private async Task<bool> JudgeAsync(HttpContext context, WafEngine engine)
+    private async Task<bool> JudgeAsync(HttpContext context, HttpContextWafRequest request, WafEngine engine)
     {
-        var request = new HttpContextWafRequest(context);
 
         // 1. Rules.
         var decision = engine.Rules.Evaluate(request);
@@ -131,7 +130,9 @@ public sealed partial class WafMiddleware(
             return true;
         }
 
-        var detail = $"{finding.Category} in {finding.Location}{(finding.Name is null ? string.Empty : $" '{finding.Name}'")}: {finding.Snippet}";
+        // Cookie values are session secrets: name the cookie, but never record (part of) its value.
+        var snippet = finding.Location == RequestLocation.Cookie ? "(cookie value not logged)" : finding.Snippet;
+        var detail = $"{finding.Category} in {finding.Location}{(finding.Name is null ? string.Empty : $" '{finding.Name}'")}: {snippet}";
         if (engine.DetectionOnly)
         {
             Publish(request, WafEventKind.AttackDetected, finding.SignatureId, StatusCodes.Status200OK, detail);
@@ -154,9 +155,13 @@ public sealed partial class WafMiddleware(
         return context.Response.WriteAsync(ForbiddenMessage, context.RequestAborted);
     }
 
-    private void Publish(HttpContextWafRequest request, WafEventKind kind, string ruleName, int status, string? detail = null) =>
-        events.Publish(new WafEvent(
-            time.GetUtcNow(), kind, request.ClientIp, request.Method, request.Host, request.Path, request.RouteName, ruleName, status, detail));
+    private void Publish(HttpContextWafRequest request, WafEventKind kind, string ruleName, int status, string? detail = null)
+    {
+        var wafEvent = new WafEvent(
+            time.GetUtcNow(), kind, request.ClientIp, request.Method, request.Host, request.Path, request.RouteName, ruleName, status, detail);
+        RequestLogFeature.Record(request.Context, wafEvent);
+        events.Publish(wafEvent);
+    }
 
     [LoggerMessage(EventId = 300, Level = LogLevel.Error, Message = "WAF evaluation failed for {Method} {Path}; the request was refused (fail-closed).")]
     private static partial void LogEvaluationFailed(ILogger logger, Exception exception, string method, PathString path);
@@ -186,9 +191,11 @@ public sealed class FailClosedGuardMiddleware(RequestDelegate next, WafEngineHol
     internal static Task RespondUnavailableAsync(HttpContext context, IWafEventSink events, TimeProvider time, string? reason)
     {
         var request = new HttpContextWafRequest(context);
-        events.Publish(new WafEvent(
+        var wafEvent = new WafEvent(
             time.GetUtcNow(), WafEventKind.FailClosed, request.ClientIp, request.Method, request.Host, request.Path,
-            RouteName: null, RuleName: string.Empty, StatusCodes.Status503ServiceUnavailable, reason));
+            RouteName: null, RuleName: string.Empty, StatusCodes.Status503ServiceUnavailable, reason);
+        RequestLogFeature.Record(context, wafEvent);
+        events.Publish(wafEvent);
 
         context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
         context.Response.Headers.RetryAfter = RetryAfterSeconds.ToString(CultureInfo.InvariantCulture);

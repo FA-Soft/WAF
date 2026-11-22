@@ -164,7 +164,21 @@ Only your prompt and a sanitized summary of the current configuration are sent. 
 
 ## Logging
 
-Every request is recorded with timestamp, client IP, host, method, path, matched rule, action (blocked or forwarded), destination, status code and latency. The log viewer supports filters, free-text search, pagination and a live view. From any entry you can create a route or rule pre-filled with its details, allow a false positive, or block a source. Retention is configurable by age and database size.
+Every public request is recorded in `events.db` (in the data folder) with timestamp, client IP, host, method, path, route, matched rule, action (forwarded, blocked, rate limited, fail-closed, no route), destination, status code and latency. Query strings, headers, cookie values and bodies are never stored, so tokens in URLs, authorization headers and form posts stay out of the log; for an attack found in a cookie only the cookie's name is recorded.
+
+Logging never slows requests down: each entry goes into a bounded in-memory queue, and a background writer stores the queue in batches. When the disk cannot keep up (or `events.db` is locked or damaged), new entries are **dropped and counted** instead of making requests wait; the dashboard shows how many, and a warning is logged at most once a minute. Logging is best effort by design: the firewall's protection never depends on it. The queue is drained on shutdown. Host settings (in `appsettings.json`, not part of the configuration versions):
+
+```json
+"Gateway": {
+  "EventLog": {
+    "Enabled": true,         // false: no request log at all
+    "QueueCapacity": 10000,  // entries that may wait to be written (100 to 1,000,000)
+    "BatchSize": 500         // entries per transaction
+  }
+}
+```
+
+The log viewer supports filters, free-text search, pagination and a live view. From any entry you can create a route or rule pre-filled with its details, allow a false positive, or block a source. Retention is configurable by age and database size.
 
 ## Installation (planned interface)
 

@@ -37,8 +37,16 @@ public abstract partial class AdminGateway : GatewayFixture
     {
         Admin.Dispose();
         Public.Dispose();
-        await A.DisposeAsync();
-        await B.DisposeAsync();
+        // Null when starting failed before the backends were up: keep the original error visible.
+        if (A is not null)
+        {
+            await A.DisposeAsync();
+        }
+
+        if (B is not null)
+        {
+            await B.DisposeAsync();
+        }
     }
 
     public async Task<string> GetPageAsync(string path)

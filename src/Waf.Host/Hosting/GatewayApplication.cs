@@ -71,6 +71,7 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<WafEngineHolder>();
         builder.Services.AddSingleton<IWafEventSink, LoggingWafEventSink>();
+        AddRequestLog(builder, storagePaths);
         builder.Services.AddSingleton<InMemoryAcmeChallengeStore>();
         builder.Services.AddSingleton<IAcmeChallengeStore>(sp => sp.GetRequiredService<InMemoryAcmeChallengeStore>());
         builder.Services.AddWafProxy(gatewayConfiguration.Routes, configTag);
@@ -142,6 +143,32 @@ internal static partial class GatewayApplication
     /// config folder (e.g. <c>/etc/wafgateway</c>). It overrides the built-in appsettings files but not
     /// environment variables or command-line arguments, so those can still override it.
     /// </summary>
+    /// <summary>The request log (events.db), or a log that discards everything when it is switched off.</summary>
+    private static void AddRequestLog(WebApplicationBuilder builder, StoragePaths paths)
+    {
+        var options = builder.Configuration.GetSection(EventLogOptions.SectionName).Get<EventLogOptions>() ?? new EventLogOptions();
+        var errors = options.Validate();
+        if (errors.Count > 0)
+        {
+            throw new OptionsValidationException(EventLogOptions.SectionName, typeof(EventLogOptions), errors);
+        }
+
+        if (!options.Enabled)
+        {
+            builder.Services.AddSingleton<NullRequestLog>();
+            builder.Services.AddSingleton<IRequestLog>(sp => sp.GetRequiredService<NullRequestLog>());
+            builder.Services.AddSingleton<IRequestLogMonitor>(sp => sp.GetRequiredService<NullRequestLog>());
+            return;
+        }
+
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton<IRequestLogStore>(new SqliteRequestLogStore(paths));
+        builder.Services.AddSingleton<RequestLogWriter>();
+        builder.Services.AddSingleton<IRequestLog>(sp => sp.GetRequiredService<RequestLogWriter>());
+        builder.Services.AddSingleton<IRequestLogMonitor>(sp => sp.GetRequiredService<RequestLogWriter>());
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<RequestLogWriter>());
+    }
+
     private static StoragePaths ConfigureStorage(WebApplicationBuilder builder)
     {
         var contentRoot = builder.Environment.ContentRootPath;
