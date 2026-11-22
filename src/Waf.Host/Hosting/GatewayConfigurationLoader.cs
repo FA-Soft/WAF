@@ -18,11 +18,11 @@ internal static class GatewayConfigurationLoader
     public const string SectionName = "Gateway";
 
     /// <summary>Keys of the Gateway section that are not part of <see cref="GatewayConfiguration"/>.</summary>
-    private static readonly string[] HostKeys = ["Endpoints", "Storage"];
+    private static readonly string[] HostKeys = ["Endpoints", "Storage", "EventLog"];
 
     /// <summary>
     /// Fingerprint (SHA-256, hex) of the configuration part of the Gateway section, i.e. without the host-only
-    /// keys (Endpoints, Storage). Computed from the raw settings, so it also works for invalid configurations.
+    /// keys (Endpoints, Storage, EventLog). Computed from the raw settings, so it also works for invalid configurations.
     /// </summary>
     public static string Fingerprint(IConfiguration configuration)
     {

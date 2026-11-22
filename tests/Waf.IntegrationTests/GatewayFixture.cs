@@ -13,9 +13,9 @@ public class GatewayFixture : IAsyncLifetime
 {
     private WebApplication? _app;
 
-    public int HttpPort { get; } = FreePort();
-    public int HttpsPort { get; } = FreePort();
-    public int AdminPort { get; } = FreePort();
+    public int HttpPort { get; private set; } = FreePort();
+    public int HttpsPort { get; private set; } = FreePort();
+    public int AdminPort { get; private set; } = FreePort();
 
     internal WebApplication App => _app ?? throw new InvalidOperationException("Gateway not started.");
 
@@ -44,8 +44,26 @@ public class GatewayFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         await BeforeStartAsync();
-        _app = GatewayApplication.Build([.. Args, .. ExtraArgs]);
-        await _app.StartAsync(TestContext.Current.CancellationToken);
+
+        // FreePort releases the port before the gateway binds it; in that gap another test's outgoing connection
+        // can take it (the OS hands out the same ephemeral ports). Then retry with new ports.
+        for (var attempt = 1; ; attempt++)
+        {
+            _app = GatewayApplication.Build([.. Args, .. ExtraArgs]);
+            try
+            {
+                await _app.StartAsync(TestContext.Current.CancellationToken);
+                return;
+            }
+            catch (IOException ex) when (attempt < 5 && ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
+            {
+                await _app.DisposeAsync();
+                _app = null;
+                HttpPort = FreePort();
+                HttpsPort = FreePort();
+                AdminPort = FreePort();
+            }
+        }
     }
 
     public async ValueTask DisposeAsync()

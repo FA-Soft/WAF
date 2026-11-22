@@ -14,6 +14,9 @@ internal static class PublicPipeline
 {
     public static void Configure(WebApplication app)
     {
+        // 0. Request log: every public request, also those answered below (queued, never delays the request).
+        app.UseRequestLogging();
+
         // 1. ACME HTTP-01 challenges: only stored tokens, works even while the WAF is unavailable.
         app.UseAcmeChallenges();
 
@@ -36,6 +39,6 @@ internal static class PublicPipeline
         // 6. Reverse proxy. Requests that match no route fall through to the default 404.
         app.MapWafProxy();
 
-        // 7. Security events are published by the WAF to IWafEventSink (database logging: issue #57).
+        // Security events also go to IWafEventSink (the application log); every request ends up in events.db.
     }
 }

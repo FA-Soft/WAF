@@ -1,6 +1,7 @@
 @page "/"
 @inject WafEngineHolder Engines
 @inject ConfigurationStore Store
+@inject IRequestLogMonitor RequestLog
 
 <PageTitle>Dashboard · @ProductInfo.Name</PageTitle>
 
@@ -69,6 +70,30 @@ else
             </h2>
             <p class="metric">@(detections.Count == 0 ? "Off" : $"{detections.Count} of 5")</p>
             <p class="muted">@string.Join(", ", detections)</p>
+        </div>
+        <div class="card">
+            <h2>
+                Request log
+                <HelpTip Title="Request log"><p>Every public request is recorded in events.db, in the background. If the disk cannot keep up, entries are dropped rather than slowing down requests; the count shows here.</p></HelpTip>
+            </h2>
+            @if (RequestLog.Statistics is { } log)
+            {
+                <p class="metric">@log.Written.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</p>
+                <p class="muted">written since start@(log.Queued > 0 ? $", {log.Queued:N0} waiting" : string.Empty)</p>
+                @if (log.Dropped > 0)
+                {
+                    <p><span class="badge badge-warning">@log.Dropped.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) dropped</span></p>
+                }
+                @if (log.LastError is not null)
+                {
+                    <p class="field-error">Writing fails: @log.LastError</p>
+                }
+            }
+            else
+            {
+                <p class="metric">Off</p>
+                <p class="muted">Switched off in the host settings (Gateway:EventLog:Enabled).</p>
+            }
         </div>
     </section>
 

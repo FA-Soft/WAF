@@ -5,7 +5,10 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Waf.IntegrationTests.Proxy;
@@ -43,10 +46,9 @@ public sealed class BackendServer : IAsyncDisposable
 
     public static async Task<BackendServer> StartAsync(string id, X509Certificate2? certificate = null)
     {
-        var port = GatewayFixture.FreePort();
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, port, listen =>
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, 0, listen =>
         {
             if (certificate is not null)
             {
@@ -80,8 +82,10 @@ public sealed class BackendServer : IAsyncDisposable
                 body.Length));
         });
 
+        // Port 0: the OS picks a free port while binding, so no other process can take it first.
         await app.StartAsync(TestContext.Current.CancellationToken);
-        return new BackendServer(id, port, app);
+        var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
+        return new BackendServer(id, new Uri(address).Port, app);
     }
 
     public async ValueTask DisposeAsync()
