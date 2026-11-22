@@ -182,15 +182,41 @@ public class AttackDetectorTests
         Assert.Equal(Enum.GetValues<AttackCategory>().Length, AttackSignatures.All.Select(s => s.Category).Distinct().Count());
     }
 
+    /// <summary>
+    /// A classic catastrophic-backtracking input must take time proportional to its length. Checked by growth
+    /// (8x the input may take at most ~40x the time) rather than a wall-clock budget, so a slow or busy CI
+    /// machine does not make the test flaky; exponential backtracking would exceed it by orders of magnitude.
+    /// </summary>
     [Fact]
     public void Very_long_input_is_handled_in_linear_time()
     {
-        // Classic catastrophic-backtracking shape; must finish quickly on the non-backtracking engine.
-        var evil = "'" + string.Concat(Enumerable.Repeat("or a", 20_000)) + "!";
-        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var detector = Detector();
+        static string Evil(int repeats) => "'" + string.Concat(Enumerable.Repeat("or a", repeats)) + "!";
 
-        Detector().InspectValue(evil, RequestLocation.QueryString);
+        // Warm-up: the non-backtracking engine builds its matcher lazily on first use; don't measure that.
+        detector.InspectValue(Evil(1_000), RequestLocation.QueryString);
 
-        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(2), $"Took {watch.Elapsed}");
+        var small = Fastest(() => detector.InspectValue(Evil(5_000), RequestLocation.QueryString));
+        var large = Fastest(() => detector.InspectValue(Evil(40_000), RequestLocation.QueryString));
+
+        Assert.True(large < TimeSpan.FromSeconds(30), $"160 KB input took {large}");
+        Assert.True(
+            large <= (small * 8 * 5) + TimeSpan.FromMilliseconds(100),
+            $"Not linear: 20 KB took {small.TotalMilliseconds:F1} ms, 160 KB took {large.TotalMilliseconds:F1} ms");
+    }
+
+    /// <summary>Best of three runs, to filter out scheduling noise.</summary>
+    private static TimeSpan Fastest(Action action)
+    {
+        var best = TimeSpan.MaxValue;
+        for (var i = 0; i < 3; i++)
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            action();
+            watch.Stop();
+            best = watch.Elapsed < best ? watch.Elapsed : best;
+        }
+
+        return best;
     }
 }

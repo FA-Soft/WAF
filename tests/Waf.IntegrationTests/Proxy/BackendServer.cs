@@ -19,7 +19,8 @@ public sealed record BackendEcho(
     string? XForwardedFor,
     string? XForwardedProto,
     string? XForwardedHost,
-    string? Forwarded);
+    string? Forwarded,
+    long BodyLength = 0);
 
 /// <summary>
 /// A small real backend on a free loopback port: echoes request details as JSON, serves
@@ -57,9 +58,11 @@ public sealed class BackendServer : IAsyncDisposable
         app.UseWebSockets();
         app.Map("/ws", ws => ws.Run(context => EchoWebSocketAsync(id, context)));
         app.MapGet("/health", () => "ok");
-        app.Map("/{**path}", (HttpContext context) =>
+        app.Map("/{**path}", async (HttpContext context) =>
         {
             var headers = context.Request.Headers;
+            using var body = new MemoryStream();
+            await context.Request.Body.CopyToAsync(body, context.RequestAborted);
             return Results.Json(new BackendEcho(
                 id,
                 context.Request.Method,
@@ -68,7 +71,8 @@ public sealed class BackendServer : IAsyncDisposable
                 headers["X-Forwarded-For"].FirstOrDefault(),
                 headers["X-Forwarded-Proto"].FirstOrDefault(),
                 headers["X-Forwarded-Host"].FirstOrDefault(),
-                headers["Forwarded"].FirstOrDefault()));
+                headers["Forwarded"].FirstOrDefault(),
+                body.Length));
         });
 
         await app.StartAsync(TestContext.Current.CancellationToken);
