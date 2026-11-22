@@ -4,7 +4,8 @@ namespace Waf.Host.Hosting;
 
 /// <summary>
 /// Request pipeline for the localhost admin listener: the Blazor admin UI (server-side rendered, enhanced
-/// navigation and forms), its static files and the health endpoint.
+/// navigation and forms), its static files and the health endpoint. The UI needs a signed-in admin account;
+/// static files and the health endpoint do not.
 /// </summary>
 internal static class AdminPipeline
 {
@@ -25,19 +26,25 @@ internal static class AdminPipeline
             headers.XContentTypeOptions = "nosniff";
             headers.XFrameOptions = "DENY";
             headers["Referrer-Policy"] = "no-referrer";
-            headers.CacheControl = "no-store";
+            headers.CacheControl = "no-cache, no-store"; // as antiforgery requires; nothing of the UI is cached
             return next(context);
         });
 
         admin.UseRouting();
+        admin.UseAuthentication();
+        admin.UseAuthorization();
         admin.UseAntiforgery();
         admin.UseEndpoints(endpoints =>
         {
             endpoints.MapStaticAssets();
             endpoints.MapHealthChecks("/healthz");
-            endpoints.MapAdminDownloads();
-            endpoints.MapLogEndpoints();
-            endpoints.MapRazorComponents<App>();
+            endpoints.MapAdminAccountEndpoints();
+
+            // Everything else needs a signed-in admin; only the sign-in and first-run pages are marked [AllowAnonymous].
+            var signedIn = endpoints.MapGroup(string.Empty).RequireAuthorization();
+            signedIn.MapAdminDownloads();
+            signedIn.MapLogEndpoints();
+            endpoints.MapRazorComponents<App>().RequireAuthorization();
         });
     }
 }

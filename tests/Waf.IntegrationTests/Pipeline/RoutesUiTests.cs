@@ -48,6 +48,8 @@ public sealed partial class RoutesUiTests
             "--Gateway:Rules:0:Conditions:0:Values:0=/admin",
         ];
 
+        protected override async ValueTask AfterStartAsync() => await SignInAsync(Admin);
+
         public async Task<string> GetPageAsync(string path)
         {
             using var response = await Admin.GetAsync(new Uri($"http://127.0.0.1:{AdminPort}{path}"), Ct);

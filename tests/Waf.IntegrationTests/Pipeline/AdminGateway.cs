@@ -33,6 +33,8 @@ public abstract partial class AdminGateway : GatewayFixture
         B = await BackendServer.StartAsync("B");
     }
 
+    protected override async ValueTask AfterStartAsync() => await SignInAsync(Admin);
+
     protected override async ValueTask AfterStopAsync()
     {
         Admin.Dispose();

@@ -80,6 +80,12 @@ The admin UI currently offers a **dashboard** (firewall state, active configurat
 - **While remote access is on:** HTTPS only, mandatory 2FA, brute-force protection and lockout, an optional IP/CIDR allowlist, short idle timeouts, login history, and a generic 404 before login.
 - **First run:** the admin account can only be created from the local machine, or with a one-time token printed to the service log.
 
+**Signing in.** Every page of the admin UI needs a signed-in admin account; only the sign-in page, the first-run page, the stylesheet and /healthz are open. On a fresh install, opening the admin UI leads to **Create the admin account**. On the gateway's own machine (a loopback connection, not passed on by a proxy) only a user name and password are asked. From anywhere else the page also asks for the **setup token**: at startup the gateway writes it to the service log (Windows Event Log or journalctl -u wafgateway), in a warning that starts with "No admin account exists yet". The token is random, works once and is replaced at every restart; as soon as the account exists, the first-run page is closed for good. Passwords need at least 12 characters (no other rules: a few unrelated words make a strong password). The sign-in cookie is HTTP-only and same-site, and a session ends after an hour without activity. Change your password under your user name at the top right.
+
+![Sign-in page of the admin UI](docs/images/admin-login.png)
+
+Accounts are stored in identity.db in the data folder, apart from the configuration, so they are not part of exports, backups or restores. The keys that protect the sign-in cookie are kept in the keys folder next to it (on Windows encrypted for the service account), so a restart does not sign you out. **Forgot the password?** Stop the gateway, delete identity.db, and start it again: the first-run page is back, with a new setup token.
+
 The admin UI is exempt from user-defined WAF rules and from the fail-closed 503 state, so a bad rule can never lock you out.
 
 ## Configuration concepts
@@ -243,7 +249,7 @@ wafctl admin unregister-url        # turn remote admin access off
 src/Waf.Core      Domain models, interfaces, configuration schema
 src/Waf.Engine    Rule evaluation, attack detectors, rate limiter
 src/Waf.Proxy     YARP integration, middleware, certificates, ACME
-src/Waf.Data      EF Core (config.db, events.db), migrations
+src/Waf.Data      EF Core (config.db, events.db, identity.db), migrations
 src/Waf.Ai        AI provider interface and proposal schema
 src/Waf.Web       Blazor UI, identity, log viewer, sample library
 src/Waf.Host      Startup, Kestrel, service hosting

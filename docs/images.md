@@ -2,6 +2,7 @@
 
 Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the example configuration (`schemas/gateway-config.example.json`) plus a few changes made through the UI, so the history has several versions.
 
+- [Signing in](#signing-in)
 - [Dashboard](#dashboard)
 - [Request log](#request-log)
 - [Routes](#routes)
@@ -11,6 +12,17 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 - [Test a request](#test-a-request)
 - [Configuration history](#configuration-history)
 - [Backup and import](#backup-and-import)
+- [Your account](#your-account)
+
+## Signing in
+
+First run: creating the admin account. On the gateway's own machine no setup token is needed.
+
+![Create the admin account](images/admin-setup.png)
+
+The sign-in page. Every other page needs a signed-in admin.
+
+![Sign in](images/admin-login.png)
 
 ## Dashboard
 
@@ -121,3 +133,9 @@ Export the configuration, import a file, download a full backup or restore one.
 The preview of an import: the file was exported without secrets, so the running values are kept.
 
 ![Import preview](images/admin-import-preview.png)
+
+## Your account
+
+The signed-in account, and changing its password.
+
+![Your account](images/admin-account.png)

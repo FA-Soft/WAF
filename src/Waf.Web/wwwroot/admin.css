@@ -88,6 +88,15 @@ a { color: var(--accent); }
 }
 
 .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+.topbar-end { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.topbar-end form { margin: 0; }
+.topbar-end .button { padding: 0.35rem 0.9rem; }
+.account-link { color: var(--text); }
+
+/* Sign-in and first-run pages. */
+.account-shell { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1rem; }
+.account-card { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 1.75rem; }
+.account-card .brand { margin: 0 0 1rem; }
 
 .sidenav {
     grid-area: nav;
@@ -230,7 +239,7 @@ tr.disabled td { color: var(--muted); }
 .field-help { margin: 0 0 0.35rem; color: var(--muted); font-size: 0.9rem; }
 .field-error, .validation-message { color: var(--danger); font-size: 0.9rem; margin-top: 0.25rem; }
 
-input[type="text"], input[type="search"], input[type="number"], input:not([type]), select, textarea {
+input[type="text"], input[type="search"], input[type="number"], input[type="password"], input:not([type]), select, textarea {
     width: 100%;
     padding: 0.5rem 0.6rem;
     font: inherit;
