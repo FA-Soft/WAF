@@ -29,7 +29,9 @@ public sealed partial class WafMiddleware(
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var engine = engines.Current;
+        // Judge with the engine of the same configuration as the routes this request was routed by, so a
+        // configuration swap can never pair new routes with old rules (or vice versa).
+        var engine = engines.Resolve(HttpContextWafRequest.GetConfigTag(context));
         if (engine is null)
         {
             await FailClosedGuardMiddleware.RespondUnavailableAsync(context, events, time, engines.UnavailableReason).ConfigureAwait(false);

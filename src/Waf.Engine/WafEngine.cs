@@ -7,19 +7,26 @@ namespace Waf.Engine;
 
 /// <summary>
 /// Everything the WAF needs to judge a request, built from one configuration: trusted proxies, rules,
-/// rate limits and attack detection. Immutable; replaced as a whole via <see cref="WafEngineHolder"/>, so a request is
-/// always judged by one consistent configuration.
+/// rate limits and attack detection. Immutable; replaced as a whole via <see cref="WafEngineHolder"/>, so a
+/// request is always judged by one consistent configuration.
 /// </summary>
 public sealed class WafEngine
 {
-    private WafEngine(CompiledRuleSet rules, RateLimiter rateLimiter, AttackDetector detector, TrustedProxies trustedProxies, bool detectionOnly)
+    private WafEngine(string configTag, CompiledRuleSet rules, RateLimiter rateLimiter, AttackDetector detector, TrustedProxies trustedProxies, bool detectionOnly)
     {
+        ConfigTag = configTag;
         Rules = rules;
         TrustedProxies = trustedProxies;
         RateLimiter = rateLimiter;
         Detector = detector;
         DetectionOnly = detectionOnly;
     }
+
+    /// <summary>
+    /// Identifies the configuration this engine was built from. The proxy routes of the same configuration
+    /// carry the same tag, so a request can be judged by the engine that matches the routes it was routed by.
+    /// </summary>
+    public string ConfigTag { get; }
 
     public CompiledRuleSet Rules { get; }
 
@@ -34,11 +41,13 @@ public sealed class WafEngine
     public bool DetectionOnly { get; }
 
     /// <exception cref="ArgumentException">The configuration is not valid.</exception>
-    public static WafEngine Build(GatewayConfiguration configuration, TimeProvider? timeProvider = null)
+    public static WafEngine Build(GatewayConfiguration configuration, TimeProvider? timeProvider = null, string configTag = "")
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(configTag);
 
         return new WafEngine(
+            configTag,
             CompiledRuleSet.Compile(configuration),
             new RateLimiter(configuration, timeProvider),
             new AttackDetector(configuration.Settings.AttackDetection),
@@ -48,12 +57,13 @@ public sealed class WafEngine
 }
 
 /// <summary>
-/// Holds the active <see cref="WafEngine"/>. When no engine is active (not built yet, or marked
-/// unavailable after a failure) public traffic must be refused: the gateway fails closed.
+/// Holds the active <see cref="WafEngine"/>, and the previous one for requests that were routed just before
+/// a swap. When no engine is active (not built yet, or marked unavailable after a failure) public traffic
+/// must be refused: the gateway fails closed.
 /// </summary>
 public sealed class WafEngineHolder
 {
-    private State _state = new(null, "The WAF engine has not been started yet.");
+    private State _state = new(null, null, "The WAF engine has not been started yet.");
 
     /// <summary>The active engine, or null when the WAF is unavailable.</summary>
     public WafEngine? Current => Volatile.Read(ref _state).Engine;
@@ -61,19 +71,38 @@ public sealed class WafEngineHolder
     /// <summary>Why the WAF is unavailable; null while an engine is active.</summary>
     public string? UnavailableReason => Volatile.Read(ref _state).Reason;
 
-    /// <summary>Activates <paramref name="engine"/>.</summary>
+    /// <summary>
+    /// The engine built from the configuration with <paramref name="configTag"/> (the active or the previous
+    /// one); the active engine when the tag is unknown or null (e.g. no route matched). Null while unavailable.
+    /// </summary>
+    public WafEngine? Resolve(string? configTag)
+    {
+        var state = Volatile.Read(ref _state);
+        if (state.Engine is null)
+        {
+            return null;
+        }
+
+        return configTag is not null && state.Previous is { } previous && previous.ConfigTag == configTag && state.Engine.ConfigTag != configTag
+            ? previous
+            : state.Engine;
+    }
+
+    /// <summary>Activates <paramref name="engine"/>; the engine it replaces stays available via <see cref="Resolve"/>.</summary>
     public void Activate(WafEngine engine)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        Volatile.Write(ref _state, new State(engine, null));
+
+        var current = Volatile.Read(ref _state).Engine;
+        Volatile.Write(ref _state, new State(engine, current, null));
     }
 
     /// <summary>Takes the engine out of service: from now on public traffic gets 503.</summary>
     public void MarkUnavailable(string reason)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
-        Volatile.Write(ref _state, new State(null, reason));
+        Volatile.Write(ref _state, new State(null, null, reason));
     }
 
-    private sealed record State(WafEngine? Engine, string? Reason);
+    private sealed record State(WafEngine? Engine, WafEngine? Previous, string? Reason);
 }

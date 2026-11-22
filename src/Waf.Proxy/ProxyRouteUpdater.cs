@@ -13,7 +13,7 @@ public sealed record PreparedRoutes(IReadOnlyList<RouteConfig> Routes, IReadOnly
 public sealed class ProxyRouteUpdater(InMemoryConfigProvider provider, IConfigValidator validator)
 {
     /// <summary>Validates and translates <paramref name="routes"/>; returns errors instead of throwing.</summary>
-    public async Task<(PreparedRoutes? Prepared, IReadOnlyList<string> Errors)> PrepareAsync(IEnumerable<ProxyRouteOptions> routes)
+    public async Task<(PreparedRoutes? Prepared, IReadOnlyList<string> Errors)> PrepareAsync(IEnumerable<ProxyRouteOptions> routes, string configTag = "")
     {
         ArgumentNullException.ThrowIfNull(routes);
 
@@ -24,7 +24,7 @@ public sealed class ProxyRouteUpdater(InMemoryConfigProvider provider, IConfigVa
             return (null, errors);
         }
 
-        var (yarpRoutes, clusters) = YarpConfigMapper.Map(list);
+        var (yarpRoutes, clusters) = YarpConfigMapper.Map(list, configTag);
         foreach (var route in yarpRoutes)
         {
             errors.AddRange((await validator.ValidateRouteAsync(route).ConfigureAwait(false)).Select(e => $"Route '{route.RouteId}': {e.Message}"));

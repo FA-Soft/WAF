@@ -48,19 +48,29 @@ internal static partial class GatewayApplication
         var store = ConfigurationStore.Create(storagePaths, TimeProvider.System);
         var bootstrap = ConfigurationBootstrap.Run(builder.Configuration, storagePaths, store, TimeProvider.System);
         var gatewayConfiguration = bootstrap.Configuration;
+        var configTag = ConfigurationStore.ConfigTag(bootstrap.Version.Sha256);
+        var configurationStatus = new ConfigurationStatus();
+        if (bootstrap.UsesLastKnownGood)
+        {
+            configurationStatus.Rejected("appsettings at startup", bootstrap.RejectedErrors, TimeProvider.System.GetUtcNow());
+        }
 
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
-        builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
+        builder.Services.AddHealthChecks()
+            .AddCheck<WafEngineHealthCheck>("waf-engine")
+            .AddCheck<ConfigurationHealthCheck>("configuration");
         builder.Services.AddSingleton(storagePaths);
         builder.Services.AddSingleton(store);
+        builder.Services.AddSingleton(configurationStatus);
         builder.Services.AddSingleton<GatewayConfigurationService>();
+        builder.Services.AddHostedService<ConfigurationReloadService>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<WafEngineHolder>();
         builder.Services.AddSingleton<IWafEventSink, LoggingWafEventSink>();
         builder.Services.AddSingleton<InMemoryAcmeChallengeStore>();
         builder.Services.AddSingleton<IAcmeChallengeStore>(sp => sp.GetRequiredService<InMemoryAcmeChallengeStore>());
-        builder.Services.AddWafProxy(gatewayConfiguration.Routes);
+        builder.Services.AddWafProxy(gatewayConfiguration.Routes, configTag);
 
         var endpoints = builder.Configuration
             .GetSection(GatewayEndpointOptions.SectionName)
@@ -78,7 +88,7 @@ internal static partial class GatewayApplication
         var app = builder.Build();
 
         LogBootstrap(app.Logger, bootstrap, storagePaths);
-        ActivateWafEngine(app, gatewayConfiguration);
+        ActivateWafEngine(app, gatewayConfiguration, configTag);
 
         var classifier = app.Services.GetRequiredService<ListenerClassifier>();
         app.MapWhen(classifier.IsAdminListener, AdminPipeline.Configure);
@@ -140,7 +150,7 @@ internal static partial class GatewayApplication
         {
             var sources = builder.Configuration.Sources;
             var lastJson = sources.Select((source, index) => (source, index)).LastOrDefault(s => s.source is JsonConfigurationSource).index;
-            var source = new JsonConfigurationSource { Path = settingsFile, Optional = true, ReloadOnChange = false };
+            var source = new JsonConfigurationSource { Path = settingsFile, Optional = true, ReloadOnChange = true };
             source.ResolveFileProvider();
             sources.Insert(lastJson + 1, source);
         }
@@ -153,12 +163,12 @@ internal static partial class GatewayApplication
     /// Builds the WAF engine. If that fails, the gateway still starts but fails closed: the admin UI is
     /// reachable to fix the configuration and public traffic gets 503.
     /// </summary>
-    private static void ActivateWafEngine(WebApplication app, GatewayConfiguration configuration)
+    private static void ActivateWafEngine(WebApplication app, GatewayConfiguration configuration, string configTag)
     {
         var holder = app.Services.GetRequiredService<WafEngineHolder>();
         try
         {
-            holder.Activate(WafEngine.Build(configuration, app.Services.GetRequiredService<TimeProvider>()));
+            holder.Activate(WafEngine.Build(configuration, app.Services.GetRequiredService<TimeProvider>(), configTag));
         }
 #pragma warning disable CA1031 // Any failure must leave the gateway closed, not crashed or open.
         catch (Exception ex)
