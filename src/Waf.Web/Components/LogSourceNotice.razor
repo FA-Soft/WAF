@@ -1,0 +1,31 @@
+@* Shown above an editor that was opened from a request log entry. *@
+@if (Entry is not null)
+{
+    <div class="alert alert-info" role="status">
+        <strong>Pre-filled from <a href="@($"logs/{Entry.Id}")">request @Entry.Id</a>:</strong>
+        @Entry.Method @Entry.Host@Entry.Path from @Entry.ClientIp@(Entry.RuleName is null ? "" : $" ({Entry.RuleName})").
+        @if (Message is not null)
+        {
+            <span>@Message</span>
+        }
+        Check the form; nothing changes until you save.
+    </div>
+}
+else if (Missing)
+{
+    <div class="alert alert-warning" role="status">The log entry no longer exists; the form is not pre-filled.</div>
+}
+
+@code {
+    /// <summary>The entry the form was filled from; null when none.</summary>
+    [Parameter]
+    public RequestEvent? Entry { get; set; }
+
+    /// <summary>True when a log entry was asked for but not found.</summary>
+    [Parameter]
+    public bool Missing { get; set; }
+
+    /// <summary>An extra sentence, e.g. "203.0.113.7 was added to the list below."</summary>
+    [Parameter]
+    public string? Message { get; set; }
+}

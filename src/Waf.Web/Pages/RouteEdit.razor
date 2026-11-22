@@ -2,6 +2,7 @@
 @page "/routes/{RouteName}/edit"
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
+@inject RequestLogReader LogReader
 
 <PageTitle>@(IsNew ? "Add a route" : $"Edit route {RouteName}") · @ProductInfo.Name</PageTitle>
 
@@ -15,6 +16,7 @@
 else if (Model is not null)
 {
     <TemplateNotice Title="@(IsNew ? TemplateLibrary.FindRoute(Template)?.Title : null)" />
+    <LogSourceNotice Entry="_logEntry" Missing="_logMissing" Message="@(_logEntry is null ? null : "Enter the backend that should receive these requests.")" />
 
     @if (_errors.Count > 0)
     {
@@ -153,6 +155,13 @@ else if (Model is not null)
     [SupplyParameterFromQuery]
     public string? Template { get; set; }
 
+    /// <summary>Pre-fills a new route from a request log entry (its host).</summary>
+    [SupplyParameterFromQuery(Name = LogActions.FromLogParameter)]
+    public long? FromLog { get; set; }
+
+    private RequestEvent? _logEntry;
+    private bool _logMissing;
+
     [SupplyParameterFromForm(FormName = "route-edit")]
     private RouteFormModel? Model { get; set; }
 
@@ -169,6 +178,17 @@ else if (Model is not null)
         var version = active?.Version ?? 0;
         if (IsNew)
         {
+            if (FromLog is { } id && active is not null)
+            {
+                _logEntry = await LogReader.GetAsync(id, CancellationToken.None);
+                _logMissing = _logEntry is null;
+                if (_logEntry is not null)
+                {
+                    Model = LogActions.NewRoute(_logEntry, active.Configuration, version);
+                    return;
+                }
+            }
+
             Model = RouteFormModel.ForNewRoute(version, Template);
             return;
         }
