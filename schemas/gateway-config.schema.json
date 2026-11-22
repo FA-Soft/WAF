@@ -42,6 +42,72 @@
           },
           "additionalProperties": false
         },
+        "AttackDetection": {
+          "type": "object",
+          "properties": {
+            "Enabled": {
+              "type": "boolean"
+            },
+            "SqlInjection": {
+              "type": "boolean"
+            },
+            "CrossSiteScripting": {
+              "type": "boolean"
+            },
+            "PathTraversal": {
+              "type": "boolean"
+            },
+            "CommandInjection": {
+              "type": "boolean"
+            },
+            "BadUserAgents": {
+              "type": "boolean"
+            },
+            "InspectBody": {
+              "type": "boolean"
+            },
+            "MaxBodyBytes": {
+              "type": "integer"
+            },
+            "Exclusions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "PathPrefix": {
+                    "type": "string"
+                  },
+                  "Routes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "Categories": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "SqlInjection",
+                        "CrossSiteScripting",
+                        "PathTraversal",
+                        "CommandInjection",
+                        "BadUserAgent"
+                      ]
+                    }
+                  },
+                  "Reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
         "RateLimitMaxTrackedClients": {
           "type": "integer"
         }

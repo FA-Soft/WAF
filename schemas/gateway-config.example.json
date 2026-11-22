@@ -8,6 +8,17 @@
       "Email": "admin@example.com",
       "AcceptTermsOfService": true,
       "UseStaging": false
+    },
+    "AttackDetection": {
+      "InspectBody": true,
+      "MaxBodyBytes": 65536,
+      "Exclusions": [
+        {
+          "PathPrefix": "/cms/editor",
+          "Categories": [ "CrossSiteScripting" ],
+          "Reason": "The rich-text editor saves HTML on purpose."
+        }
+      ]
     }
   },
   "Routes": [

@@ -30,6 +30,7 @@ public static class GatewayConfigurationValidator
         var routeNames = new HashSet<string>(configuration.Routes.Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
         ValidateRules(configuration.Rules, routeNames, errors);
         ValidateRateLimits(configuration.RateLimits, routeNames, errors);
+        ValidateAttackDetection(configuration.Settings?.AttackDetection, routeNames, errors);
         ValidateCertificates(configuration.Certificates, configuration.Settings, errors);
 
         return errors;
@@ -40,6 +41,50 @@ public static class GatewayConfigurationValidator
 
     /// <summary>Longest rate-limit window: one day.</summary>
     public const int MaxWindowSeconds = 86_400;
+
+    /// <summary>Largest body part that can be inspected: 10 MB.</summary>
+    public const int MaxInspectedBodyBytes = 10 * 1024 * 1024;
+
+    private static void ValidateAttackDetection(AttackDetectionSettings? detection, HashSet<string> routeNames, List<string> errors)
+    {
+        if (detection is null)
+        {
+            errors.Add("Settings.AttackDetection is missing.");
+            return;
+        }
+
+        if (detection.MaxBodyBytes is < 1 or > MaxInspectedBodyBytes)
+        {
+            errors.Add($"Settings.AttackDetection.MaxBodyBytes must be between 1 and {MaxInspectedBodyBytes} (10 MB; was {detection.MaxBodyBytes}).");
+        }
+
+        for (var i = 0; i < detection.Exclusions.Count; i++)
+        {
+            var exclusion = detection.Exclusions[i];
+            var label = $"Detection exclusion #{i + 1}";
+
+            if (string.IsNullOrEmpty(exclusion.PathPrefix) || exclusion.PathPrefix[0] != '/')
+            {
+                errors.Add($"{label}: the path prefix must start with '/' (was '{exclusion.PathPrefix}').");
+            }
+
+            foreach (var route in exclusion.Routes)
+            {
+                if (!routeNames.Contains(route))
+                {
+                    errors.Add($"{label}: route '{route}' does not exist.");
+                }
+            }
+
+            foreach (var category in exclusion.Categories)
+            {
+                if (!Enum.IsDefined(category))
+                {
+                    errors.Add($"{label}: unknown category.");
+                }
+            }
+        }
+    }
 
     private static void ValidateRateLimits(IList<RateLimitRule> limits, HashSet<string> routeNames, List<string> errors)
     {

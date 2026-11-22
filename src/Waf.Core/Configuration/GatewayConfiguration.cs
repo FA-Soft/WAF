@@ -54,6 +54,9 @@ public sealed class GatewaySettings
     /// <summary>Let's Encrypt account settings.</summary>
     public AcmeSettings Acme { get; set; } = new();
 
+    /// <summary>Built-in attack detection.</summary>
+    public AttackDetectionSettings AttackDetection { get; set; } = new();
+
     /// <summary>
     /// Upper bound on rate-limit counters kept in memory (all limits together). When full, idle counters
     /// and those with the fewest requests are dropped first.
