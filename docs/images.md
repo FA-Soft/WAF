@@ -32,6 +32,10 @@ One entry in detail: an SQL injection blocked by attack detection.
 
 ![Log entry](images/admin-log-entry.png)
 
+Log retention: size, entries, the last cleanup and the age and size limits.
+
+![Log retention](images/admin-log-retention.png)
+
 "Allow this (false positive)" from that entry: the exclusion form, pre-filled with the path, route and the check that fired.
 
 ![Exclusion pre-filled from a log entry](images/admin-exclusion-from-log.png)

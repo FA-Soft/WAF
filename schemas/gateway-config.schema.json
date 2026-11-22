@@ -108,6 +108,18 @@
           },
           "additionalProperties": false
         },
+        "LogRetention": {
+          "type": "object",
+          "properties": {
+            "MaxAgeDays": {
+              "type": "integer"
+            },
+            "MaxDatabaseSizeMb": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
         "RateLimitMaxTrackedClients": {
           "type": "integer"
         }

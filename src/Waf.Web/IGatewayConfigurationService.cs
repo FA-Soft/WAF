@@ -59,3 +59,13 @@ public interface IGatewayConfigurationService
     /// <summary>Ignores the edited appsettings configuration; the notice disappears until it is edited again.</summary>
     Task DismissAppSettingsAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>The request log's retention job, for the log settings page.</summary>
+public interface ILogRetention
+{
+    /// <summary>The last cleanup run; null until the first run.</summary>
+    LogCleanupResult? LastRun { get; }
+
+    /// <summary>Runs a cleanup now with the active configuration's limits.</summary>
+    Task<LogCleanupResult> CleanUpNowAsync(CancellationToken cancellationToken);
+}
