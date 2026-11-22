@@ -1,0 +1,77 @@
+@page "/logs/{Id:long}"
+@inject RequestLogReader Reader
+
+<PageTitle>Request @Id · @ProductInfo.Name</PageTitle>
+
+<p><a href="logs">← Request log</a></p>
+
+@if (_entry is null)
+{
+    <h1>Request @Id</h1>
+    <div class="alert alert-danger" role="alert">This log entry does not exist (any more).</div>
+}
+else
+{
+    var (label, badge) = LogFormat.Outcome(_entry);
+    var note = LogFormat.Note(_entry);
+
+    <h1><span class="method">@_entry.Method</span> @_entry.Host@_entry.Path</h1>
+    <p>
+        <span class="badge @badge">@label</span>
+        @if (note is { } n)
+        {
+            <span class="badge @n.Badge">@n.Label</span>
+        }
+    </p>
+
+    <dl class="details">
+        <dt>Time (UTC)</dt>
+        <dd>@LogFormat.Time(_entry.TimestampMs)</dd>
+        <dt>Client IP</dt>
+        <dd>@_entry.ClientIp <a href="@($"logs?range=all&ip={Uri.EscapeDataString(_entry.ClientIp)}")">all requests from this client</a></dd>
+        <dt>Host</dt>
+        <dd>@_entry.Host</dd>
+        <dt>Path</dt>
+        <dd><code>@_entry.Path</code></dd>
+        <dt>Route</dt>
+        <dd>@(_entry.RouteName ?? "none")</dd>
+        <dt>Forwarded to</dt>
+        <dd>@(_entry.Destination ?? "not forwarded")</dd>
+        <dt>Rule</dt>
+        <dd>
+            @if (_entry.RuleName is null)
+            {
+                <span>none</span>
+            }
+            else
+            {
+                @_entry.RuleName <a href="@($"logs?range=all&rule={Uri.EscapeDataString(_entry.RuleName)}")">all requests it matched</a>
+            }
+        </dd>
+        @if (_entry.Event is not null)
+        {
+            <dt>WAF event</dt>
+            <dd>@_entry.Event</dd>
+        }
+        @if (_entry.Detail is not null)
+        {
+            <dt>Detail</dt>
+            <dd><code>@_entry.Detail</code></dd>
+        }
+        <dt>Status</dt>
+        <dd>@_entry.StatusCode</dd>
+        <dt>Latency</dt>
+        <dd>@LogFormat.Latency(_entry.LatencyMs)</dd>
+    </dl>
+    <p class="muted">Query strings, headers, cookies and bodies are not logged. For a detected attack, only the matching fragment (at most 100 characters) is kept as evidence, never from a cookie.</p>
+}
+
+@code {
+    private RequestEvent? _entry;
+
+    [Parameter]
+    public long Id { get; set; }
+
+    protected override async Task OnInitializedAsync() =>
+        _entry = await Reader.GetAsync(Id, CancellationToken.None);
+}

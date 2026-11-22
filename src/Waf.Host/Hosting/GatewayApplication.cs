@@ -146,6 +146,9 @@ internal static partial class GatewayApplication
     /// <summary>The request log (events.db), or a log that discards everything when it is switched off.</summary>
     private static void AddRequestLog(WebApplicationBuilder builder, StoragePaths paths)
     {
+        // The viewer reads events.db whether or not new requests are logged.
+        builder.Services.AddSingleton(new RequestLogReader(paths));
+
         var options = builder.Configuration.GetSection(EventLogOptions.SectionName).Get<EventLogOptions>() ?? new EventLogOptions();
         var errors = options.Validate();
         if (errors.Count > 0)

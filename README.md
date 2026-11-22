@@ -164,7 +164,7 @@ Only your prompt and a sanitized summary of the current configuration are sent. 
 
 ## Logging
 
-Every public request is recorded in `events.db` (in the data folder) with timestamp, client IP, host, method, path, route, matched rule, action (forwarded, blocked, rate limited, fail-closed, no route), destination, status code and latency. Query strings, headers, cookie values and bodies are never stored, so tokens in URLs, authorization headers and form posts stay out of the log; for an attack found in a cookie only the cookie's name is recorded.
+Every public request is recorded in `events.db` (in the data folder) with timestamp, client IP, host, method, path, route, matched rule, action (forwarded, blocked, rate limited, fail-closed, no route), destination, status code and latency. Query strings, headers, cookie values and bodies are not stored, so tokens in URLs, authorization headers and form posts stay out of the log. For a detected attack only the matching fragment (at most 100 characters) is kept as evidence; for an attack found in a cookie only the cookie's name is recorded.
 
 Logging never slows requests down: each entry goes into a bounded in-memory queue, and a background writer stores the queue in batches. When the disk cannot keep up (or `events.db` is locked or damaged), new entries are **dropped and counted** instead of making requests wait; the dashboard shows how many, and a warning is logged at most once a minute. Logging is best effort by design: the firewall's protection never depends on it. The queue is drained on shutdown. Host settings (in `appsettings.json`, not part of the configuration versions):
 
@@ -178,7 +178,7 @@ Logging never slows requests down: each entry goes into a bounded in-memory queu
 }
 ```
 
-The log viewer supports filters, free-text search, pagination and a live view. From any entry you can create a route or rule pre-filled with its details, allow a false positive, or block a source. Retention is configurable by age and database size.
+The **request log** page shows it, newest first: filter by time range, what happened (blocked, would be blocked, forwarded, no route, server errors), client IP, host, route, rule or status, search free text, and page through older entries. Filters are part of the address, so a view can be bookmarked. "Live" adds new requests as they arrive (polling every 2 seconds; also with `?live=1` in the address). Paging works by entry id instead of offset and reads stop as soon as a page is full, so the viewer stays fast at any size: about 1 ms per page with a million entries, and about half a second for the worst case (a search without matches through all of them). From any entry you can create a route or rule pre-filled with its details, allow a false positive, or block a source. Retention is configurable by age and database size.
 
 ## Installation (planned interface)
 
