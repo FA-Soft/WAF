@@ -1,0 +1,78 @@
+@page "/library"
+
+<PageTitle>Templates and presets · @ProductInfo.Name</PageTitle>
+
+<h1>
+    Templates and presets
+    <HelpTip Title="Templates and presets">
+        <p>A <strong>preset</strong> makes a complete change for you, such as blocking common attacks. You see exactly what will change before anything is saved.</p>
+        <p>A <strong>template</strong> opens the editor with a common route, rule or rate limit already filled in. Adjust it, then save.</p>
+    </HelpTip>
+</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved <a href="history">View the configuration history</a>.</div>
+}
+
+<section aria-labelledby="presets-heading">
+    <h2 id="presets-heading">One-click presets</h2>
+    <p class="muted">Each preset shows a preview of the changes first. Applying one again later changes nothing, and every change can be rolled back on the history page.</p>
+    <div class="library">
+        @foreach (var preset in Presets.All)
+        {
+            <article class="card library-item">
+                <h3>@preset.Title</h3>
+                <p>@preset.Summary</p>
+                <a class="button" href="@($"presets/{preset.Id}")" aria-label="@($"Preview: {preset.Title}")">Preview</a>
+            </article>
+        }
+    </div>
+</section>
+
+<section aria-labelledby="route-templates-heading" id="routes">
+    <h2 id="route-templates-heading">Route templates</h2>
+    <div class="library">
+        @foreach (var template in TemplateLibrary.Routes)
+        {
+            <article class="card library-item">
+                <h3>@template.Title</h3>
+                <p>@template.Description</p>
+                <a class="button button-secondary" href="@($"routes/new?template={template.Id}")" aria-label="@($"Use template: {template.Title}")">Use template</a>
+            </article>
+        }
+    </div>
+</section>
+
+<section aria-labelledby="rule-templates-heading" id="rules">
+    <h2 id="rule-templates-heading">Rule templates</h2>
+    <div class="library">
+        @foreach (var template in TemplateLibrary.Rules)
+        {
+            <article class="card library-item">
+                <h3>@template.Title</h3>
+                <p>@template.Description</p>
+                <a class="button button-secondary" href="@($"rules/new?template={template.Id}")" aria-label="@($"Use template: {template.Title}")">Use template</a>
+            </article>
+        }
+    </div>
+</section>
+
+<section aria-labelledby="limit-templates-heading" id="rate-limits">
+    <h2 id="limit-templates-heading">Rate-limit templates</h2>
+    <div class="library">
+        @foreach (var template in TemplateLibrary.RateLimits)
+        {
+            <article class="card library-item">
+                <h3>@template.Title</h3>
+                <p>@template.Description</p>
+                <a class="button button-secondary" href="@($"rate-limits/new?template={template.Id}")" aria-label="@($"Use template: {template.Title}")">Use template</a>
+            </article>
+        }
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+}

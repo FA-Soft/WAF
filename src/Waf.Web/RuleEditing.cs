@@ -21,8 +21,13 @@ public sealed class ConditionFormModel
 
     public bool CaseSensitive { get; set; }
 
-    /// <summary>A row the user left empty; such rows are ignored.</summary>
-    public bool IsEmpty => string.IsNullOrWhiteSpace(Values) && string.IsNullOrWhiteSpace(HeaderName);
+    /// <summary>
+    /// An untouched row (no values, default choices); such rows are ignored. A row whose field, operator or "not"
+    /// was changed, e.g. a template's empty IP list, is not empty: dropping it silently would change what the rule
+    /// does (an "only these IPs" rule would block everyone).
+    /// </summary>
+    public bool IsEmpty => string.IsNullOrWhiteSpace(Values) && string.IsNullOrWhiteSpace(HeaderName)
+        && Field == ConditionField.Path && Operator == ConditionOperator.StartsWith && !Negate;
 
     public IReadOnlyList<string> ValueList => Field == ConditionField.ClientIp
         ? (Values ?? string.Empty).Split(['\n', '\r', ',', ' ', '\t', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -185,7 +190,7 @@ internal sealed class RuleFormModel : IValidatableObject
         }
     }
 
-    /// <summary>A new rule with one empty condition.</summary>
+    /// <summary>A new rule with one empty condition, or pre-filled from a <see cref="TemplateLibrary"/> template.</summary>
     public static RuleFormModel ForNewRule(long baseVersion, IEnumerable<string> routeNames, string? template = null)
     {
         var model = new RuleFormModel
@@ -196,25 +201,7 @@ internal sealed class RuleFormModel : IValidatableObject
             Conditions = [new ConditionFormModel()],
         };
 
-        switch (template)
-        {
-            case "block-ips":
-                model.Name = "blocked-ips";
-                model.Description = "Block these IP addresses and ranges.";
-                model.Priority = 10;
-                model.Action = RuleAction.Block;
-                model.Conditions = [new ConditionFormModel { Field = ConditionField.ClientIp, Operator = ConditionOperator.InCidr }];
-                break;
-
-            case "allow-ips":
-                model.Name = "trusted-ips";
-                model.Description = "Always allow these IP addresses and ranges (no further checks).";
-                model.Priority = 5;
-                model.Action = RuleAction.Allow;
-                model.Conditions = [new ConditionFormModel { Field = ConditionField.ClientIp, Operator = ConditionOperator.InCidr }];
-                break;
-        }
-
+        TemplateLibrary.FindRule(template)?.Apply(model);
         return model;
     }
 
@@ -331,13 +318,20 @@ internal sealed class RateLimitFormModel : IValidatableObject
         }
     }
 
-    public static RateLimitFormModel ForNewLimit(long baseVersion, IEnumerable<string> routeNames) => new()
+    /// <summary>A new limit, or pre-filled from a <see cref="TemplateLibrary"/> template.</summary>
+    public static RateLimitFormModel ForNewLimit(long baseVersion, IEnumerable<string> routeNames, string? template = null)
     {
-        BaseVersion = baseVersion,
-        Enabled = true,
-        RouteChoices = [.. routeNames.Select(r => new RouteChoice { Name = r })],
-        Conditions = [new ConditionFormModel()],
-    };
+        var model = new RateLimitFormModel
+        {
+            BaseVersion = baseVersion,
+            Enabled = true,
+            RouteChoices = [.. routeNames.Select(r => new RouteChoice { Name = r })],
+            Conditions = [new ConditionFormModel()],
+        };
+
+        TemplateLibrary.FindRateLimit(template)?.Apply(model);
+        return model;
+    }
 
     public static RateLimitFormModel FromLimit(RateLimitRule limit, long baseVersion, IEnumerable<string> routeNames)
     {

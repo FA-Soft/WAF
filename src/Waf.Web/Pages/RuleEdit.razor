@@ -14,6 +14,8 @@
 }
 else if (Model is not null)
 {
+    <TemplateNotice Title="@(RuleName is null ? TemplateLibrary.FindRule(Template)?.Title : null)" />
+
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
@@ -98,7 +100,7 @@ else if (Model is not null)
     [Parameter]
     public string? RuleName { get; set; }
 
-    /// <summary>Pre-fills a new rule: "block-ips" or "allow-ips" (IP list editors).</summary>
+    /// <summary>Pre-fills a new rule from the template library, e.g. "block-ips".</summary>
     [SupplyParameterFromQuery]
     public string? Template { get; set; }
 

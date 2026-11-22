@@ -20,6 +20,16 @@ public class DescribeTests
     }
 
     [Fact]
+    public void Long_values_are_shortened()
+    {
+        var pattern = "^(" + new string('a', 80) + ")$";
+
+        var text = Describe.Condition(When(ConditionField.Path, ConditionOperator.Regex, pattern));
+
+        Assert.Equal("the path matches the pattern " + pattern[..59] + "…", text);
+    }
+
+    [Fact]
     public void Destinations_are_listed_as_urls()
     {
         Assert.Equal(

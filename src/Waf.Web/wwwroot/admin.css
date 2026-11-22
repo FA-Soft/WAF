@@ -14,6 +14,7 @@
     --warn-bg: #fff4d6;
     --danger: #b3261e;
     --danger-bg: #fde8e7;
+    --info-bg: #e8f0fc;
     --radius: 8px;
     --focus: 0 0 0 3px rgba(31, 95, 191, 0.45);
     color-scheme: light dark;
@@ -37,6 +38,7 @@
         --warn-bg: #3a2e12;
         --danger: #ff8f87;
         --danger-bg: #3d1a18;
+        --info-bg: #172338;
     }
 }
 
@@ -144,6 +146,7 @@ h2 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; display: flex; align-items: ce
 .alert p, .alert ul { margin: 0.5rem 0 0; }
 .alert-warning { background: var(--warn-bg); border-color: var(--warn); }
 .alert-danger { background: var(--danger-bg); border-color: var(--danger); }
+.alert-info { background: var(--info-bg); border-color: var(--accent); }
 
 .cards {
     display: grid;
@@ -302,3 +305,17 @@ input[type="number"] { width: 100%; padding: 0.5rem 0.6rem; font: inherit; color
 .setting h2 { margin-top: 0; }
 .validation-summary ul, ul.validation-errors { margin: 0; padding-left: 1.25rem; }
 .validation-summary:empty { display: none; }
+
+/* Templates and presets */
+.library { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.library-item { display: flex; flex-direction: column; align-items: flex-start; }
+.library-item h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+.library-item p { margin: 0 0 0.75rem; flex: 1; color: var(--muted); font-size: 0.95rem; }
+.preview { margin-top: 1rem; }
+.changes { list-style: none; padding: 0; margin: 0 0 1rem; }
+.change { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+.change .badge { margin-right: 0.35rem; }
+.change-detail { display: block; margin-top: 0.25rem; }
+.change .advanced { margin: 0.5rem 0 0; }
+.change-json { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; }
+.change-json pre { margin: 0.15rem 0 0; padding: 0.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; font-size: 0.8rem; }

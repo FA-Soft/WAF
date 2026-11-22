@@ -65,7 +65,7 @@ internal static class Describe
             _ => condition.Operator.ToString(),
         };
 
-        return $"{field} {verb} {Join(condition.Values, "or")}";
+        return $"{field} {verb} {Join(condition.Values.Select(Shorten), "or")}";
     }
 
     /// <summary>All conditions of a rule, e.g. "the path starts with /admin and the client IP is not in …".</summary>
@@ -133,6 +133,117 @@ internal static class Describe
         if (settings.BadUserAgents) { enabled.Add("Attack tools"); }
         return enabled;
     }
+
+    /// <summary>e.g. "Add rule 'lock-admin'" or "Change setting: SQL injection detection".</summary>
+    public static string ChangeTitle(ConfigurationChange change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+
+        var verb = change.Kind switch
+        {
+            ChangeKind.Added => "Add",
+            ChangeKind.Removed => "Remove",
+            _ => "Change",
+        };
+
+        return change.Section switch
+        {
+            ConfigurationSection.Settings => $"{(change.Kind == ChangeKind.Changed ? "Change" : verb)} setting: {SettingLabel(change.Name)}",
+            ConfigurationSection.Route => $"{verb} route '{change.Name}'",
+            ConfigurationSection.Rule => $"{verb} rule '{change.Name}'",
+            ConfigurationSection.RateLimit => $"{verb} rate limit '{change.Name}'",
+            _ => $"{verb} certificate for {change.Name}",
+        };
+    }
+
+    /// <summary>What the item does after the change (or did, when removed), in plain language.</summary>
+    public static string ChangeDetail(ConfigurationChange change, GatewayConfiguration before, GatewayConfiguration after)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(after);
+
+        var source = change.Kind == ChangeKind.Removed ? before : after;
+        bool Named(string name) => string.Equals(name, change.Name, StringComparison.OrdinalIgnoreCase);
+
+        switch (change.Section)
+        {
+            case ConfigurationSection.Settings:
+                return $"{SettingValue(change.Before)} → {SettingValue(change.After)}";
+
+            case ConfigurationSection.Route when source.Routes.FirstOrDefault(r => Named(r.Name)) is { } route:
+                return $"{Match(route.Match)} → {Destinations(route.Destinations)}";
+
+            case ConfigurationSection.Rule when source.Rules.FirstOrDefault(r => Named(r.Name)) is { } rule:
+                return string.Create(CultureInfo.InvariantCulture, $"{Conditions(rule.Conditions)} → {Action(rule, after.Settings.DetectionOnly)} (priority {rule.Priority})")
+                    + Scope(rule.Routes);
+
+            case ConfigurationSection.RateLimit when source.RateLimits.FirstOrDefault(l => Named(l.Name)) is { } limit:
+                var text = RateLimit(limit);
+                if (limit.Conditions.Count > 0)
+                {
+                    text += ", when " + char.ToLowerInvariant(Conditions(limit.Conditions)[0]) + Conditions(limit.Conditions)[1..];
+                }
+
+                return text + (limit.DetectionOnly ? " (detection only: logged, not enforced)" : string.Empty) + Scope(limit.Routes);
+
+            default:
+                return string.Empty;
+        }
+    }
+
+    /// <summary>The item's own description (rules and rate limits), or null.</summary>
+    public static string? ChangeNote(ConfigurationChange change, GatewayConfiguration before, GatewayConfiguration after)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(after);
+
+        var source = change.Kind == ChangeKind.Removed ? before : after;
+        bool Named(string name) => string.Equals(name, change.Name, StringComparison.OrdinalIgnoreCase);
+        return change.Section switch
+        {
+            ConfigurationSection.Rule => source.Rules.FirstOrDefault(r => Named(r.Name))?.Description,
+            ConfigurationSection.RateLimit => source.RateLimits.FirstOrDefault(l => Named(l.Name))?.Description,
+            _ => null,
+        };
+    }
+
+    /// <summary>Long values (mostly regular expressions) are cut off; the editor shows them in full.</summary>
+    private const int MaxValueLength = 60;
+
+    private static string Shorten(string value) =>
+        value.Length <= MaxValueLength ? value : value[..(MaxValueLength - 1)] + "…";
+
+    private static string Scope(IList<string> routes) =>
+        routes.Count == 0 ? string.Empty : $"; only on route {string.Join(", ", routes)}";
+
+    private static readonly Dictionary<string, string> SettingLabels = new(StringComparer.Ordinal)
+    {
+        ["DetectionOnly"] = "Detection-only mode",
+        ["TrustedProxies"] = "Trusted proxies",
+        ["RateLimitMaxTrackedClients"] = "Rate-limit counters kept in memory",
+        ["AttackDetection.Enabled"] = "Attack detection",
+        ["AttackDetection.SqlInjection"] = "SQL injection detection",
+        ["AttackDetection.CrossSiteScripting"] = "Cross-site scripting detection",
+        ["AttackDetection.PathTraversal"] = "Path traversal detection",
+        ["AttackDetection.CommandInjection"] = "Command injection detection",
+        ["AttackDetection.BadUserAgents"] = "Attack tool detection",
+        ["AttackDetection.InspectBody"] = "Inspect request bodies",
+        ["AttackDetection.MaxBodyBytes"] = "Largest body inspected (bytes)",
+        ["AttackDetection.Exclusions"] = "Detection exclusions",
+    };
+
+    private static string SettingLabel(string path) =>
+        SettingLabels.TryGetValue(path, out var label) ? label : path.Replace(".", " › ", StringComparison.Ordinal);
+
+    private static string SettingValue(string? json) => json switch
+    {
+        null => "(not set)",
+        "true" => "on",
+        "false" => "off",
+        _ => json,
+    };
 
     private static string Join(IEnumerable<string> values, string conjunction)
     {
