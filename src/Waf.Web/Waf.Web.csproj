@@ -1,19 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <Description>Blazor admin UI, identity, log viewer and sample library.</Description>
+    <Description>Blazor admin UI (server-side rendered), identity, log viewer and sample library.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <SupportedPlatform Include="browser" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <InternalsVisibleTo Include="Waf.UnitTests" />
+    <InternalsVisibleTo Include="Waf.IntegrationTests" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
+    <ProjectReference Include="../Waf.Engine/Waf.Engine.csproj" />
     <ProjectReference Include="../Waf.Data/Waf.Data.csproj" />
     <ProjectReference Include="../Waf.Ai/Waf.Ai.csproj" />
   </ItemGroup>

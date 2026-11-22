@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
+    <PackageReference Include="bunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
@@ -17,6 +18,7 @@
     <ProjectReference Include="../../src/Waf.Data/Waf.Data.csproj" />
     <ProjectReference Include="../../src/Waf.Ai/Waf.Ai.csproj" />
     <ProjectReference Include="../../src/Waf.Host/Waf.Host.csproj" />
+    <ProjectReference Include="../../src/Waf.Web/Waf.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>
