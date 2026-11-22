@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Builder;
 using Waf.Host.Hosting;
 
@@ -9,13 +10,15 @@ namespace Waf.IntegrationTests;
 /// Starts the real gateway (Kestrel, not TestServer) on free loopback ports.
 /// Derived fixtures can start backends first and add configuration such as routes.
 /// </summary>
-public class GatewayFixture : IAsyncLifetime
+public partial class GatewayFixture : IAsyncLifetime
 {
     private WebApplication? _app;
 
-    public int HttpPort { get; private set; } = FreePort();
-    public int HttpsPort { get; private set; } = FreePort();
-    public int AdminPort { get; private set; } = FreePort();
+    public GatewayFixture() => (HttpPort, HttpsPort, AdminPort) = ThreeFreePorts();
+
+    public int HttpPort { get; private set; }
+    public int HttpsPort { get; private set; }
+    public int AdminPort { get; private set; }
 
     internal WebApplication App => _app ?? throw new InvalidOperationException("Gateway not started.");
 
@@ -38,6 +41,9 @@ public class GatewayFixture : IAsyncLifetime
     /// <summary>Runs before the gateway starts, e.g. to start backends.</summary>
     protected virtual ValueTask BeforeStartAsync() => ValueTask.CompletedTask;
 
+    /// <summary>Runs after the gateway started, e.g. to sign in to the admin UI.</summary>
+    protected virtual ValueTask AfterStartAsync() => ValueTask.CompletedTask;
+
     /// <summary>Runs after the gateway stopped, e.g. to stop backends.</summary>
     protected virtual ValueTask AfterStopAsync() => ValueTask.CompletedTask;
 
@@ -53,17 +59,17 @@ public class GatewayFixture : IAsyncLifetime
             try
             {
                 await _app.StartAsync(TestContext.Current.CancellationToken);
-                return;
+                break;
             }
             catch (IOException ex) when (attempt < 5 && ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
             {
                 await _app.DisposeAsync();
                 _app = null;
-                HttpPort = FreePort();
-                HttpsPort = FreePort();
-                AdminPort = FreePort();
+                (HttpPort, HttpsPort, AdminPort) = ThreeFreePorts();
             }
         }
+
+        await AfterStartAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -75,6 +81,7 @@ public class GatewayFixture : IAsyncLifetime
         }
 
         await AfterStopAsync();
+        _accountGate.Dispose();
         DeleteDataDirectory(DataDirectory);
         GC.SuppressFinalize(this);
     }
@@ -99,10 +106,73 @@ public class GatewayFixture : IAsyncLifetime
         }
     }
 
+/// <summary>Three different free ports: all three listeners stay open until the last is chosen, so the OS cannot hand out one twice.</summary>
+    private static (int, int, int) ThreeFreePorts()
+    {
+        var listeners = Enumerable.Range(0, 3).Select(_ => new TcpListener(IPAddress.Loopback, 0)).ToList();
+        try
+        {
+            listeners.ForEach(l => l.Start());
+            var ports = listeners.Select(l => ((IPEndPoint)l.LocalEndpoint).Port).ToList();
+            return (ports[0], ports[1], ports[2]);
+        }
+        finally
+        {
+            listeners.ForEach(l => l.Dispose());
+        }
+    }
+
     public static int FreePort()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         return ((IPEndPoint)listener.LocalEndpoint).Port;
     }
+    /// <summary>User name of the admin account that <see cref="SignInAsync"/> creates.</summary>
+    public const string AdminUserName = "admin";
+
+    /// <summary>Password of that account.</summary>
+    public const string AdminPassword = "correct horse battery staple";
+
+    private readonly SemaphoreSlim _accountGate = new(1, 1);
+    private bool _adminCreated;
+
+    /// <summary>
+    /// Signs <paramref name="client"/> (with a cookie container) in to the admin UI. The first call creates the admin
+    /// account, from this machine, as on a fresh install.
+    /// </summary>
+    public async Task SignInAsync(HttpClient client)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+
+        await _accountGate.WaitAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            var (path, handler) = _adminCreated ? ("/account/login", "login") : ("/account/setup", "setup");
+            var page = await client.GetStringAsync(new Uri($"http://127.0.0.1:{AdminPort}{path}"), TestContext.Current.CancellationToken);
+            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = SignInTokenPattern().Match(page).Groups["token"].Value,
+                ["_handler"] = handler,
+                ["Model.UserName"] = AdminUserName,
+                ["Model.Password"] = AdminPassword,
+                ["Model.ConfirmPassword"] = AdminPassword,
+            });
+            using var response = await client.PostAsync(new Uri($"http://127.0.0.1:{AdminPort}{path}"), content, TestContext.Current.CancellationToken);
+            var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            if (response.StatusCode != HttpStatusCode.OK || !html.Contains("Sign out", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Signing in to the admin UI failed ({(int)response.StatusCode}): {html}");
+            }
+
+            _adminCreated = true;
+        }
+        finally
+        {
+            _accountGate.Release();
+        }
+    }
+
+    [GeneratedRegex("""name="__RequestVerificationToken" value="(?<token>[^"]+)""")]
+    private static partial Regex SignInTokenPattern();
 }

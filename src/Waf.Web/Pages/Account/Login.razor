@@ -1,0 +1,71 @@
+@page "/account/login"
+@layout AccountLayout
+@attribute [AllowAnonymous]
+@inject SignInManager<IdentityUser> SignIn
+@inject FirstRunSetup Setup
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in · @ProductInfo.Name</PageTitle>
+
+<h1>Sign in</h1>
+
+@if (_failed)
+{
+    <div class="alert alert-danger" role="alert">The user name or password is not correct.</div>
+}
+
+@if (SignedOut)
+{
+    <div class="alert alert-ok" role="status">You are signed out.</div>
+}
+
+<EditForm Model="Model" FormName="login" OnValidSubmit="SignInAsync" Enhance class="form">
+    <DataAnnotationsValidator />
+    <input type="hidden" name="Model.ReturnUrl" value="@Model!.ReturnUrl" />
+    <FormField Id="user-name" Label="User name" For="() => Model.UserName">
+        <InputText id="user-name" @bind-Value="Model.UserName" autocomplete="username" />
+    </FormField>
+    <FormField Id="password" Label="Password" For="() => Model.Password">
+        @* A plain input: a password is never sent back to the browser, not even after a failed attempt. *@
+        <input id="password" type="password" name="Model.Password" autocomplete="current-password" />
+    </FormField>
+    <div class="actions">
+        <button type="submit" class="button">Sign in</button>
+    </div>
+</EditForm>
+
+@code {
+    private bool _failed;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery(Name = "signedOut")]
+    public bool SignedOut { get; set; }
+
+    [SupplyParameterFromForm(FormName = "login")]
+    private LoginFormModel? Model { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (Setup.IsRequired)
+        {
+            Navigation.NavigateTo(AdminIdentity.SetupPath.TrimStart('/'));
+        }
+
+        Model ??= new LoginFormModel { ReturnUrl = ReturnUrl };
+    }
+
+    private async Task SignInAsync()
+    {
+        var model = Model!;
+        var result = await SignIn.PasswordSignInAsync(model.UserName.Trim(), model.Password, isPersistent: false, lockoutOnFailure: false);
+        if (!result.Succeeded)
+        {
+            _failed = true;
+            return;
+        }
+
+        Navigation.NavigateTo(AdminIdentity.LocalReturnUrl(model.ReturnUrl));
+    }
+}

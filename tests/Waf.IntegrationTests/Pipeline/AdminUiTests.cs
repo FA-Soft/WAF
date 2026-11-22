@@ -30,7 +30,7 @@ public sealed class AdminUiFixture : GatewayFixture
     }
 }
 
-public sealed partial class AdminUiTests(AdminUiFixture gateway) : IClassFixture<AdminUiFixture>, IDisposable
+public sealed partial class AdminUiTests(AdminUiFixture gateway) : IClassFixture<AdminUiFixture>, IAsyncLifetime
 {
     private readonly HttpClient _http = new(new HttpClientHandler { UseCookies = true, CookieContainer = new CookieContainer() })
     {
@@ -39,7 +39,13 @@ public sealed partial class AdminUiTests(AdminUiFixture gateway) : IClassFixture
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    public void Dispose() => _http.Dispose();
+    public async ValueTask InitializeAsync() => await gateway.SignInAsync(_http);
+
+    public ValueTask DisposeAsync()
+    {
+        _http.Dispose();
+        return ValueTask.CompletedTask;
+    }
 
     private Uri Admin(string path) => new($"http://127.0.0.1:{gateway.AdminPort}{path}");
 

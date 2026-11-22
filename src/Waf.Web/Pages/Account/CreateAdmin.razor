@@ -1,0 +1,100 @@
+@page "/account/setup"
+@layout AccountLayout
+@attribute [AllowAnonymous]
+@inject FirstRunSetup Setup
+@inject UserManager<IdentityUser> Users
+@inject SignInManager<IdentityUser> SignIn
+@inject NavigationManager Navigation
+
+<PageTitle>Create the admin account · @ProductInfo.Name</PageTitle>
+
+<h1>Create the admin account</h1>
+
+<p>No admin account exists yet. The account you create here signs in to this admin UI.</p>
+
+@if (!_local)
+{
+    <div class="alert alert-info" role="note">
+        You are not on the gateway's own machine. Enter the one-time setup token: the gateway printed it to its
+        service log at startup (look for "No admin account exists yet"). It is used up once the account exists.
+    </div>
+}
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>The account was not created.</strong>
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<EditForm Model="Model" FormName="setup" OnValidSubmit="CreateAsync" Enhance class="form">
+    <DataAnnotationsValidator />
+    @if (!_local)
+    {
+        <FormField Id="setup-token" Label="Setup token" Help="From the service log of the gateway." For="() => Model!.SetupToken">
+            <input id="setup-token" type="password" name="Model.SetupToken" autocomplete="off" aria-describedby="setup-token-help" />
+        </FormField>
+    }
+    <FormField Id="user-name" Label="User name" Help="Letters, digits and - . _ @@ +" For="() => Model!.UserName">
+        <InputText id="user-name" @bind-Value="Model!.UserName" autocomplete="username" aria-describedby="user-name-help" />
+    </FormField>
+    <FormField Id="password" Label="Password" Help="@AdminIdentity.PasswordHelp" For="() => Model!.Password">
+        <input id="password" type="password" name="Model.Password" autocomplete="new-password" aria-describedby="password-help" />
+    </FormField>
+    <FormField Id="confirm-password" Label="Password again" For="() => Model!.ConfirmPassword">
+        <input id="confirm-password" type="password" name="Model.ConfirmPassword" autocomplete="new-password" />
+    </FormField>
+    <div class="actions">
+        <button type="submit" class="button">Create account and sign in</button>
+    </div>
+</EditForm>
+
+@code {
+    private bool _local;
+    private IReadOnlyList<string> _errors = [];
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = null!;
+
+    [SupplyParameterFromForm(FormName = "setup")]
+    private SetupFormModel? Model { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!Setup.IsRequired)
+        {
+            Navigation.NavigateTo(AdminIdentity.LoginPath.TrimStart('/'));
+        }
+
+        _local = FirstRunSetup.IsLocalRequest(HttpContext);
+        Model ??= new SetupFormModel();
+    }
+
+    private async Task CreateAsync()
+    {
+        var model = Model!;
+        if (!Setup.IsAllowed(HttpContext, model.SetupToken))
+        {
+            _errors = [Setup.IsRequired
+                ? "The setup token is not correct. Copy it from the service log of the gateway."
+                : "An admin account already exists. Sign in instead."];
+            return;
+        }
+
+        var (result, user) = await Setup.CreateAdminAsync(Users, model.UserName, model.Password);
+        if (!result.Succeeded)
+        {
+            _errors = [.. result.Errors.Select(e => e.Description)];
+            return;
+        }
+
+        await SignIn.SignInAsync(user!, isPersistent: false);
+        Navigation.NavigateTo(string.Empty);
+    }
+}

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Options;
 using Waf.Core;
@@ -9,6 +10,7 @@ using Waf.Core.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Waf.Data;
 using Waf.Proxy;
+using Waf.Web;
 
 namespace Waf.Host.Hosting;
 
@@ -61,6 +63,8 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
         builder.Services.AddRazorComponents();
+        builder.Services.AddAdminIdentity(storagePaths);
+        AddDataProtection(builder, storagePaths);
         builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
         builder.Services.AddSingleton(storagePaths);
         builder.Services.AddSingleton(store);
@@ -143,6 +147,25 @@ internal static partial class GatewayApplication
     /// config folder (e.g. <c>/etc/wafgateway</c>). It overrides the built-in appsettings files but not
     /// environment variables or command-line arguments, so those can still override it.
     /// </summary>
+    /// <summary>
+    /// Keys that protect the sign-in cookie and antiforgery tokens, kept in the data folder so a restart does not
+    /// sign the admin out. On Windows they are encrypted with DPAPI for the service account.
+    /// </summary>
+    private static void AddDataProtection(WebApplicationBuilder builder, StoragePaths paths)
+    {
+        var dataProtection = builder.Services
+            .AddDataProtection()
+            .SetApplicationName(ServiceName)
+            .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(paths.DataDirectory, KeysDirectoryName)));
+        if (OperatingSystem.IsWindows())
+        {
+            dataProtection.ProtectKeysWithDpapi();
+        }
+    }
+
+    /// <summary>Folder in the data folder with the data protection keys.</summary>
+    public const string KeysDirectoryName = "keys";
+
     /// <summary>The request log (events.db), or a log that discards everything when it is switched off.</summary>
     private static void AddRequestLog(WebApplicationBuilder builder, StoragePaths paths)
     {

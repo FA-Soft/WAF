@@ -1,0 +1,88 @@
+@page "/account"
+@inject UserManager<IdentityUser> Users
+@inject SignInManager<IdentityUser> SignIn
+@inject NavigationManager Navigation
+
+<PageTitle>Your account · @ProductInfo.Name</PageTitle>
+
+<h1>Your account</h1>
+
+<p>Signed in as <strong>@_userName</strong>.</p>
+
+@if (Changed)
+{
+    <div class="alert alert-ok" role="status">Your password was changed.</div>
+}
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>The password was not changed.</strong>
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<EditForm Model="Model" FormName="change-password" OnValidSubmit="ChangeAsync" Enhance class="form">
+    <DataAnnotationsValidator />
+    <fieldset>
+        <legend>Change password</legend>
+        <FormField Id="current-password" Label="Current password" For="() => Model!.CurrentPassword">
+            <input id="current-password" type="password" name="Model.CurrentPassword" autocomplete="current-password" />
+        </FormField>
+        <FormField Id="new-password" Label="New password" Help="@AdminIdentity.PasswordHelp" For="() => Model!.NewPassword">
+            <input id="new-password" type="password" name="Model.NewPassword" autocomplete="new-password" aria-describedby="new-password-help" />
+        </FormField>
+        <FormField Id="confirm-password" Label="New password again" For="() => Model!.ConfirmPassword">
+            <input id="confirm-password" type="password" name="Model.ConfirmPassword" autocomplete="new-password" />
+        </FormField>
+    </fieldset>
+    <div class="actions">
+        <button type="submit" class="button">Change password</button>
+    </div>
+</EditForm>
+
+@code {
+    private string? _userName;
+    private IReadOnlyList<string> _errors = [];
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = null!;
+
+    [SupplyParameterFromQuery(Name = "changed")]
+    public bool Changed { get; set; }
+
+    [SupplyParameterFromForm(FormName = "change-password")]
+    private ChangePasswordFormModel? Model { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _userName = HttpContext.User.Identity?.Name;
+        Model ??= new ChangePasswordFormModel();
+    }
+
+    private async Task ChangeAsync()
+    {
+        var user = await Users.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            Navigation.NavigateTo(AdminIdentity.LoginPath.TrimStart('/'));
+            return;
+        }
+
+        var result = await Users.ChangePasswordAsync(user, Model!.CurrentPassword, Model.NewPassword);
+        if (!result.Succeeded)
+        {
+            _errors = [.. result.Errors.Select(e => e.Code == "PasswordMismatch" ? "The current password is not correct." : e.Description)];
+            return;
+        }
+
+        // A new security stamp: keep this session, other sessions end at their next check.
+        await SignIn.RefreshSignInAsync(user);
+        Navigation.NavigateTo("account?changed=true");
+    }
+}
