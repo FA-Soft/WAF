@@ -34,7 +34,9 @@ public sealed class HotReloadTests
 
         public ConfigurationStore Store => App.Services.GetRequiredService<ConfigurationStore>();
 
-        public ConfigurationReloadService Reloader => App.Services.GetServices<IHostedService>().OfType<ConfigurationReloadService>().Single();
+        public AppSettingsWatcher Watcher => App.Services.GetServices<IHostedService>().OfType<AppSettingsWatcher>().Single();
+
+        public Waf.Engine.ConfigurationStatus Status => App.Services.GetRequiredService<Waf.Engine.ConfigurationStatus>();
 
         protected override async ValueTask BeforeStartAsync()
         {
@@ -93,49 +95,63 @@ public sealed class HotReloadTests
     }
 
     [Fact]
-    public async Task Changed_settings_file_is_applied_without_a_restart()
+    public async Task Edited_settings_file_is_reported_but_not_applied_until_imported()
     {
         await using var gateway = new Gateway();
         await gateway.InitializeAsync();
-        Assert.Equal(HttpStatusCode.OK, await StatusAsync(gateway, "/secret"));
+        Assert.Null(gateway.Status.AppSettingsNotice);
 
         await gateway.WriteSettingsAsync(blockSecret: true);
 
-        await EventuallyAsync(async () => await StatusAsync(gateway, "/secret") == HttpStatusCode.Forbidden, "/secret is blocked");
-        var latest = await gateway.Store.GetLatestAsync(Ct);
-        Assert.Equal((2, ConfigurationReloadService.ReloadAuthor), (latest!.Version, latest.Author));
-        Assert.Equal(2, (await gateway.Store.GetLastKnownGoodAsync(Ct))!.Version);
-        Assert.Equal("Healthy", await gateway.HealthAsync());
+        await EventuallyAsync(() => Task.FromResult(gateway.Status.AppSettingsNotice is not null), "the edit is noticed");
+        Assert.True(gateway.Status.AppSettingsNotice!.CanImport);
+        Assert.Equal(HttpStatusCode.OK, await StatusAsync(gateway, "/secret")); // not applied: the database is the truth
+        Assert.Equal(1, await gateway.Store.CountAsync(Ct));
+
+        var result = await gateway.Configurations.ImportAppSettingsAsync("test", Ct);
+
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
+        Assert.Equal((2, "Imported from appsettings."), (result.Version!.Version, result.Version.Comment));
+        Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(gateway, "/secret"));
+        Assert.Null(gateway.Status.AppSettingsNotice);
+
+        await gateway.Watcher.CheckAsync(Ct); // the imported file is no longer "edited"
+        Assert.Null(gateway.Status.AppSettingsNotice);
     }
 
     [Fact]
-    public async Task Invalid_settings_file_keeps_the_last_known_good_running_until_fixed()
+    public async Task Invalid_settings_file_is_reported_with_its_errors_and_can_be_dismissed()
     {
         await using var gateway = new Gateway();
         await gateway.InitializeAsync();
 
         await gateway.WriteSettingsAsync(blockSecret: true, broken: true);
 
-        await EventuallyAsync(async () => await gateway.HealthAsync() == "Degraded", "health reports the rejected change");
+        await EventuallyAsync(() => Task.FromResult(gateway.Status.AppSettingsNotice is not null), "the edit is noticed");
+        var notice = gateway.Status.AppSettingsNotice!;
+        Assert.False(notice.CanImport);
+        Assert.Contains(notice.Errors, e => e.Contains("'10' is not a valid IP address", StringComparison.Ordinal));
+        Assert.False((await gateway.Configurations.ImportAppSettingsAsync("test", Ct)).Succeeded);
+        Assert.Equal(HttpStatusCode.OK, await StatusAsync(gateway, "/"));
+
+        await gateway.Configurations.DismissAppSettingsAsync(Ct);
+
+        Assert.Null(gateway.Status.AppSettingsNotice);
+        await gateway.Watcher.CheckAsync(Ct); // dismissed: stays quiet until the file is edited again
+        Assert.Null(gateway.Status.AppSettingsNotice);
         Assert.Equal(1, await gateway.Store.CountAsync(Ct));
-        Assert.Equal(HttpStatusCode.OK, await StatusAsync(gateway, "/"));        // still proxied
-        Assert.Equal(HttpStatusCode.OK, await StatusAsync(gateway, "/secret"));  // the rejected rule is not active
-
-        await gateway.WriteSettingsAsync(blockSecret: true);
-
-        await EventuallyAsync(async () => await gateway.HealthAsync() == "Healthy", "health recovers");
-        Assert.Equal(HttpStatusCode.Forbidden, await StatusAsync(gateway, "/secret"));
     }
 
     [Fact]
-    public async Task Reload_without_changes_creates_no_version_and_keeps_the_engine()
+    public async Task Unchanged_settings_file_gives_no_notice()
     {
         await using var gateway = new Gateway();
         await gateway.InitializeAsync();
         var engine = gateway.App.Services.GetRequiredService<Waf.Engine.WafEngineHolder>().Current;
 
-        await gateway.Reloader.ReloadAsync(Ct);
+        await gateway.Watcher.CheckAsync(Ct);
 
+        Assert.Null(gateway.Status.AppSettingsNotice);
         Assert.Equal(1, await gateway.Store.CountAsync(Ct));
         Assert.Same(engine, gateway.App.Services.GetRequiredService<Waf.Engine.WafEngineHolder>().Current);
     }

@@ -33,18 +33,19 @@ public sealed class StorageTests
     }
 
     [Fact]
-    public async Task Restart_with_the_same_configuration_adds_no_version_and_a_change_adds_one()
+    public async Task Restart_keeps_the_stored_configuration_even_when_appsettings_changed()
     {
+        // The configuration database is the source of truth: appsettings only seeds the first start.
         await using var backend = await BackendServer.StartAsync("A");
         var dataDirectory = GatewayFixture.NewDataDirectory();
         try
         {
             await RunOnceAsync(backend.Port, "first", dataDirectory);
             await RunOnceAsync(backend.Port, "first", dataDirectory);
-            var afterSecondStart = await RunOnceAsync(backend.Port, "renamed", dataDirectory);
+            var afterChangedAppSettings = await RunOnceAsync(backend.Port, "renamed", dataDirectory);
 
-            Assert.Equal(2, afterSecondStart.Version);
-            Assert.Equal("renamed", Assert.Single(afterSecondStart.Configuration.Routes).Name);
+            Assert.Equal(1, afterChangedAppSettings.Version);
+            Assert.Equal("first", Assert.Single(afterChangedAppSettings.Configuration.Routes).Name);
         }
         finally
         {

@@ -12,6 +12,9 @@ public sealed class ProxyRouteOptions
     /// <summary>Unique route name (letters, digits, '-', '_' and '.').</summary>
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>Disabled routes are kept in the configuration but not used: their requests get 404.</summary>
+    public bool Enabled { get; set; } = true;
+
     /// <summary>Which requests this route handles.</summary>
     public RouteMatchOptions Match { get; set; } = new();
 

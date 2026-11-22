@@ -1,0 +1,111 @@
+@page "/routes"
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>Routes · @ProductInfo.Name</PageTitle>
+
+<h1>
+    Routes
+    <HelpTip Title="Routes">
+        <p>A route decides which backend receives a request, based on the host name, the path and the method. Requests that match no route get 404. When several routes match, the most specific path wins.</p>
+    </HelpTip>
+</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved</div>
+}
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>The change was not applied.</strong>
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<p><a class="button" href="routes/new">Add a route</a></p>
+
+@if (_active is not null && _active.Configuration.Routes.Count == 0)
+{
+    <p>No routes yet: every public request gets 404. Add a route to forward traffic to a backend.</p>
+}
+else if (_active is not null)
+{
+    <table>
+        <thead>
+            <tr><th scope="col">Name</th><th scope="col">Handles</th><th scope="col">Forwards to</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var route in _active.Configuration.Routes)
+            {
+                var name = route.Name;
+                <tr class="@(route.Enabled ? null : "disabled")">
+                    <td>@name</td>
+                    <td>@Describe.Match(route.Match)</td>
+                    <td>@Describe.Destinations(route.Destinations)</td>
+                    <td>
+                        @if (route.Enabled)
+                        {
+                            <span class="badge badge-ok">Enabled</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-muted">Disabled</span>
+                        }
+                    </td>
+                    <td><div class="row-actions">
+                        <a href="@($"routes/{Uri.EscapeDataString(name)}/edit")">Edit</a>
+                        <form method="post" @formname="@($"toggle-{name}")" @onsubmit="() => ToggleAsync(name)" data-enhance>
+                            <AntiforgeryToken />
+                            <button type="submit" class="link-button">@(route.Enabled ? "Disable" : "Enable")</button>
+                        </form>
+                        <a href="@($"routes/{Uri.EscapeDataString(name)}/delete")">Delete</a>
+                    </div></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private StoredConfiguration? _active;
+    private IReadOnlyList<string> _errors = [];
+
+    /// <summary>Confirmation shown after a change, e.g. "Route 'api' saved as version 4."</summary>
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
+    protected override async Task OnInitializedAsync() =>
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+
+    private async Task ToggleAsync(string name)
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        var route = configuration.Routes.FirstOrDefault(r => r.Name == name);
+        if (route is null)
+        {
+            _errors = [$"Route '{name}' no longer exists."];
+            return;
+        }
+
+        route.Enabled = !route.Enabled;
+        var verb = route.Enabled ? "enabled" : "disabled";
+        var result = await Configurations.ActivateIfCurrentAsync(active.Version, configuration, "admin UI", $"Route '{name}' {verb}.", CancellationToken.None);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo($"routes?saved={Uri.EscapeDataString($"Route '{name}' {verb} (version {result.Version!.Version}).")}");
+        }
+        else
+        {
+            _errors = result.Errors;
+            _active = await Configurations.GetActiveAsync(CancellationToken.None);
+        }
+    }
+}

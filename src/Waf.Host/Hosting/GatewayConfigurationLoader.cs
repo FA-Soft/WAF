@@ -20,6 +20,25 @@ internal static class GatewayConfigurationLoader
     /// <summary>Keys of the Gateway section that are not part of <see cref="GatewayConfiguration"/>.</summary>
     private static readonly string[] HostKeys = ["Endpoints", "Storage"];
 
+    /// <summary>
+    /// Fingerprint (SHA-256, hex) of the configuration part of the Gateway section, i.e. without the host-only
+    /// keys (Endpoints, Storage). Computed from the raw settings, so it also works for invalid configurations.
+    /// </summary>
+    public static string Fingerprint(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var lines = configuration.GetSection(SectionName).AsEnumerable(makePathsRelative: true)
+            .Where(pair => pair.Value is not null)
+            .Where(pair => !HostKeys.Any(key => pair.Key.Equals(key, StringComparison.OrdinalIgnoreCase)
+                || pair.Key.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase)))
+            .Select(pair => $"{pair.Key.ToUpperInvariant()}={pair.Value}")
+            .Order(StringComparer.Ordinal);
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(string.Join('\n', lines));
+        return Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes));
+    }
+
     /// <exception cref="OptionsValidationException">The configuration cannot be read or is invalid.</exception>
     public static GatewayConfiguration Load(IConfiguration configuration)
     {
