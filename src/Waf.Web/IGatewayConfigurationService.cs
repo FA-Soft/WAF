@@ -12,6 +12,16 @@ public sealed record ActivationResult(bool Succeeded, IReadOnlyList<string> Erro
     public static ActivationResult Failed(IEnumerable<string> errors) => new(false, [.. errors], null);
 }
 
+/// <summary>Outcome of restoring a full backup.</summary>
+/// <param name="Succeeded">True when the backup's history is stored and its active version is running.</param>
+/// <param name="Errors">Why it was refused, in plain language; empty on success.</param>
+/// <param name="ActiveVersion">The version that is now active; null on failure.</param>
+/// <param name="SafetyCopyPath">Where the database was copied before it was replaced; null on failure.</param>
+public sealed record RestoreResult(bool Succeeded, IReadOnlyList<string> Errors, long? ActiveVersion, string? SafetyCopyPath)
+{
+    public static RestoreResult Failed(IEnumerable<string> errors) => new(false, [.. errors], null, null);
+}
+
 /// <summary>
 /// Changes the running configuration. Implemented by the host: every change is validated, stored as a new
 /// version and swapped in without a restart; on any failure the running configuration stays as it was.
@@ -29,6 +39,19 @@ public interface IGatewayConfigurationService
     /// version; otherwise the change is refused, so a concurrent change is never overwritten unseen.
     /// </summary>
     Task<ActivationResult> ActivateIfCurrentAsync(long baseVersion, GatewayConfiguration candidate, string author, string? comment, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Activates the configuration of an earlier version again, stored as a new version, but only when
+    /// <paramref name="baseVersion"/> is still the running version.
+    /// </summary>
+    Task<ActivationResult> RollbackAsync(long version, long baseVersion, string author, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Replaces the whole configuration history with <paramref name="backup"/> and activates its active version.
+    /// Secret values left out of the backup are taken from the running configuration. Everything is checked
+    /// first; the current database is copied next to it before it is replaced.
+    /// </summary>
+    Task<RestoreResult> RestoreBackupAsync(GatewayBackup backup, string author, CancellationToken cancellationToken);
 
     /// <summary>Activates the edited appsettings configuration (see the appsettings notice).</summary>
     Task<ActivationResult> ImportAppSettingsAsync(string author, CancellationToken cancellationToken);

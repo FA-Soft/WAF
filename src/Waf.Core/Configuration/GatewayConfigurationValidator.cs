@@ -273,6 +273,12 @@ public static class GatewayConfigurationValidator
             return;
         }
 
+        if (value == ConfigurationSecrets.Placeholder)
+        {
+            errors.Add($"{where}: the secret value was left out when the configuration was exported. Enter the real value.");
+            return;
+        }
+
         switch (condition.Operator)
         {
             case ConditionOperator.InCidr:

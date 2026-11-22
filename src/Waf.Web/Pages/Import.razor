@@ -1,0 +1,160 @@
+@page "/import"
+@using Microsoft.AspNetCore.Http
+@using System.Text
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>Import a configuration · @ProductInfo.Name</PageTitle>
+
+<p><a href="backup">← Backup and import</a></p>
+<h1>Import a configuration</h1>
+
+@if (_active is null)
+{
+    <div class="alert alert-danger" role="alert">No configuration is active yet.</div>
+}
+else
+{
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>The configuration was not imported.</strong> The running configuration is unchanged.
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (_notice is not null)
+    {
+        <div class="alert alert-warning" role="alert">@_notice</div>
+    }
+
+    <EditForm Model="Model" FormName="import-config" OnSubmit="HandleAsync" Enhance enctype="multipart/form-data" class="form">
+        <input type="hidden" name="Model.PreviewTag" value="@_preview?.Tag" />
+
+        <fieldset>
+            <legend>Configuration file</legend>
+            <div class="field">
+                <label for="config-file">Choose a file</label>
+                <p class="field-help" id="config-file-help">A JSON file exported from the gateway (at most @(ConfigurationImport.MaxBytes / (1024 * 1024)) MB).</p>
+                <input type="file" id="config-file" name="configFile" accept=".json,application/json" aria-describedby="config-file-help" />
+            </div>
+            <details class="advanced" open="@(!string.IsNullOrEmpty(Model!.Json))">
+                <summary>Or paste the JSON</summary>
+                <FormField Id="json" Label="Configuration JSON" Help="The contents of an exported file. After checking a file, its contents are shown here." For="() => Model.Json">
+                    <InputTextArea id="json" aria-describedby="json-help" @bind-Value="Model.Json" rows="12" class="code" spellcheck="false" />
+                </FormField>
+            </details>
+            <button type="submit" name="Model.Command" value="preview" class="button button-secondary">Check the file</button>
+        </fieldset>
+
+        @if (_preview is not null)
+        {
+            <section class="preview" aria-labelledby="preview-heading" aria-live="polite">
+                <h2 id="preview-heading">Preview: what will change</h2>
+
+                @if (_preview.Errors.Count > 0)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <strong>This file cannot be imported:</strong>
+                        <ul>
+                            @foreach (var error in _preview.Errors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else if (_preview.Changes.Count == 0)
+                {
+                    <div class="alert alert-ok" role="status">Nothing to change: the file is identical to the running configuration.</div>
+                }
+                else
+                {
+                    @if (_preview.KeptSecrets > 0)
+                    {
+                        <p class="muted">The file was exported without secrets: @_preview.KeptSecrets secret value@(_preview.KeptSecrets == 1 ? " is" : "s are") kept from the running configuration.</p>
+                    }
+
+                    <ChangeList Changes="_preview.Changes" Before="_active.Configuration" After="_preview.Candidate!" />
+                    <p class="muted">Importing creates version @(_active.Version + 1) and takes effect immediately, without a restart. You can roll it back on the <a href="history">history page</a>.</p>
+                }
+            </section>
+        }
+
+        <div class="actions">
+            @if (_preview?.CanApply == true)
+            {
+                <button type="submit" name="Model.Command" value="apply" class="button">Import these changes</button>
+            }
+            <a class="button button-secondary" href="backup">Cancel</a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private StoredConfiguration? _active;
+    private ImportPreview? _preview;
+    private IReadOnlyList<string> _errors = [];
+    private string? _notice;
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromForm(FormName = "import-config")]
+    private ImportFormModel? Model { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model ??= new ImportFormModel();
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+    }
+
+    private async Task HandleAsync()
+    {
+        var model = Model!;
+        var file = HttpContext?.Request.HasFormContentType == true ? HttpContext.Request.Form.Files.GetFile("configFile") : null;
+        if (file is { Length: > 0 })
+        {
+            if (file.Length > ConfigurationImport.MaxBytes)
+            {
+                _errors = [$"The file is larger than {ConfigurationImport.MaxBytes / (1024 * 1024)} MB."];
+                return;
+            }
+
+            using var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            model.Json = await reader.ReadToEndAsync();
+        }
+
+        var active = _active!;
+        _preview = ConfigurationImport.Preview(model.Json, active.Configuration);
+
+        if (model.Command == "apply" && _preview.CanApply)
+        {
+            if (_preview.Tag != model.PreviewTag)
+            {
+                _notice = "The file or the running configuration changed since the preview. Check the updated preview below, then import again.";
+            }
+            else
+            {
+                var result = await Configurations.ActivateIfCurrentAsync(active.Version, _preview.Candidate!, "admin UI", "Imported from a file.", CancellationToken.None);
+                if (result.Succeeded)
+                {
+                    Navigation.NavigateTo($"history?saved={Uri.EscapeDataString($"Configuration imported (version {result.Version!.Version}).")}");
+                    return;
+                }
+
+                _errors = result.Errors;
+                _active = await Configurations.GetActiveAsync(CancellationToken.None);
+                _preview = ConfigurationImport.Preview(model.Json, _active!.Configuration);
+            }
+        }
+
+        model.Command = null;
+    }
+
+}

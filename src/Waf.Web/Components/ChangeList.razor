@@ -1,0 +1,52 @@
+@* The differences between two configurations, in plain language, with the JSON of each item on request. *@
+
+<ul class="changes">
+    @foreach (var change in Changes)
+    {
+        <li class="change">
+            <span class="badge @KindBadge(change.Kind)">@change.Kind</span>
+            <strong>@Describe.ChangeTitle(change)</strong>
+            @if (Describe.ChangeNote(change, Before, After) is { Length: > 0 } note)
+            {
+                <span class="muted cell-note">@note</span>
+            }
+            <span class="change-detail">@Describe.ChangeDetail(change, Before, After)</span>
+            @if (change.Section != ConfigurationSection.Settings)
+            {
+                <details class="advanced">
+                    <summary>Show as configuration</summary>
+                    <div class="change-json">
+                        @if (change.Before is not null)
+                        {
+                            <div><span class="muted">Before</span><pre>@change.Before</pre></div>
+                        }
+                        @if (change.After is not null)
+                        {
+                            <div><span class="muted">After</span><pre>@change.After</pre></div>
+                        }
+                    </div>
+                </details>
+            }
+        </li>
+    }
+</ul>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ConfigurationChange> Changes { get; set; } = [];
+
+    /// <summary>The configuration before the changes.</summary>
+    [Parameter, EditorRequired]
+    public GatewayConfiguration Before { get; set; } = null!;
+
+    /// <summary>The configuration after the changes.</summary>
+    [Parameter, EditorRequired]
+    public GatewayConfiguration After { get; set; } = null!;
+
+    private static string KindBadge(ChangeKind kind) => kind switch
+    {
+        ChangeKind.Added => "badge-ok",
+        ChangeKind.Removed => "badge-danger",
+        _ => "badge-warning",
+    };
+}

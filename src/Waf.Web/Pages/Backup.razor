@@ -1,0 +1,144 @@
+@page "/backup"
+@using Microsoft.AspNetCore.Http
+@inject IGatewayConfigurationService Configurations
+@inject ConfigurationStore Store
+
+<PageTitle>Backup and import · @ProductInfo.Name</PageTitle>
+
+<h1>
+    Backup and import
+    <HelpTip Title="Backup and import">
+        <p><strong>Export</strong> saves the active configuration as a JSON file, for example to copy it to another gateway. <strong>Import</strong> loads such a file; you see what changes before it is applied.</p>
+        <p>A <strong>backup</strong> holds every configuration version. <strong>Restore</strong> replaces the whole history with the backup's, for example on a new server.</p>
+        <p>Secret values, such as the API keys in header conditions, are left out unless you tick "Include secrets". When a file without secrets is imported, the gateway keeps the values it already has.</p>
+    </HelpTip>
+</h1>
+
+@if (_active is null)
+{
+    <div class="alert alert-danger" role="alert">No configuration is active yet.</div>
+}
+else
+{
+    <section class="card section" aria-labelledby="export-heading">
+        <h2 id="export-heading">Export the configuration</h2>
+        <p>Downloads version @_active.Version (the active configuration) as a JSON file. Older versions can be exported from the <a href="history">history</a>.</p>
+        <form method="post" action="export/configuration">
+            <AntiforgeryToken />
+            <SecretsCheckbox Id="export-secrets" Count="_secrets" />
+            <button type="submit" class="button">Download configuration (JSON)</button>
+        </form>
+    </section>
+
+    <section class="card section" aria-labelledby="import-heading">
+        <h2 id="import-heading">Import a configuration</h2>
+        <p>Load a JSON file exported from this or another gateway. You see exactly what will change before anything is applied, and the import becomes a new version you can roll back.</p>
+        <a class="button button-secondary" href="import">Import a file…</a>
+    </section>
+
+    <section class="card section" aria-labelledby="backup-heading">
+        <h2 id="backup-heading">Full backup</h2>
+        <p>Downloads all @_versionCount configuration versions and which one is active, as a .zip file.</p>
+        <form method="post" action="export/backup">
+            <AntiforgeryToken />
+            <SecretsCheckbox Id="backup-secrets" Count="_secrets" />
+            <button type="submit" class="button">Download backup (.zip)</button>
+        </form>
+    </section>
+
+    <section class="card section" aria-labelledby="restore-heading">
+        <h2 id="restore-heading">Restore a backup</h2>
+
+        @if (_restored is { Succeeded: true })
+        {
+            <div class="alert alert-ok" role="status">
+                <strong>Backup restored.</strong> Version @_restored.ActiveVersion is active. The previous database was saved as <code>@_restored.SafetyCopyPath</code>.
+                <a href="history">View the history</a>.
+            </div>
+        }
+        else if (_restored is not null)
+        {
+            <div class="alert alert-danger" role="alert">
+                <strong>The backup was not restored.</strong> Nothing was changed.
+                <ul>
+                    @foreach (var error in _restored.Errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <p>Replaces <strong>all</strong> configuration versions with those in the backup and activates the backup's active version. Everything is checked first; if anything is wrong, nothing changes. A copy of the current database is kept next to it.</p>
+        <EditForm Model="Restore" FormName="restore-backup" OnSubmit="RestoreAsync" Enhance enctype="multipart/form-data" class="form">
+            <div class="field">
+                <label for="backup-file">Backup file (.zip)</label>
+                <input type="file" id="backup-file" name="backupFile" accept=".zip,application/zip" required />
+            </div>
+            <div class="field checkbox-field">
+                <InputCheckbox id="restore-confirm" @bind-Value="Restore!.Confirm" aria-describedby="restore-confirm-help" />
+                <label for="restore-confirm">Replace the current configuration and its history</label>
+                <p class="field-help" id="restore-confirm-help">Changes made after the backup was taken are no longer in the history (they stay in the copy of the database).</p>
+            </div>
+            <button type="submit" class="button button-danger">Restore backup</button>
+        </EditForm>
+    </section>
+}
+
+@code {
+    private StoredConfiguration? _active;
+    private int _secrets;
+    private int _versionCount;
+    private RestoreResult? _restored;
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromForm(FormName = "restore-backup")]
+    private RestoreFormModel? Restore { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Restore ??= new RestoreFormModel();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _secrets = _active is null ? 0 : ConfigurationSecrets.Count(_active.Configuration);
+        _versionCount = await Store.CountAsync(CancellationToken.None);
+    }
+
+    private async Task RestoreAsync()
+    {
+        var file = HttpContext?.Request.HasFormContentType == true ? HttpContext.Request.Form.Files.GetFile("backupFile") : null;
+        if (file is null || file.Length == 0)
+        {
+            _restored = RestoreResult.Failed(["Choose a backup file."]);
+            return;
+        }
+
+        if (!Restore!.Confirm)
+        {
+            _restored = RestoreResult.Failed(["Tick \"Replace the current configuration and its history\" to confirm."]);
+            return;
+        }
+
+        BackupReadResult read;
+        await using (var stream = file.OpenReadStream())
+        using (var buffer = new MemoryStream())
+        {
+            await stream.CopyToAsync(buffer);
+            buffer.Position = 0;
+            read = BackupArchive.Read(buffer);
+        }
+
+        _restored = read.Backup is null
+            ? RestoreResult.Failed(read.Errors)
+            : await Configurations.RestoreBackupAsync(read.Backup, "admin UI (backup restore)", CancellationToken.None);
+        Restore.Confirm = false;
+        await LoadAsync();
+    }
+
+}
