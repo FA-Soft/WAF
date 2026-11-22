@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Rule evaluation, attack detectors and rate limiter.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
+  </ItemGroup>
+
+</Project>

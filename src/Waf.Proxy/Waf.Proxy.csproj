@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>YARP integration, middleware, certificates and ACME.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
+    <ProjectReference Include="../Waf.Engine/Waf.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

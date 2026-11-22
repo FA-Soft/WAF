@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>AI provider interface and proposal schema.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
+  </ItemGroup>
+
+</Project>
