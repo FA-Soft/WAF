@@ -159,6 +159,17 @@ deploy/windows    Install.ps1, firewall and IIS detection
 deploy/linux      install.sh, systemd unit, UFW notes
 ```
 
+## Building from source
+
+Requires the [.NET 11 SDK](https://dotnet.microsoft.com/download) (pinned in `global.json`).
+
+```bash
+dotnet build WafGateway.sln
+dotnet test --solution WafGateway.sln
+```
+
+Shared build settings live in `Directory.Build.props` (nullable, analyzers, warnings as errors) and NuGet versions in `Directory.Packages.props` (central package management). Tests use xUnit v3 on Microsoft.Testing.Platform.
+
 ## Roadmap
 
 | Milestone | Scope |

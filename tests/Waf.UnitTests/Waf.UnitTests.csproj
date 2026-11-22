@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Waf.Core/Waf.Core.csproj" />
+    <ProjectReference Include="../../src/Waf.Engine/Waf.Engine.csproj" />
+    <ProjectReference Include="../../src/Waf.Proxy/Waf.Proxy.csproj" />
+    <ProjectReference Include="../../src/Waf.Data/Waf.Data.csproj" />
+    <ProjectReference Include="../../src/Waf.Ai/Waf.Ai.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

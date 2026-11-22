@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <Description>Gateway host: startup, Kestrel and service hosting.</Description>
+    <AssemblyName>WafGateway</AssemblyName>
+    <RootNamespace>Waf.Host</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
+    <ProjectReference Include="../Waf.Engine/Waf.Engine.csproj" />
+    <ProjectReference Include="../Waf.Proxy/Waf.Proxy.csproj" />
+    <ProjectReference Include="../Waf.Data/Waf.Data.csproj" />
+    <ProjectReference Include="../Waf.Ai/Waf.Ai.csproj" />
+    <ProjectReference Include="../Waf.Web/Waf.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Waf.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

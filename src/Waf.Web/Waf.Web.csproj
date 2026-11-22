@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <Description>Blazor admin UI, identity, log viewer and sample library.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
+    <ProjectReference Include="../Waf.Data/Waf.Data.csproj" />
+    <ProjectReference Include="../Waf.Ai/Waf.Ai.csproj" />
+  </ItemGroup>
+
+</Project>
