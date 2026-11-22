@@ -36,6 +36,7 @@ internal static class AdminPipeline
             endpoints.MapStaticAssets();
             endpoints.MapHealthChecks("/healthz");
             endpoints.MapAdminDownloads();
+            endpoints.MapLogEndpoints();
             endpoints.MapRazorComponents<App>();
         });
     }

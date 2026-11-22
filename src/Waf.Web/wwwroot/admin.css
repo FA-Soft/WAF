@@ -230,7 +230,7 @@ tr.disabled td { color: var(--muted); }
 .field-help { margin: 0 0 0.35rem; color: var(--muted); font-size: 0.9rem; }
 .field-error, .validation-message { color: var(--danger); font-size: 0.9rem; margin-top: 0.25rem; }
 
-input[type="text"], input:not([type]), select, textarea {
+input[type="text"], input[type="search"], input[type="number"], input:not([type]), select, textarea {
     width: 100%;
     padding: 0.5rem 0.6rem;
     font: inherit;
@@ -325,3 +325,23 @@ input[type="number"] { width: 100%; padding: 0.5rem 0.6rem; font: inherit; color
 .section h2 { color: var(--text); font-size: 1.1rem; }
 .section form { margin: 0; }
 textarea.code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.85rem; width: 100%; }
+
+/* Request log */
+.log-filter { max-width: none; margin-bottom: 0.5rem; }
+.log-filter .field { min-width: 160px; }
+.field-wide { flex: 2; min-width: 260px; }
+.inline-label { font-weight: 600; }
+.log-filter .actions select { width: auto; }
+.log-toolbar { display: flex; gap: 1rem; align-items: center; margin: 0.5rem 0; min-height: 1.5rem; }
+.live-toggle { display: inline-flex; gap: 0.4rem; align-items: center; font-weight: 600; }
+.live-toggle[hidden] { display: none; }
+.table-scroll { overflow-x: auto; }
+.log-table { font-size: 0.9rem; }
+.log-table td { vertical-align: top; }
+.nowrap { white-space: nowrap; }
+.method { font-weight: 700; margin-right: 0.25rem; }
+.path { display: block; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.85rem; word-break: break-all; color: var(--muted); }
+.log-request { max-width: 420px; }
+.pager { display: flex; gap: 0.5rem; justify-content: flex-end; margin: 0.75rem 0; }
+@keyframes live-new { from { background: var(--info-bg); } to { background: transparent; } }
+.live-new { animation: live-new 3s ease-out; }

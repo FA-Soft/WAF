@@ -3,6 +3,7 @@
 Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the example configuration (`schemas/gateway-config.example.json`) plus a few changes made through the UI, so the history has several versions.
 
 - [Dashboard](#dashboard)
+- [Request log](#request-log)
 - [Routes](#routes)
 - [Rules](#rules)
 - [Rate limits](#rate-limits)
@@ -16,6 +17,20 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 The firewall state, the active configuration version, and the routes, rules, rate limits and attack detection in plain language.
 
 ![Dashboard](images/admin-dashboard.png)
+
+## Request log
+
+Every public request, newest first, with filters, free-text search and a live view.
+
+![Request log](images/admin-logs.png)
+
+Only the blocked requests, with the rule that blocked each one.
+
+![Blocked requests](images/admin-logs-blocked.png)
+
+One entry in detail: an SQL injection blocked by attack detection.
+
+![Log entry](images/admin-log-entry.png)
 
 ## Routes
 
