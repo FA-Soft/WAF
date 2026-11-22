@@ -65,6 +65,34 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Fingerprint of the appsettings Gateway section last imported or dismissed; null if never recorded.</summary>
+    public async Task<string?> GetAppSettingsFingerprintAsync(CancellationToken cancellationToken)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await db.ConfigurationState.AsNoTracking()
+            .Where(s => s.Id == ConfigurationState.SingletonId)
+            .Select(s => s.AppSettingsFingerprint)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Records the fingerprint of the appsettings Gateway section (after an import or dismissal).</summary>
+    public async Task SetAppSettingsFingerprintAsync(string fingerprint, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(fingerprint);
+
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var state = await db.ConfigurationState.FirstOrDefaultAsync(s => s.Id == ConfigurationState.SingletonId, cancellationToken).ConfigureAwait(false);
+        if (state is null)
+        {
+            state = new ConfigurationState();
+            db.ConfigurationState.Add(state);
+        }
+
+        state.AppSettingsFingerprint = fingerprint;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>The newest versions first (metadata and configuration), at most <paramref name="take"/>.</summary>
     public async Task<IReadOnlyList<StoredConfiguration>> GetHistoryAsync(int take, CancellationToken cancellationToken)
     {

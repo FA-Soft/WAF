@@ -1,28 +1,34 @@
+using Waf.Core.Configuration;
+
 namespace Waf.Engine;
 
 /// <summary>
-/// Whether the configuration in appsettings is the one running. When a change was rejected (at startup or
-/// on reload), the last-known-good keeps running and this records why. Thread-safe.
+/// The configuration in appsettings was edited since it was last imported or dismissed. The configuration
+/// database is the source of truth, so the edit is not applied; an administrator can import it (it then goes
+/// through the usual checks) or dismiss it.
 /// </summary>
+/// <param name="Fingerprint">Fingerprint of the edited appsettings Gateway section.</param>
+/// <param name="Candidate">The edited configuration, or null when it is not valid.</param>
+/// <param name="Errors">Why it is not valid; empty when it is.</param>
+/// <param name="DetectedAt">When the edit was noticed.</param>
+public sealed record AppSettingsNotice(string Fingerprint, GatewayConfiguration? Candidate, IReadOnlyList<string> Errors, DateTimeOffset DetectedAt)
+{
+    public bool CanImport => Candidate is not null && Errors.Count == 0;
+}
+
+/// <summary>Holds the current <see cref="AppSettingsNotice"/>, if any. Thread-safe.</summary>
 public sealed class ConfigurationStatus
 {
-    private Snapshot _snapshot = new(null, [], null);
+    private AppSettingsNotice? _notice;
 
-    /// <summary>Where the rejected configuration came from; null when nothing is rejected.</summary>
-    public string? RejectedSource => Volatile.Read(ref _snapshot).Source;
+    /// <summary>The pending notice, or null when appsettings has not been edited since the last import/dismissal.</summary>
+    public AppSettingsNotice? AppSettingsNotice => Volatile.Read(ref _notice);
 
-    /// <summary>Why it was rejected; empty when nothing is rejected.</summary>
-    public IReadOnlyList<string> RejectedErrors => Volatile.Read(ref _snapshot).Errors;
+    public void SetNotice(AppSettingsNotice notice)
+    {
+        ArgumentNullException.ThrowIfNull(notice);
+        Volatile.Write(ref _notice, notice);
+    }
 
-    /// <summary>When it was rejected.</summary>
-    public DateTimeOffset? RejectedAt => Volatile.Read(ref _snapshot).At;
-
-    public bool HasRejection => RejectedSource is not null;
-
-    public void Rejected(string source, IReadOnlyList<string> errors, DateTimeOffset at) =>
-        Volatile.Write(ref _snapshot, new Snapshot(source, [.. errors], at));
-
-    public void Accepted() => Volatile.Write(ref _snapshot, new Snapshot(null, [], null));
-
-    private sealed record Snapshot(string? Source, IReadOnlyList<string> Errors, DateTimeOffset? At);
+    public void ClearNotice() => Volatile.Write(ref _notice, null);
 }

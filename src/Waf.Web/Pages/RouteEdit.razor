@@ -1,0 +1,224 @@
+@page "/routes/new"
+@page "/routes/{RouteName}/edit"
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>@(IsNew ? "Add a route" : $"Edit route {RouteName}") · @ProductInfo.Name</PageTitle>
+
+<p><a href="routes">← Routes</a></p>
+<h1>@(IsNew ? "Add a route" : $"Edit route '{RouteName}'")</h1>
+
+@if (_notFound)
+{
+    <div class="alert alert-danger" role="alert">Route '@RouteName' does not exist (any more). <a href="routes">Back to the routes</a>.</div>
+}
+else if (Model is not null)
+{
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert" tabindex="-1">
+            <strong>The route was not saved.</strong> The running configuration is unchanged.
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <EditForm Model="Model" FormName="route-edit" OnValidSubmit="SaveAsync" Enhance class="form">
+        <DataAnnotationsValidator />
+        <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
+        <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
+
+        <fieldset>
+            <legend>Name</legend>
+            @if (Model.IsNew)
+            {
+                <FormField Id="name" Label="Name" Help="A short, unique name, e.g. website or api. Rules can refer to it; it cannot be changed later." For="() => Model.Name">
+                    <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
+                </FormField>
+            }
+            else
+            {
+                <p><strong>@Model.Name</strong> <span class="muted">(the name cannot be changed because rules may refer to it)</span></p>
+                <input type="hidden" name="Model.Name" value="@Model.Name" />
+            }
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="enabled" @bind-Value="Model.Enabled" />
+                <label for="enabled">Enabled</label>
+                <p class="field-help">A disabled route is kept but not used: its requests get 404.</p>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>
+                Which requests
+                <HelpTip Title="Which requests">
+                    <p>All conditions you fill in must match. Leave the host names empty and the path at / to handle every request. When several routes match, the one with the most specific path wins.</p>
+                </HelpTip>
+            </legend>
+
+            <FormField Id="hosts" Label="Host names" Optional Help="One per line, e.g. www.example.com or *.example.com for all subdomains. Empty: any host name." For="() => Model.Hosts">
+                <InputTextArea id="hosts" aria-describedby="hosts-help" @bind-Value="Model.Hosts" rows="3" />
+            </FormField>
+
+            <FormField Id="path" Label="Path prefix" Help="Handles this path and everything below it: /api matches /api and /api/users, not /apix. Use / for all paths." For="() => Model.PathPrefix">
+                <InputText id="path" aria-describedby="path-help" @bind-Value="Model.PathPrefix" autocomplete="off" />
+            </FormField>
+
+            <div class="field" role="group" aria-labelledby="methods-label" aria-describedby="methods-help">
+                <span class="label" id="methods-label">Methods <span class="field-optional">(optional)</span></span>
+                <p class="field-help" id="methods-help">Only these methods. None ticked: every method.</p>
+                <div class="checkbox-row">
+                    <label><InputCheckbox @bind-Value="Model.MethodGet" /> GET</label>
+                    <label><InputCheckbox @bind-Value="Model.MethodPost" /> POST</label>
+                    <label><InputCheckbox @bind-Value="Model.MethodPut" /> PUT</label>
+                    <label><InputCheckbox @bind-Value="Model.MethodPatch" /> PATCH</label>
+                    <label><InputCheckbox @bind-Value="Model.MethodDelete" /> DELETE</label>
+                    <label><InputCheckbox @bind-Value="Model.MethodHead" /> HEAD</label>
+                    <label><InputCheckbox @bind-Value="Model.MethodOptions" /> OPTIONS</label>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>
+                Where to
+                <HelpTip Title="Backends">
+                    <p>The server(s) that answer the requests. With several backends, requests are spread over them, and a backend that stops answering is skipped.</p>
+                </HelpTip>
+            </legend>
+
+            <FormField Id="destinations" Label="Backends" Help="One address per line: http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http)." For="() => Model.Destinations">
+                <InputTextArea id="destinations" aria-describedby="destinations-help" @bind-Value="Model.Destinations" rows="3" />
+            </FormField>
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="preserve-host" @bind-Value="Model.PreserveHost" aria-describedby="preserve-host-help" />
+                <label for="preserve-host">Send the original host name to the backend</label>
+                <p class="field-help" id="preserve-host-help">Keep this on for IIS and other servers that host several sites. Off: the backend receives its own address as host name.</p>
+            </div>
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="allow-invalid-cert" @bind-Value="Model.AllowInvalidBackendCertificate" aria-describedby="allow-invalid-cert-help" />
+                <label for="allow-invalid-cert">Accept a self-signed certificate from https:// backends</label>
+                <p class="field-help" id="allow-invalid-cert-help">Only for backends you control on a trusted network, e.g. a local IIS with a self-signed certificate.</p>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>
+                Health check
+                <HelpTip Title="Health check">
+                    <p>With a path, the gateway regularly requests it on each backend and stops sending traffic to a backend that does not answer. Backends that fail real requests are always skipped for a while.</p>
+                </HelpTip>
+            </legend>
+
+            <FormField Id="health-path" Label="Health check path" Optional Help="e.g. /health. Empty: no active health check." For="() => Model.HealthCheckPath">
+                <InputText id="health-path" aria-describedby="health-path-help" @bind-Value="Model.HealthCheckPath" autocomplete="off" />
+            </FormField>
+
+            <div class="field-row">
+                <FormField Id="health-interval" Label="Check every (seconds)" For="() => Model.HealthCheckIntervalSeconds">
+                    <InputNumber id="health-interval" @bind-Value="Model.HealthCheckIntervalSeconds" min="1" max="3600" />
+                </FormField>
+                <FormField Id="health-timeout" Label="Time-out (seconds)" For="() => Model.HealthCheckTimeoutSeconds">
+                    <InputNumber id="health-timeout" @bind-Value="Model.HealthCheckTimeoutSeconds" min="1" max="3600" />
+                </FormField>
+            </div>
+        </fieldset>
+
+        <div class="actions">
+            <button type="submit" class="button">@(Model.IsNew ? "Add route" : "Save changes")</button>
+            <a class="button button-secondary" href="routes">Cancel</a>
+        </div>
+        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+    </EditForm>
+}
+
+@code {
+    private IReadOnlyList<string> _errors = [];
+    private bool _notFound;
+
+    /// <summary>The route being edited; null when adding a route.</summary>
+    [Parameter]
+    public string? RouteName { get; set; }
+
+    [SupplyParameterFromForm(FormName = "route-edit")]
+    private RouteFormModel? Model { get; set; }
+
+    private bool IsNew => RouteName is null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Model is not null)
+        {
+            return; // posted form
+        }
+
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var version = active?.Version ?? 0;
+        if (IsNew)
+        {
+            Model = RouteFormModel.ForNewRoute(version);
+            return;
+        }
+
+        var route = active?.Configuration.Routes.FirstOrDefault(r => string.Equals(r.Name, RouteName, StringComparison.OrdinalIgnoreCase));
+        if (route is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        Model = RouteFormModel.FromRoute(route, version);
+    }
+
+    private async Task SaveAsync()
+    {
+        var model = Model!;
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        if (active is null)
+        {
+            _errors = ["No configuration is active yet."];
+            return;
+        }
+
+        var configuration = ConfigurationEditing.Clone(active.Configuration);
+        var route = model.ToRoute();
+        var index = configuration.Routes.ToList().FindIndex(r => string.Equals(r.Name, route.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (model.IsNew)
+        {
+            if (index >= 0)
+            {
+                _errors = [$"A route named '{route.Name}' already exists. Choose another name."];
+                return;
+            }
+
+            configuration.Routes.Add(route);
+        }
+        else if (index < 0)
+        {
+            _errors = [$"Route '{route.Name}' no longer exists; it was deleted in the meantime."];
+            return;
+        }
+        else
+        {
+            configuration.Routes[index] = route;
+        }
+
+        var verb = model.IsNew ? "added" : "changed";
+        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, "admin UI", $"Route '{route.Name}' {verb}.", CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"routes?saved={Uri.EscapeDataString($"Route '{route.Name}' {verb} (version {result.Version!.Version}).")}");
+    }
+}

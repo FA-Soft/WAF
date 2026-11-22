@@ -1,0 +1,78 @@
+@*
+    Shown when the Gateway section in appsettings was edited after it was last imported or dismissed. The
+    configuration database is the source of truth, so the edit is not applied until an administrator imports it.
+*@
+@inject ConfigurationStatus Status
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+@if (Status.AppSettingsNotice is { } notice)
+{
+    <div class="alert alert-warning" role="status">
+        <strong>The configuration in appsettings was changed, but it is not used.</strong>
+        <HelpTip Title="Why is it not used?">
+            <p>The configuration you edit in this admin UI is the one that runs. Changes to the Gateway section of appsettings.json are only applied when you import them here, after the usual checks, as a new version you can roll back.</p>
+        </HelpTip>
+        @if (notice.CanImport)
+        {
+            <p>It passed all checks and can be imported. Importing replaces the running configuration (including changes made in this UI).</p>
+        }
+        else
+        {
+            <p>It cannot be imported because it has problems:</p>
+            <ul>
+                @foreach (var error in notice.Errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        }
+
+        @if (_errors.Count > 0)
+        {
+            <ul class="field-error">
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        }
+
+        <div class="actions">
+            @if (notice.CanImport)
+            {
+                <form method="post" @formname="appsettings-import" @onsubmit="ImportAsync" data-enhance>
+                    <AntiforgeryToken />
+                    <button type="submit" class="button">Import from appsettings</button>
+                </form>
+            }
+            <form method="post" @formname="appsettings-dismiss" @onsubmit="DismissAsync" data-enhance>
+                <AntiforgeryToken />
+                <button type="submit" class="button button-secondary">Dismiss</button>
+            </form>
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<string> _errors = [];
+
+    private async Task ImportAsync()
+    {
+        var result = await Configurations.ImportAppSettingsAsync("admin UI (import from appsettings)", CancellationToken.None);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: false);
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+    }
+
+    private async Task DismissAsync()
+    {
+        await Configurations.DismissAppSettingsAsync(CancellationToken.None);
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: false);
+    }
+}

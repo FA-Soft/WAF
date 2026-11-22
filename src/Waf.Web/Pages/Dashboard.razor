@@ -1,7 +1,6 @@
 @page "/"
 @inject WafEngineHolder Engines
 @inject ConfigurationStore Store
-@inject ConfigurationStatus Status
 
 <PageTitle>Dashboard · @ProductInfo.Name</PageTitle>
 
@@ -24,20 +23,7 @@ else if (Engines.Current.DetectionOnly)
     </div>
 }
 
-@if (Status.HasRejection)
-{
-    <div class="alert alert-warning" role="alert">
-        <strong>A configuration change was rejected.</strong>
-        The previous, working configuration is still running. Fix the problems below and save again.
-        <ul>
-            @foreach (var error in Status.RejectedErrors)
-            {
-                <li>@error</li>
-            }
-        </ul>
-        <p class="muted">Source: @Status.RejectedSource, @Status.RejectedAt?.ToString("u", System.Globalization.CultureInfo.InvariantCulture)</p>
-    </div>
-}
+<AppSettingsNoticeBanner />
 
 @if (_active is null)
 {
@@ -87,7 +73,7 @@ else
     </section>
 
     <section aria-labelledby="routes-heading">
-        <h2 id="routes-heading">Routes</h2>
+        <h2 id="routes-heading">Routes <a class="heading-link" href="routes">Manage routes</a></h2>
         @if (configuration.Routes.Count == 0)
         {
             <p>No routes yet: every public request gets 404.</p>

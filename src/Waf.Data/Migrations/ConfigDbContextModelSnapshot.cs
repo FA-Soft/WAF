@@ -15,7 +15,7 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261122145344_AddConfigurationState";
+    public override string LastMigrationId => "20261122155302_AddAppSettingsFingerprint";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -28,6 +28,10 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("INTEGER");
 
                 b.Property<DateTime?>("ActivatedAtUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("AppSettingsFingerprint")
+                    .HasMaxLength(64)
                     .HasColumnType("TEXT");
 
                 b.Property<long?>("LastKnownGoodVersionId")

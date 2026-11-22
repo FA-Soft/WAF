@@ -53,22 +53,21 @@ internal static partial class GatewayApplication
         var gatewayConfiguration = bootstrap.Configuration;
         var configTag = ConfigurationStore.ConfigTag(bootstrap.Version.Sha256);
         var configurationStatus = new ConfigurationStatus();
-        if (bootstrap.UsesLastKnownGood)
+        if (bootstrap.Notice is not null)
         {
-            configurationStatus.Rejected("appsettings at startup", bootstrap.RejectedErrors, TimeProvider.System.GetUtcNow());
+            configurationStatus.SetNotice(bootstrap.Notice);
         }
 
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
         builder.Services.AddRazorComponents();
-        builder.Services.AddHealthChecks()
-            .AddCheck<WafEngineHealthCheck>("waf-engine")
-            .AddCheck<ConfigurationHealthCheck>("configuration");
+        builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
         builder.Services.AddSingleton(storagePaths);
         builder.Services.AddSingleton(store);
         builder.Services.AddSingleton(configurationStatus);
         builder.Services.AddSingleton<GatewayConfigurationService>();
-        builder.Services.AddHostedService<ConfigurationReloadService>();
+        builder.Services.AddSingleton<Waf.Web.IGatewayConfigurationService>(sp => sp.GetRequiredService<GatewayConfigurationService>());
+        builder.Services.AddHostedService<AppSettingsWatcher>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<WafEngineHolder>();
         builder.Services.AddSingleton<IWafEventSink, LoggingWafEventSink>();
@@ -185,29 +184,30 @@ internal static partial class GatewayApplication
 
     private static void LogBootstrap(ILogger logger, BootstrapResult bootstrap, StoragePaths paths)
     {
-        if (bootstrap.UsesLastKnownGood)
-        {
-            LogUsingLastKnownGood(logger, bootstrap.Version.Version, string.Join(" ", bootstrap.RejectedErrors));
-        }
-        else if (bootstrap.Created)
+        if (bootstrap.Seeded)
         {
             LogVersionStored(logger, bootstrap.Version.Version, paths.ConfigDatabasePath);
         }
         else
         {
-            LogVersionUnchanged(logger, bootstrap.Version.Version);
+            LogRunningStoredVersion(logger, bootstrap.Version.Version);
+        }
+
+        if (bootstrap.Notice is { } notice)
+        {
+            LogAppSettingsIgnored(logger, notice.CanImport ? "valid" : "not valid");
         }
     }
 
-    [LoggerMessage(EventId = 10, Level = LogLevel.Information, Message = "Configuration stored as version {Version} in {DatabasePath}.")]
+    [LoggerMessage(EventId = 10, Level = LogLevel.Information, Message = "First start: configuration from appsettings stored as version {Version} in {DatabasePath}.")]
     private static partial void LogVersionStored(ILogger logger, long version, string databasePath);
 
-    [LoggerMessage(EventId = 11, Level = LogLevel.Information, Message = "Configuration unchanged since version {Version}.")]
-    private static partial void LogVersionUnchanged(ILogger logger, long version);
+    [LoggerMessage(EventId = 11, Level = LogLevel.Information, Message = "Running configuration version {Version} from the configuration database.")]
+    private static partial void LogRunningStoredVersion(ILogger logger, long version);
 
-    [LoggerMessage(EventId = 12, Level = LogLevel.Critical,
-        Message = "The configuration in appsettings is invalid and was NOT activated; running the last-known-good version {Version} instead. Errors: {Errors}")]
-    private static partial void LogUsingLastKnownGood(ILogger logger, long version, string errors);
+    [LoggerMessage(EventId = 12, Level = LogLevel.Warning,
+        Message = "The Gateway section in appsettings was edited ({Validity}). It is NOT applied: the configuration database is the source of truth. Import or dismiss the change in the admin UI.")]
+    private static partial void LogAppSettingsIgnored(ILogger logger, string validity);
 
     [LoggerMessage(EventId = 2, Level = LogLevel.Critical, Message = "The WAF engine could not be built; public traffic is refused with 503 until the configuration is fixed.")]
     private static partial void LogEngineUnavailable(ILogger logger, Exception exception);

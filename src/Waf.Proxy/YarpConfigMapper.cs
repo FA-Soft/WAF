@@ -16,7 +16,7 @@ public static class YarpConfigMapper
     /// <summary>Route metadata key holding the configuration tag (see <c>WafEngine.ConfigTag</c>).</summary>
     public const string ConfigTagMetadataKey = "WafConfigTag";
 
-    /// <param name="routes">The routes to translate.</param>
+    /// <param name="routes">The routes to translate; disabled routes are left out.</param>
     /// <param name="configTag">Tag of the configuration the routes belong to; stored in each route's metadata.</param>
     public static (IReadOnlyList<RouteConfig> Routes, IReadOnlyList<ClusterConfig> Clusters) Map(
         IEnumerable<ProxyRouteOptions> routes, string configTag = "")
@@ -26,7 +26,7 @@ public static class YarpConfigMapper
         var yarpRoutes = new List<RouteConfig>();
         var clusters = new List<ClusterConfig>();
 
-        foreach (var route in routes)
+        foreach (var route in routes.Where(r => r.Enabled))
         {
             yarpRoutes.Add(MapRoute(route) with
             {

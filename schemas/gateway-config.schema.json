@@ -122,6 +122,9 @@
           "Name": {
             "type": "string"
           },
+          "Enabled": {
+            "type": "boolean"
+          },
           "Match": {
             "type": "object",
             "properties": {

@@ -60,6 +60,7 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
             entity.ToTable("ConfigurationState");
             entity.HasKey(s => s.Id);
             entity.Property(s => s.Id).ValueGeneratedNever();
+            entity.Property(s => s.AppSettingsFingerprint).HasMaxLength(64);
             entity.HasOne<ConfigurationVersion>()
                 .WithMany()
                 .HasForeignKey(s => s.LastKnownGoodVersionId)
@@ -85,6 +86,12 @@ public sealed class ConfigurationState
 
     /// <summary>When it was activated (UTC).</summary>
     public DateTime? ActivatedAtUtc { get; set; }
+
+    /// <summary>
+    /// Fingerprint of the appsettings Gateway section when it was last imported or dismissed. The database is
+    /// the source of truth; a different fingerprint means appsettings was edited since and is not applied.
+    /// </summary>
+    public string? AppSettingsFingerprint { get; set; }
 }
 
 /// <summary>Used by <c>dotnet ef</c> to create migrations; not used at runtime.</summary>
