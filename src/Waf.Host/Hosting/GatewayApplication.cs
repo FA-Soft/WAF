@@ -149,6 +149,12 @@ internal static partial class GatewayApplication
         // The viewer reads events.db whether or not new requests are logged.
         builder.Services.AddSingleton(new RequestLogReader(paths));
 
+        // Retention runs whether or not new requests are logged, so an existing events.db stays within its limits.
+        builder.Services.AddSingleton(new RequestLogMaintenance(paths));
+        builder.Services.AddSingleton<LogRetentionService>();
+        builder.Services.AddSingleton<Waf.Web.ILogRetention>(sp => sp.GetRequiredService<LogRetentionService>());
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<LogRetentionService>());
+
         var options = builder.Configuration.GetSection(EventLogOptions.SectionName).Get<EventLogOptions>() ?? new EventLogOptions();
         var errors = options.Validate();
         if (errors.Count > 0)

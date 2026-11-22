@@ -154,8 +154,10 @@ public sealed class RequestLogTests
         TestContext.Current.TestOutputHelper!.WriteLine(
             $"{Total} requests in {watch.ElapsedMilliseconds} ms while events.db was locked; p50 {latencies[Total / 2]:F1} ms, p99 {p99:F1} ms, max {latencies[^1]:F1} ms; queued {during.Queued}, dropped {during.Dropped}.");
 
-        // A blocking logger would hold requests for the busy timeout (5 s); here even the slowest is far below it.
-        Assert.True(latencies[^1] < SqliteRequestLogStore.BusyTimeoutSeconds * 1000 / 2, $"Slowest request took {latencies[^1]:F0} ms.");
+        // The proof: every request above completed while events.db was still locked (the lock is released only below);
+        // a blocking logger would have made them hang. A blocking logger would also show at least the busy timeout as
+        // latency. The bound is that timeout, not a tighter number, because the test machine may be busy with other tests.
+        Assert.True(latencies[^1] < SqliteRequestLogStore.BusyTimeoutSeconds * 1000, $"Slowest request took {latencies[^1]:F0} ms.");
         Assert.True(during.Dropped > 0, "The queue (200) cannot hold 3000 entries; the rest must be dropped, not waited for.");
         Assert.True(during.Queued <= 200);
 

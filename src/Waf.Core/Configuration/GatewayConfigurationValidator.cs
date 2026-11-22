@@ -31,6 +31,7 @@ public static class GatewayConfigurationValidator
         ValidateRules(configuration.Rules, routeNames, errors);
         ValidateRateLimits(configuration.RateLimits, routeNames, errors);
         ValidateAttackDetection(configuration.Settings?.AttackDetection, routeNames, errors);
+        ValidateLogRetention(configuration.Settings?.LogRetention, errors);
         ValidateCertificates(configuration.Certificates, configuration.Settings, errors);
 
         return errors;
@@ -44,6 +45,25 @@ public static class GatewayConfigurationValidator
 
     /// <summary>Largest body part that can be inspected: 10 MB.</summary>
     public const int MaxInspectedBodyBytes = 10 * 1024 * 1024;
+
+    private static void ValidateLogRetention(LogRetentionSettings? retention, List<string> errors)
+    {
+        if (retention is null)
+        {
+            errors.Add("Settings.LogRetention is missing.");
+            return;
+        }
+
+        if (retention.MaxAgeDays is < 0 or > LogRetentionSettings.MaxMaxAgeDays)
+        {
+            errors.Add($"Settings.LogRetention.MaxAgeDays must be between 0 (no age limit) and {LogRetentionSettings.MaxMaxAgeDays} (was {retention.MaxAgeDays}).");
+        }
+
+        if (retention.MaxDatabaseSizeMb is < LogRetentionSettings.MinDatabaseSizeMb or > LogRetentionSettings.MaxDatabaseSizeLimitMb)
+        {
+            errors.Add($"Settings.LogRetention.MaxDatabaseSizeMb must be between {LogRetentionSettings.MinDatabaseSizeMb} and {LogRetentionSettings.MaxDatabaseSizeLimitMb} (was {retention.MaxDatabaseSizeMb}).");
+        }
+    }
 
     private static void ValidateAttackDetection(AttackDetectionSettings? detection, HashSet<string> routeNames, List<string> errors)
     {

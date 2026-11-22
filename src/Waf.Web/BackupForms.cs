@@ -1,3 +1,6 @@
+using System.ComponentModel.DataAnnotations;
+using Waf.Core.Configuration;
+
 namespace Waf.Web;
 
 /// <summary>Form model of the backup restore form (the file itself is read from the request).</summary>
@@ -24,4 +27,16 @@ internal sealed class RestoreVersionFormModel
 {
     /// <summary>The version that was active when the page was shown.</summary>
     public long BaseVersion { get; set; }
+}
+
+/// <summary>Form model of the log retention settings.</summary>
+internal sealed class LogRetentionFormModel
+{
+    public long BaseVersion { get; set; }
+
+    [Range(0, LogRetentionSettings.MaxMaxAgeDays, ErrorMessage = "Use 0 (no age limit) up to 3650 days.")]
+    public int MaxAgeDays { get; set; }
+
+    [Range(LogRetentionSettings.MinDatabaseSizeMb, LogRetentionSettings.MaxDatabaseSizeLimitMb, ErrorMessage = "Use at least 10 MB.")]
+    public int MaxDatabaseSizeMb { get; set; }
 }

@@ -57,6 +57,9 @@ public sealed class GatewaySettings
     /// <summary>Built-in attack detection.</summary>
     public AttackDetectionSettings AttackDetection { get; set; } = new();
 
+    /// <summary>How long request log entries are kept, and how large the log may grow.</summary>
+    public LogRetentionSettings LogRetention { get; set; } = new();
+
     /// <summary>
     /// Upper bound on rate-limit counters kept in memory (all limits together). When full, idle counters
     /// and those with the fewest requests are dropped first.
@@ -65,6 +68,30 @@ public sealed class GatewaySettings
 
     /// <summary>Default for <see cref="RateLimitMaxTrackedClients"/>.</summary>
     public const int DefaultRateLimitMaxTrackedClients = 100_000;
+}
+
+/// <summary>
+/// Limits of the request log (<c>events.db</c>). A background job removes the oldest entries when either is exceeded.
+/// </summary>
+public sealed class LogRetentionSettings
+{
+    /// <summary>Remove entries older than this many days. 0: no age limit (the size limit still applies).</summary>
+    public int MaxAgeDays { get; set; } = DefaultMaxAgeDays;
+
+    /// <summary>Largest size of the request log on disk, in megabytes (MB).</summary>
+    public int MaxDatabaseSizeMb { get; set; } = DefaultMaxDatabaseSizeMb;
+
+    public const int DefaultMaxAgeDays = 30;
+    public const int DefaultMaxDatabaseSizeMb = 1024;
+
+    /// <summary>Longest age limit: ten years.</summary>
+    public const int MaxMaxAgeDays = 3650;
+
+    /// <summary>Smallest size limit, in MB.</summary>
+    public const int MinDatabaseSizeMb = 10;
+
+    /// <summary>Largest size limit, in MB (1 TB).</summary>
+    public const int MaxDatabaseSizeLimitMb = 1_048_576;
 }
 
 /// <summary>Let's Encrypt (ACME) account settings.</summary>

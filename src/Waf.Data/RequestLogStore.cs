@@ -60,7 +60,22 @@ public sealed class SqliteRequestLogStore(StoragePaths paths) : IRequestLogStore
         // WAL: the log viewer reads while the writer writes. synchronous=NORMAL is safe with WAL (no corruption);
         // at worst the last batches before a power failure are lost, which is acceptable for a log.
         await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken).ConfigureAwait(false);
+
+        // Incremental auto-vacuum lets retention give free space back to the disk when the file is over its size
+        // limit. It must be switched on before data is written, or followed by one VACUUM (instant on a new database).
+        var connection = db.Database.GetDbConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var check = connection.CreateCommand();
+        check.CommandText = "PRAGMA auto_vacuum";
+        if (Convert.ToInt64(await check.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), System.Globalization.CultureInfo.InvariantCulture) != IncrementalAutoVacuum)
+        {
+            await db.Database.ExecuteSqlRawAsync("PRAGMA auto_vacuum=INCREMENTAL;", cancellationToken).ConfigureAwait(false);
+            await db.Database.ExecuteSqlRawAsync("VACUUM;", cancellationToken).ConfigureAwait(false);
+        }
     }
+
+    /// <summary>Value of <c>PRAGMA auto_vacuum</c> for incremental mode.</summary>
+    private const long IncrementalAutoVacuum = 2;
 
     public async Task WriteAsync(IReadOnlyList<RequestLogEntry> entries, CancellationToken cancellationToken)
     {

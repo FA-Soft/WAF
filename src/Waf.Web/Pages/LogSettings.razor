@@ -1,0 +1,194 @@
+@page "/logs/settings"
+@using System.ComponentModel.DataAnnotations
+@inject IGatewayConfigurationService Configurations
+@inject RequestLogMaintenance Maintenance
+@inject ILogRetention Retention
+@inject NavigationManager Navigation
+
+<PageTitle>Log retention · @ProductInfo.Name</PageTitle>
+
+<p><a href="logs">← Request log</a></p>
+<h1>
+    Log retention
+    <HelpTip Title="Log retention">
+        <p>The request log is kept in events.db in the data folder. A background job checks it every minute and removes the oldest entries when they are older than the age limit, or when the log grows close to its size limit. The file never grows beyond the size limit; space of removed entries is reused for new ones.</p>
+    </HelpTip>
+</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved</div>
+}
+
+@if (_cleaned is { } cleaned)
+{
+    <div class="alert @(cleaned.Error is null ? "alert-ok" : "alert-danger")" role="status">
+        @if (cleaned.Error is null)
+        {
+            <span>Cleanup finished: @cleaned.Deleted.ToString("N0", Culture) entries removed.</span>
+        }
+        else
+        {
+            <span>Cleanup failed: @cleaned.Error</span>
+        }
+    </div>
+}
+
+<section class="cards" aria-label="Request log size">
+    <div class="card">
+        <h2>Size on disk</h2>
+        @if (_info is { } info)
+        {
+            <p class="metric">@Megabytes(info.FileBytes)</p>
+            <p class="muted">of at most @_settings.MaxDatabaseSizeMb.ToString("N0", Culture) MB (@Percent(info.FileBytes))</p>
+            <meter class="size-meter" min="0" max="1" low="@RequestLogMaintenance.LowWatermark" high="@RequestLogMaintenance.HighWatermark" optimum="0" value="@Math.Clamp(Fraction(info.FileBytes), 0, 1).ToString("0.###", Culture)" aria-label="Share of the size limit in use">@Percent(info.FileBytes)</meter>
+        }
+        else
+        {
+            <p class="metric">0 MB</p>
+            <p class="muted">No requests have been logged yet.</p>
+        }
+    </div>
+    <div class="card">
+        <h2>Entries</h2>
+        <p class="metric">@((_info?.Entries ?? 0).ToString("N0", Culture))</p>
+        <p class="muted">
+            @if (_info?.Oldest is { } oldest)
+            {
+                <span>oldest from @oldest.UtcDateTime.ToString("yyyy-MM-dd HH:mm", Culture) UTC</span>
+            }
+        </p>
+    </div>
+    <div class="card">
+        <h2>Last cleanup</h2>
+        @if (Retention.LastRun is { } last)
+        {
+            <p class="metric">@last.Deleted.ToString("N0", Culture) removed</p>
+            <p class="muted">
+                @last.FinishedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture) UTC: @last.DeletedByAge.ToString("N0", Culture) by age, @last.DeletedBySize.ToString("N0", Culture) by size
+            </p>
+            @if (last.Error is not null)
+            {
+                <p class="field-error">@last.Error</p>
+            }
+        }
+        else
+        {
+            <p class="metric">Not yet</p>
+            <p class="muted">The first run starts shortly after the gateway starts, then every minute.</p>
+        }
+        <form method="post" @formname="cleanup-now" @onsubmit="CleanUpAsync" data-enhance>
+            <AntiforgeryToken />
+            <button type="submit" class="button button-secondary">Clean up now</button>
+        </form>
+    </div>
+</section>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>The settings were not saved.</strong> The running configuration is unchanged.
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (Model is not null)
+{
+    <EditForm Model="Model" FormName="log-retention" OnValidSubmit="SaveAsync" Enhance class="form">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-danger validation-summary" />
+        <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
+        <fieldset>
+            <legend>Limits</legend>
+            <FormField Id="max-age" Label="Keep entries for (days)" Help="Older entries are removed. 0 keeps entries regardless of age; the size limit still applies." For="() => Model.MaxAgeDays">
+                <InputNumber id="max-age" aria-describedby="max-age-help" @bind-Value="Model.MaxAgeDays" min="0" max="@LogRetentionSettings.MaxMaxAgeDays" />
+            </FormField>
+            <FormField Id="max-size" Label="Maximum size (MB)" Help="@SizeHelp" For="() => Model.MaxDatabaseSizeMb">
+                <InputNumber id="max-size" aria-describedby="max-size-help" @bind-Value="Model.MaxDatabaseSizeMb" min="@LogRetentionSettings.MinDatabaseSizeMb" max="@LogRetentionSettings.MaxDatabaseSizeLimitMb" />
+            </FormField>
+        </fieldset>
+        <div class="actions">
+            <button type="submit" class="button">Save</button>
+        </div>
+        <p class="muted">Saving creates a new configuration version. New limits apply at the next cleanup (within a minute), or press "Clean up now".</p>
+    </EditForm>
+}
+
+@code {
+    private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    private static readonly string SizeHelp =
+        $"When the log reaches {RequestLogMaintenance.HighWatermark:P0} of this, the oldest entries are removed until it is at {RequestLogMaintenance.LowWatermark:P0}. At least {LogRetentionSettings.MinDatabaseSizeMb} MB. Rough guide: 1 MB holds about 4,000 requests.";
+
+    private LogDatabaseInfo? _info;
+    private LogRetentionSettings _settings = new();
+    private LogCleanupResult? _cleaned;
+    private IReadOnlyList<string> _errors = [];
+
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
+    [SupplyParameterFromForm(FormName = "log-retention")]
+    private LogRetentionFormModel? Model { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _settings = active?.Configuration.Settings.LogRetention ?? new LogRetentionSettings();
+        Model ??= new LogRetentionFormModel
+        {
+            BaseVersion = active?.Version ?? 0,
+            MaxAgeDays = _settings.MaxAgeDays,
+            MaxDatabaseSizeMb = _settings.MaxDatabaseSizeMb,
+        };
+        await LoadInfoAsync();
+    }
+
+    private async Task LoadInfoAsync()
+    {
+        try
+        {
+            _info = await Maintenance.GetInfoAsync(CancellationToken.None);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            _info = null; // being created right now
+        }
+    }
+
+    private async Task CleanUpAsync()
+    {
+        _cleaned = await Retention.CleanUpNowAsync(CancellationToken.None);
+        await LoadInfoAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        var model = Model!;
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        configuration.Settings.LogRetention.MaxAgeDays = model.MaxAgeDays;
+        configuration.Settings.LogRetention.MaxDatabaseSizeMb = model.MaxDatabaseSizeMb;
+
+        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, "admin UI", "Log retention changed.", CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"logs/settings?saved={Uri.EscapeDataString($"Log retention saved (version {result.Version!.Version}).")}");
+    }
+
+    private double Fraction(long bytes) => (double)bytes / ((long)_settings.MaxDatabaseSizeMb * 1024 * 1024);
+
+    private string Percent(long bytes) => Fraction(bytes).ToString("P0", Culture);
+
+    private static string Megabytes(long bytes) =>
+        bytes < 1024 * 1024 ? (bytes / 1024.0).ToString("N0", Culture) + " KB" : (bytes / (1024.0 * 1024)).ToString("N1", Culture) + " MB";
+}
