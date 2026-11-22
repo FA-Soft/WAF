@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  CONFIGURATION: Release
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-test:
+    name: Build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', '**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore WafGateway.sln
+
+      - name: Build
+        run: dotnet build WafGateway.sln -c "$CONFIGURATION" --no-restore
+
+      - name: Test
+        run: >
+          dotnet test --solution WafGateway.sln -c "$CONFIGURATION" --no-build
+          --results-directory "${{ github.workspace }}/TestResults"
+          --report-xunit-trx
+          --coverage --coverage-output-format cobertura
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults/
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    name: Publish smoke check (${{ matrix.rid }})
+    needs: build-test
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+            exe: .exe
+          - rid: linux-arm64
+            os: ubuntu-latest
+            exe: ''
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-publish-${{ matrix.rid }}-${{ hashFiles('global.json', '**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-publish-${{ matrix.rid }}-
+
+      - name: Publish self-contained single files
+        run: |
+          for project in Waf.Host Waf.Cli; do
+            dotnet publish "src/$project/$project.csproj" -c "$CONFIGURATION" \
+              -r "${{ matrix.rid }}" --self-contained \
+              -p:PublishSingleFile=true \
+              -o "publish/${{ matrix.rid }}"
+          done
+
+      - name: Verify output
+        run: |
+          out="publish/${{ matrix.rid }}"
+          ls -la "$out"
+          for bin in WafGateway wafctl; do
+            test -f "$out/$bin${{ matrix.exe }}" || { echo "::error::$bin${{ matrix.exe }} missing"; exit 1; }
+          done
+
+      - name: Smoke run wafctl (native)
+        if: matrix.rid == 'win-x64'
+        run: ./publish/win-x64/wafctl.exe
+
+      - name: Check ARM64 binaries (cross-compiled)
+        if: matrix.rid == 'linux-arm64'
+        run: |
+          for bin in WafGateway wafctl; do
+            file "publish/linux-arm64/$bin"
+            file "publish/linux-arm64/$bin" | grep -q 'ELF 64-bit.*ARM aarch64' \
+              || { echo "::error::$bin is not a linux-arm64 executable"; exit 1; }
+          done
+
+      - name: Upload build
+        uses: actions/upload-artifact@v7
+        with:
+          name: wafgateway-${{ matrix.rid }}
+          path: |
+            publish/${{ matrix.rid }}/
+            !publish/${{ matrix.rid }}/*.pdb
+          retention-days: 7

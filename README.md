@@ -170,6 +170,8 @@ dotnet test --solution WafGateway.sln
 
 Shared build settings live in `Directory.Build.props` (nullable, analyzers, warnings as errors) and NuGet versions in `Directory.Packages.props` (central package management). Tests use xUnit v3 on Microsoft.Testing.Platform.
 
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds and tests every push to `main` and every pull request on Windows and Ubuntu, then publishes self-contained single-file builds for `win-x64` and `linux-arm64` as a smoke check. Test results (TRX, Cobertura coverage) and the builds are uploaded as workflow artifacts.
+
 ## Roadmap
 
 | Milestone | Scope |
