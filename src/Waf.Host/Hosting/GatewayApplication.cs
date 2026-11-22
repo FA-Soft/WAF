@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Waf.Core;
 using Waf.Core.Hosting;
 using Waf.Core.Tls;
+using Waf.Proxy;
 
 namespace Waf.Host.Hosting;
 
@@ -39,6 +40,7 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
         builder.Services.AddHealthChecks();
+        builder.Services.AddWafProxy(builder.Configuration);
 
         var endpoints = builder.Configuration
             .GetSection(GatewayEndpointOptions.SectionName)

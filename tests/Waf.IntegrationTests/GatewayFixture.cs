@@ -7,8 +7,9 @@ namespace Waf.IntegrationTests;
 
 /// <summary>
 /// Starts the real gateway (Kestrel, not TestServer) on free loopback ports.
+/// Derived fixtures can start backends first and add configuration such as routes.
 /// </summary>
-public sealed class GatewayFixture : IAsyncLifetime
+public class GatewayFixture : IAsyncLifetime
 {
     private WebApplication? _app;
 
@@ -27,9 +28,19 @@ public sealed class GatewayFixture : IAsyncLifetime
         "--Gateway:Endpoints:PublicBindAddress=127.0.0.1",
     ];
 
+    /// <summary>Extra command-line style configuration, e.g. routes.</summary>
+    protected virtual IEnumerable<string> ExtraArgs => [];
+
+    /// <summary>Runs before the gateway starts, e.g. to start backends.</summary>
+    protected virtual ValueTask BeforeStartAsync() => ValueTask.CompletedTask;
+
+    /// <summary>Runs after the gateway stopped, e.g. to stop backends.</summary>
+    protected virtual ValueTask AfterStopAsync() => ValueTask.CompletedTask;
+
     public async ValueTask InitializeAsync()
     {
-        _app = GatewayApplication.Build(Args);
+        await BeforeStartAsync();
+        _app = GatewayApplication.Build([.. Args, .. ExtraArgs]);
         await _app.StartAsync(TestContext.Current.CancellationToken);
     }
 
@@ -40,6 +51,9 @@ public sealed class GatewayFixture : IAsyncLifetime
             await _app.StopAsync(CancellationToken.None);
             await _app.DisposeAsync();
         }
+
+        await AfterStopAsync();
+        GC.SuppressFinalize(this);
     }
 
     public static int FreePort()
