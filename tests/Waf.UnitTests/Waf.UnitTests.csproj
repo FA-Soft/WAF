@@ -16,6 +16,7 @@
     <ProjectReference Include="../../src/Waf.Proxy/Waf.Proxy.csproj" />
     <ProjectReference Include="../../src/Waf.Data/Waf.Data.csproj" />
     <ProjectReference Include="../../src/Waf.Ai/Waf.Ai.csproj" />
+    <ProjectReference Include="../../src/Waf.Host/Waf.Host.csproj" />
   </ItemGroup>
 
   <ItemGroup>
