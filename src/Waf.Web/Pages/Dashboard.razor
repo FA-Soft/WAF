@@ -97,7 +97,7 @@ else
     </section>
 
     <section aria-labelledby="rules-heading">
-        <h2 id="rules-heading">Rules</h2>
+        <h2 id="rules-heading">Rules <a class="heading-link" href="rules">Manage rules</a></h2>
         @if (configuration.Rules.Count == 0)
         {
             <p>No rules yet. Attack detection and rate limits still apply.</p>
@@ -124,7 +124,7 @@ else
     @if (configuration.RateLimits.Count > 0)
     {
         <section aria-labelledby="limits-heading">
-            <h2 id="limits-heading">Rate limits</h2>
+            <h2 id="limits-heading">Rate limits <a class="heading-link" href="rate-limits">Manage rate limits</a></h2>
             <ul>
                 @foreach (var limit in configuration.RateLimits.Where(l => l.Enabled))
                 {

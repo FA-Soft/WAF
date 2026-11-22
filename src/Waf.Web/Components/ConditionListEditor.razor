@@ -1,0 +1,83 @@
+@*
+    Editor for a list of conditions ("the path · starts with · /admin"). Uses plain form fields named
+    "{Prefix}.Conditions[i].…" so the page's [SupplyParameterFromForm] model binds them, and submit buttons
+    named "{Prefix}.Command" to add or remove a row without JavaScript.
+*@
+@using System.Globalization
+
+<fieldset>
+    <legend>
+        @Legend
+        <HelpTip Title="Conditions">
+            <p>All conditions must match (AND). Inside one condition, any of the values may match (OR): put one value per line. "Invert" turns a condition around, e.g. "the client IP is <em>not</em> in the IP list".</p>
+            <p>A condition on a header that is missing never matches; inverted, it always matches. That is how "block when X-Api-Key is missing" works.</p>
+        </HelpTip>
+    </legend>
+
+    @for (var i = 0; i < Conditions.Count; i++)
+    {
+        var condition = Conditions[i];
+        var id = $"condition-{i}";
+        var name = $"{Prefix}.Conditions[{i.ToString(CultureInfo.InvariantCulture)}]";
+
+        <div class="condition" role="group" aria-label="@($"Condition {i + 1}")">
+            <div class="condition-head">
+                <strong>Condition @(i + 1)</strong>
+                @if (Conditions.Count > 1 || !condition.IsEmpty)
+                {
+                    <button type="submit" class="link-button" name="@($"{Prefix}.Command")" value="@($"{ConditionCommands.RemovePrefix}{i}")" formnovalidate>Remove</button>
+                }
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="@($"{id}-field")">When</label>
+                    <select id="@($"{id}-field")" name="@($"{name}.Field")">
+                        @foreach (var (value, label) in ConditionLabels.Fields)
+                        {
+                            <option value="@value" selected="@(condition.Field == value)">@label</option>
+                        }
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="@($"{id}-header")">Header name</label>
+                    <input id="@($"{id}-header")" name="@($"{name}.HeaderName")" value="@condition.HeaderName" placeholder="only for 'a header', e.g. X-Api-Key" title="Only used when 'When' is 'a header'" autocomplete="off" />
+                </div>
+                <div class="field">
+                    <label for="@($"{id}-operator")">Comparison</label>
+                    <select id="@($"{id}-operator")" name="@($"{name}.Operator")">
+                        @foreach (var (value, label) in ConditionLabels.Operators)
+                        {
+                            <option value="@value" selected="@(condition.Operator == value)">@label</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="@($"{id}-values")">Values</label>
+                <p class="field-help" id="@($"{id}-values-help")">One per line. For the client IP: addresses or ranges such as 203.0.113.0/24 or 2001:db8::/32. Patterns use .NET regular expressions.</p>
+                <textarea id="@($"{id}-values")" name="@($"{name}.Values")" rows="3" aria-describedby="@($"{id}-values-help")">@condition.Values</textarea>
+            </div>
+
+            <div class="checkbox-row">
+                <label><input type="checkbox" name="@($"{name}.Negate")" value="true" checked="@condition.Negate" /> Invert (matches when the comparison is <em>not</em> true)</label>
+                <label><input type="checkbox" name="@($"{name}.CaseSensitive")" value="true" checked="@condition.CaseSensitive" /> Case-sensitive</label>
+            </div>
+        </div>
+    }
+
+    <button type="submit" class="button button-secondary" name="@($"{Prefix}.Command")" value="@ConditionCommands.Add" formnovalidate>Add another condition</button>
+</fieldset>
+
+@code {
+    /// <summary>The form model's name in the page, e.g. "Model".</summary>
+    [Parameter, EditorRequired]
+    public string Prefix { get; set; } = "Model";
+
+    [Parameter, EditorRequired]
+    public List<ConditionFormModel> Conditions { get; set; } = [];
+
+    [Parameter]
+    public string Legend { get; set; } = "When";
+}

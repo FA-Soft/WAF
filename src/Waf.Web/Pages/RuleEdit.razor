@@ -1,0 +1,185 @@
+@page "/rules/new"
+@page "/rules/{RuleName}/edit"
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>@(RuleName is null ? "Add a rule" : $"Edit rule {RuleName}") · @ProductInfo.Name</PageTitle>
+
+<p><a href="rules">← Rules</a></p>
+<h1>@(RuleName is null ? "Add a rule" : $"Edit rule '{RuleName}'")</h1>
+
+@if (_notFound)
+{
+    <div class="alert alert-danger" role="alert">Rule '@RuleName' does not exist (any more). <a href="rules">Back to the rules</a>.</div>
+}
+else if (Model is not null)
+{
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>The rule was not saved.</strong> The running configuration is unchanged.
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <EditForm Model="Model" FormName="rule-edit" OnSubmit="HandleAsync" Enhance class="form">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-danger validation-summary" />
+        <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
+        <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
+
+        <fieldset>
+            <legend>Rule</legend>
+            @if (Model.IsNew)
+            {
+                <FormField Id="name" Label="Name" Help="A short, unique name, e.g. block-admin or office-only." For="() => Model.Name">
+                    <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
+                </FormField>
+            }
+            else
+            {
+                <p><strong>@Model.Name</strong></p>
+                <input type="hidden" name="Model.Name" value="@Model.Name" />
+            }
+
+            <FormField Id="description" Label="Description" Optional Help="Why this rule exists; shown in the list and the logs." For="() => Model.Description">
+                <InputText id="description" aria-describedby="description-help" @bind-Value="Model.Description" autocomplete="off" />
+            </FormField>
+
+            <div class="field-row">
+                <FormField Id="action" Label="Then" Help="What happens when all conditions match." For="() => Model.Action">
+                    <InputSelect id="action" aria-describedby="action-help" @bind-Value="Model.Action">
+                        @foreach (var (value, label) in ConditionLabels.Actions)
+                        {
+                            <option value="@value">@label</option>
+                        }
+                    </InputSelect>
+                </FormField>
+
+                <FormField Id="priority" Label="Priority" Help="Lower numbers run first. The first matching Allow or Block decides." For="() => Model.Priority">
+                    <InputNumber id="priority" aria-describedby="priority-help" @bind-Value="Model.Priority" min="0" />
+                </FormField>
+            </div>
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="enabled" @bind-Value="Model.Enabled" />
+                <label for="enabled">Enabled</label>
+                <p class="field-help">A disabled rule is kept but never evaluated.</p>
+            </div>
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="detection-only" @bind-Value="Model.DetectionOnly" aria-describedby="detection-only-help" />
+                <label for="detection-only">Detection only: log instead of block</label>
+                <p class="field-help" id="detection-only-help">Try out a Block rule without risk: matches are logged as "would block" and the request continues.</p>
+            </div>
+
+            <RouteScopeEditor Prefix="Model" Choices="Model.RouteChoices" />
+        </fieldset>
+
+        <ConditionListEditor Prefix="Model" Conditions="Model.Conditions" Legend="When all of these match" />
+
+        <div class="actions">
+            <button type="submit" class="button">@(Model.IsNew ? "Add rule" : "Save changes")</button>
+            <a class="button button-secondary" href="rules">Cancel</a>
+        </div>
+        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+    </EditForm>
+}
+
+@code {
+    private IReadOnlyList<string> _errors = [];
+    private bool _notFound;
+
+    [Parameter]
+    public string? RuleName { get; set; }
+
+    /// <summary>Pre-fills a new rule: "block-ips" or "allow-ips" (IP list editors).</summary>
+    [SupplyParameterFromQuery]
+    public string? Template { get; set; }
+
+    [SupplyParameterFromForm(FormName = "rule-edit")]
+    private RuleFormModel? Model { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Model is not null)
+        {
+            return; // posted form
+        }
+
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var routes = active?.Configuration.Routes.Select(r => r.Name).ToList() ?? [];
+        var version = active?.Version ?? 0;
+
+        if (RuleName is null)
+        {
+            Model = RuleFormModel.ForNewRule(version, routes, Template);
+            return;
+        }
+
+        var rule = active?.Configuration.Rules.FirstOrDefault(r => string.Equals(r.Name, RuleName, StringComparison.OrdinalIgnoreCase));
+        if (rule is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        Model = RuleFormModel.FromRule(rule, version, routes);
+    }
+
+    private async Task HandleAsync(EditContext editContext)
+    {
+        var model = Model!;
+        if (ConditionCommands.TryApply(model.Command, model.Conditions))
+        {
+            model.Command = null;
+            return; // only the form changed; nothing is saved
+        }
+
+        if (!await editContext.ValidateAsync())
+        {
+            return;
+        }
+
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        var rule = model.ToRule();
+        var index = configuration.Rules.ToList().FindIndex(r => string.Equals(r.Name, rule.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (model.IsNew && index >= 0)
+        {
+            _errors = [$"A rule named '{rule.Name}' already exists. Choose another name."];
+            return;
+        }
+
+        if (!model.IsNew && index < 0)
+        {
+            _errors = [$"Rule '{rule.Name}' no longer exists; it was deleted in the meantime."];
+            return;
+        }
+
+        if (model.IsNew)
+        {
+            configuration.Rules.Add(rule);
+        }
+        else
+        {
+            configuration.Rules[index] = rule;
+        }
+
+        var verb = model.IsNew ? "added" : "changed";
+        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, "admin UI", $"Rule '{rule.Name}' {verb}.", CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"rules?saved={Uri.EscapeDataString($"Rule '{rule.Name}' {verb} (version {result.Version!.Version}).")}");
+    }
+}

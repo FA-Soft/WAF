@@ -291,3 +291,14 @@ input[type="number"] { width: 100%; padding: 0.5rem 0.6rem; font: inherit; color
 .details dt { font-weight: 600; }
 .details dd { margin: 0; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---- Rules and rate limits ---- */
+
+.condition { border-top: 1px dashed var(--border); padding-top: 0.75rem; margin-bottom: 0.75rem; }
+.condition:first-of-type { border-top: none; padding-top: 0; }
+.condition-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+.cell-note { display: block; }
+.setting { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.setting h2 { margin-top: 0; }
+.validation-summary ul, ul.validation-errors { margin: 0; padding-left: 1.25rem; }
+.validation-summary:empty { display: none; }

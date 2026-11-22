@@ -1,0 +1,178 @@
+@page "/rules"
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>Rules · @ProductInfo.Name</PageTitle>
+
+<h1>
+    Rules
+    <HelpTip Title="Rules">
+        <p>Rules allow or block requests, for example by IP address, path or header. They run in priority order (lowest number first); the first matching Allow or Block rule decides. "Log only" rules just record a match. Requests no rule decides on are allowed, after attack detection and rate limits.</p>
+    </HelpTip>
+</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved</div>
+}
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>The change was not applied.</strong>
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (_active is not null)
+{
+    var global = _active.Configuration.Settings.DetectionOnly;
+
+    <section class="card setting" aria-labelledby="detection-only-heading">
+        <div>
+            <h2 id="detection-only-heading">
+                Detection-only mode
+                <HelpTip Title="Detection-only mode">
+                    <p>When on, nothing is blocked: requests that rules, attack detection or rate limits would block are only logged. Use it to try out a new configuration without risk, then switch it off.</p>
+                </HelpTip>
+            </h2>
+            <p>
+                @if (global)
+                {
+                    <span class="badge badge-warning">On</span> <span>Requests that would be blocked are logged but let through.</span>
+                }
+                else
+                {
+                    <span class="badge badge-ok">Off</span> <span>Blocks are enforced.</span>
+                }
+            </p>
+        </div>
+        <form method="post" @formname="detection-only-toggle" @onsubmit="ToggleDetectionOnlyAsync" data-enhance>
+            <AntiforgeryToken />
+            <button type="submit" class="button @(global ? null : "button-secondary")">@(global ? "Switch off: enforce blocks" : "Switch on: only log")</button>
+        </form>
+    </section>
+
+    <div class="actions">
+        <a class="button" href="rules/new">Add a rule</a>
+        <a class="button button-secondary" href="rules/new?template=block-ips">New IP block list</a>
+        <a class="button button-secondary" href="rules/new?template=allow-ips">New IP allow list</a>
+    </div>
+
+    @if (_active.Configuration.Rules.Count == 0)
+    {
+        <p>No rules yet. Attack detection and rate limits still protect your routes.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th scope="col">Priority</th><th scope="col">Name</th><th scope="col">When</th><th scope="col">Then</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var rule in _active.Configuration.Rules.OrderBy(r => r.Priority).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    var name = rule.Name;
+                    <tr class="@(rule.Enabled ? null : "disabled")">
+                        <td>@rule.Priority</td>
+                        <td>
+                            @name
+                            @if (!string.IsNullOrEmpty(rule.Description))
+                            {
+                                <span class="muted cell-note">@rule.Description</span>
+                            }
+                        </td>
+                        <td>
+                            @Describe.Conditions(rule.Conditions)
+                            @if (rule.Routes.Count > 0)
+                            {
+                                <span class="muted cell-note">Only on route @string.Join(", ", rule.Routes)</span>
+                            }
+                        </td>
+                        <td>@Describe.Action(rule, global)</td>
+                        <td>
+                            @if (rule.Enabled)
+                            {
+                                <span class="badge badge-ok">Enabled</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-muted">Disabled</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="row-actions">
+                                <a href="@($"rules/{Uri.EscapeDataString(name)}/edit")">Edit</a>
+                                <form method="post" @formname="@($"toggle-rule-{name}")" @onsubmit="() => ToggleRuleAsync(name)" data-enhance>
+                                    <AntiforgeryToken />
+                                    <button type="submit" class="link-button">@(rule.Enabled ? "Disable" : "Enable")</button>
+                                </form>
+                                <a href="@($"rules/{Uri.EscapeDataString(name)}/delete")">Delete</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <p class="muted">Rate limits are managed on the <a href="rate-limits">Rate limits</a> page. Use <a href="test-request">Test a request</a> to check what the rules do.</p>
+}
+
+@code {
+    private StoredConfiguration? _active;
+    private IReadOnlyList<string> _errors = [];
+
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
+    protected override async Task OnInitializedAsync() =>
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+
+    private Task ToggleDetectionOnlyAsync() => ChangeAsync(configuration =>
+    {
+        configuration.Settings.DetectionOnly = !configuration.Settings.DetectionOnly;
+        return configuration.Settings.DetectionOnly ? "Detection-only mode switched on." : "Detection-only mode switched off.";
+    });
+
+    private Task ToggleRuleAsync(string name) => ChangeAsync(configuration =>
+    {
+        var rule = configuration.Rules.FirstOrDefault(r => r.Name == name);
+        if (rule is null)
+        {
+            return null;
+        }
+
+        rule.Enabled = !rule.Enabled;
+        return $"Rule '{name}' {(rule.Enabled ? "enabled" : "disabled")}.";
+    });
+
+    /// <summary>Applies <paramref name="change"/> to a copy of the running configuration and activates it.</summary>
+    private async Task ChangeAsync(Func<GatewayConfiguration, string?> change)
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        var description = change(configuration);
+        if (description is null)
+        {
+            _errors = ["The rule no longer exists."];
+            return;
+        }
+
+        var result = await Configurations.ActivateIfCurrentAsync(active.Version, configuration, "admin UI", description, CancellationToken.None);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo($"rules?saved={Uri.EscapeDataString($"{description.TrimEnd('.')} (version {result.Version!.Version}).")}");
+        }
+        else
+        {
+            _errors = result.Errors;
+            _active = await Configurations.GetActiveAsync(CancellationToken.None);
+        }
+    }
+}

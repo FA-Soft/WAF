@@ -1,0 +1,79 @@
+@page "/rate-limits/{LimitName}/delete"
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>Delete rate limit @LimitName · @ProductInfo.Name</PageTitle>
+
+<p><a href="rate-limits">← Rate limits</a></p>
+<h1>Delete rate limit '@LimitName'?</h1>
+
+@if (_limit is null)
+{
+    <div class="alert alert-danger" role="alert">Rate limit '@LimitName' does not exist (any more). <a href="rate-limits">Back to the rate limits</a>.</div>
+}
+else
+{
+    <p>@Describe.RateLimit(_limit).</p>
+
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>The rate limit was not deleted.</strong>
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <p>The deletion is stored as a new configuration version, so it can be undone by restoring the previous version.</p>
+    <form method="post" @formname="rate-limit-delete" @onsubmit="DeleteAsync" data-enhance class="actions">
+        <AntiforgeryToken />
+        <input type="hidden" name="BaseVersion" value="@_baseVersion" />
+        <button type="submit" class="button button-danger">Delete rate limit</button>
+        <a class="button button-secondary" href="rate-limits">Cancel</a>
+    </form>
+}
+
+@code {
+    private RateLimitRule? _limit;
+    private IReadOnlyList<string> _errors = [];
+    private long _baseVersion;
+
+    [Parameter]
+    public string LimitName { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "rate-limit-delete")]
+    private long? BaseVersion { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _baseVersion = active?.Version ?? 0;
+        _limit = active?.Configuration.RateLimits.FirstOrDefault(l => string.Equals(l.Name, LimitName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task DeleteAsync()
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        var limit = configuration.RateLimits.FirstOrDefault(l => string.Equals(l.Name, LimitName, StringComparison.OrdinalIgnoreCase));
+        if (limit is null)
+        {
+            _errors = [$"Rate limit '{LimitName}' no longer exists."];
+            return;
+        }
+
+        configuration.RateLimits.Remove(limit);
+        var result = await Configurations.ActivateIfCurrentAsync(BaseVersion ?? active.Version, configuration, "admin UI", $"Rate limit '{limit.Name}' deleted.", CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"rate-limits?saved={Uri.EscapeDataString($"Rate limit '{limit.Name}' deleted (version {result.Version!.Version}).")}");
+    }
+}
