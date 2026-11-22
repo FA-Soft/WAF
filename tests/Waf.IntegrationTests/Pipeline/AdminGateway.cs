@@ -61,6 +61,42 @@ public abstract partial class AdminGateway : GatewayFixture
         return await response.Content.ReadAsStringAsync(Ct);
     }
 
+    /// <summary>
+    /// Posts <paramref name="fields"/> as a plain HTML form to <paramref name="path"/> (e.g. a download endpoint), with
+    /// the antiforgery token of page <paramref name="tokenPage"/>. The caller disposes the response.
+    /// </summary>
+    public async Task<HttpResponseMessage> PostPlainFormAsync(string path, string tokenPage, Dictionary<string, string> fields, bool withToken = true)
+    {
+        var page = await GetPageAsync(tokenPage);
+        if (withToken)
+        {
+            fields["__RequestVerificationToken"] = AntiforgeryPattern().Match(page).Groups["token"].Value;
+        }
+
+        using var content = new FormUrlEncodedContent(fields);
+        return await Admin.PostAsync(new Uri($"http://127.0.0.1:{AdminPort}{path}"), content, Ct);
+    }
+
+    /// <summary>Like <see cref="PostAsync"/>, but as multipart/form-data with one uploaded file.</summary>
+    public async Task<string> PostMultipartAsync(
+        string path, string handler, Dictionary<string, string> fields, string fileField, string fileName, byte[] file)
+    {
+        var page = await GetPageAsync(path);
+        fields["__RequestVerificationToken"] = AntiforgeryPattern().Match(page).Groups["token"].Value;
+        fields["_handler"] = handler;
+
+        using var content = new MultipartFormDataContent();
+        foreach (var (name, value) in fields)
+        {
+            content.Add(new StringContent(value), name);
+        }
+
+        content.Add(new ByteArrayContent(file), fileField, fileName);
+        using var response = await Admin.PostAsync(new Uri($"http://127.0.0.1:{AdminPort}{path}"), content, Ct);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return await response.Content.ReadAsStringAsync(Ct);
+    }
+
     /// <summary>A public request; returns the status code.</summary>
     public async Task<HttpStatusCode> SendAsync(string path, HttpMethod? method = null)
     {

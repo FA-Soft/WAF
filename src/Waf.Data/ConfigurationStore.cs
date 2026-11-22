@@ -204,6 +204,113 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
         return (await SaveAsync(configuration, author, comment, cancellationToken).ConfigureAwait(false), true);
     }
 
+    /// <summary>Every stored version, oldest first.</summary>
+    public async Task<IReadOnlyList<StoredConfiguration>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var versions = await db.ConfigurationVersions.AsNoTracking()
+            .OrderBy(v => v.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return [.. versions.Select(ToStored)];
+    }
+
+    /// <summary>
+    /// A full backup of every version. Without <paramref name="includeSecrets"/>, secret values are replaced by
+    /// <see cref="ConfigurationSecrets.Placeholder"/>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">No configuration has been activated yet.</exception>
+    public async Task<GatewayBackup> CreateBackupAsync(bool includeSecrets, CancellationToken cancellationToken)
+    {
+        var active = await GetLastKnownGoodAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("There is no active configuration to back up.");
+        var versions = await GetAllAsync(cancellationToken).ConfigureAwait(false);
+
+        return new GatewayBackup(
+            time.GetUtcNow().UtcDateTime,
+            Waf.Core.ProductInfo.Version,
+            active.Version,
+            includeSecrets,
+            [.. versions.Select(v =>
+            {
+                // Every StoredConfiguration is freshly parsed, so redacting it changes nothing else.
+                if (!includeSecrets)
+                {
+                    ConfigurationSecrets.Redact(v.Configuration);
+                }
+
+                return new BackupVersion(v.Version, v.CreatedAtUtc, v.Author, v.Comment, v.Configuration);
+            })]);
+    }
+
+    /// <summary>
+    /// Replaces every stored version with <paramref name="versions"/> (keeping their numbers) and makes
+    /// <paramref name="activeVersion"/> the last-known-good, in one transaction: on any failure nothing changes.
+    /// </summary>
+    /// <exception cref="ArgumentException">A configuration is not valid, or <paramref name="activeVersion"/> is not among them.</exception>
+    public async Task ReplaceAllAsync(IReadOnlyList<BackupVersion> versions, long activeVersion, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(versions);
+
+        if (versions.All(v => v.Version != activeVersion))
+        {
+            throw new ArgumentException($"Version {activeVersion} is not among the versions to store.", nameof(activeVersion));
+        }
+
+        foreach (var version in versions)
+        {
+            var errors = GatewayConfigurationValidator.Validate(version.Configuration);
+            if (errors.Count > 0)
+            {
+                throw new ArgumentException($"Version {version.Version} is not valid: {string.Join(" ", errors)}", nameof(versions));
+            }
+        }
+
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        var state = await db.ConfigurationState.FirstOrDefaultAsync(s => s.Id == ConfigurationState.SingletonId, cancellationToken).ConfigureAwait(false);
+        if (state is null)
+        {
+            state = new ConfigurationState();
+            db.ConfigurationState.Add(state);
+        }
+
+        state.LastKnownGoodVersionId = null;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await db.ConfigurationVersions.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+
+        foreach (var version in versions.OrderBy(v => v.Version))
+        {
+            var json = Canonical(version.Configuration);
+            db.ConfigurationVersions.Add(new ConfigurationVersion
+            {
+                Id = version.Version,
+                CreatedAtUtc = version.CreatedAtUtc,
+                Author = version.Author,
+                Comment = version.Comment,
+                SchemaVersion = version.Configuration.SchemaVersion,
+                Json = json,
+                Sha256 = Hash(json),
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        state.LastKnownGoodVersionId = activeVersion;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Writes a consistent copy of the whole database to <paramref name="path"/> (which must not exist yet).</summary>
+    public async Task CopyDatabaseToAsync(string path, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await db.Database.ExecuteSqlAsync($"VACUUM INTO {path}", cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Canonical JSON: the editor-only <c>$schema</c> hint is not part of the stored configuration.</summary>
     private static string Canonical(GatewayConfiguration configuration)
     {

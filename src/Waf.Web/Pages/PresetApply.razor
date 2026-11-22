@@ -110,36 +110,7 @@ else if (Model is not null)
             }
             else
             {
-                <ul class="changes">
-                    @foreach (var change in _preview.Changes)
-                    {
-                        <li class="change">
-                            <span class="badge @KindBadge(change.Kind)">@change.Kind</span>
-                            <strong>@Describe.ChangeTitle(change)</strong>
-                            @if (Describe.ChangeNote(change, _active.Configuration, _preview.Candidate!) is { Length: > 0 } note)
-                            {
-                                <span class="muted cell-note">@note</span>
-                            }
-                            <span class="change-detail">@Describe.ChangeDetail(change, _active.Configuration, _preview.Candidate!)</span>
-                            @if (change.Section != ConfigurationSection.Settings)
-                            {
-                                <details class="advanced">
-                                    <summary>Show as configuration</summary>
-                                    <div class="change-json">
-                                        @if (change.Before is not null)
-                                        {
-                                            <div><span class="muted">Before</span><pre>@change.Before</pre></div>
-                                        }
-                                        @if (change.After is not null)
-                                        {
-                                            <div><span class="muted">After</span><pre>@change.After</pre></div>
-                                        }
-                                    </div>
-                                </details>
-                            }
-                        </li>
-                    }
-                </ul>
+                <ChangeList Changes="_preview.Changes" Before="_active.Configuration" After="_preview.Candidate!" />
 
                 @if (_preview.ValidationErrors.Count > 0)
                 {
@@ -240,11 +211,4 @@ else if (Model is not null)
 
         model.Command = null;
     }
-
-    private static string KindBadge(ChangeKind kind) => kind switch
-    {
-        ChangeKind.Added => "badge-ok",
-        ChangeKind.Removed => "badge-danger",
-        _ => "badge-warning",
-    };
 }

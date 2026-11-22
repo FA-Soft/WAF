@@ -19,6 +19,7 @@ internal sealed partial class GatewayConfigurationService(
     WafEngineHolder engines,
     ProxyRouteUpdater routes,
     ConfigurationStatus status,
+    StoragePaths paths,
     TimeProvider time,
     ILogger<GatewayConfigurationService> logger) : IGatewayConfigurationService, IDisposable
 {
@@ -49,6 +50,102 @@ internal sealed partial class GatewayConfigurationService(
 
         return await ActivateAsync(previous.Configuration, author, $"Rollback to version {version}.", cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<ActivationResult> RollbackAsync(long version, long baseVersion, string author, CancellationToken cancellationToken)
+    {
+        var previous = await store.GetAsync(version, cancellationToken).ConfigureAwait(false);
+        if (previous is null)
+        {
+            return ActivationResult.Failed([$"Configuration version {version} does not exist."]);
+        }
+
+        return await ActivateIfCurrentAsync(baseVersion, previous.Configuration, author, $"Restored version {version}.", cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<RestoreResult> RestoreBackupAsync(GatewayBackup backup, string author, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(backup);
+        ArgumentException.ThrowIfNullOrWhiteSpace(author);
+
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            // 1. Check every version: fill left-out secrets from the running configuration, then validate.
+            var running = await store.GetLastKnownGoodAsync(cancellationToken).ConfigureAwait(false);
+            var errors = new List<string>();
+            var versions = new List<BackupVersion>();
+            foreach (var version in backup.Versions)
+            {
+                var configuration = Copy(version.Configuration);
+                var problems = ConfigurationSecrets.FillFrom(configuration, running?.Configuration);
+                errors.AddRange(problems.Select(p => $"Version {version.Version}: {p}"));
+                if (problems.Count == 0)
+                {
+                    errors.AddRange(GatewayConfigurationValidator.Validate(configuration).Select(e => $"Version {version.Version}: {e}"));
+                }
+
+                versions.Add(version with { Configuration = configuration });
+            }
+
+            if (errors.Count > 0)
+            {
+                const int Shown = 10;
+                return RestoreResult.Failed(errors.Count <= Shown ? errors : [.. errors.Take(Shown), $"... and {errors.Count - Shown} more."]);
+            }
+
+            // 2. Build the engine and routes of the active version before changing anything.
+            var active = versions.First(v => v.Version == backup.ActiveVersion).Configuration;
+            var tag = ConfigurationStore.ConfigTag(ConfigurationStore.ComputeHash(active));
+            WafEngine engine;
+            try
+            {
+                engine = WafEngine.Build(active, time, tag);
+            }
+            catch (ArgumentException ex)
+            {
+                return RestoreResult.Failed([$"The WAF engine could not be built: {ex.Message}"]);
+            }
+
+            var (prepared, routeErrors) = await routes.PrepareAsync(active.Routes, tag).ConfigureAwait(false);
+            if (prepared is null)
+            {
+                return RestoreResult.Failed(routeErrors);
+            }
+
+            // 3. Keep a copy of the current database, 4. replace the history, 5. swap.
+            var safetyCopy = SafetyCopyPath();
+            await store.CopyDatabaseToAsync(safetyCopy, cancellationToken).ConfigureAwait(false);
+            await store.ReplaceAllAsync(versions, backup.ActiveVersion, cancellationToken).ConfigureAwait(false);
+            if (engines.Current?.ConfigTag != tag)
+            {
+                engines.Activate(engine);
+                routes.Apply(prepared);
+            }
+
+            LogRestored(logger, author, versions.Count, backup.ActiveVersion, safetyCopy);
+            return new RestoreResult(true, [], backup.ActiveVersion, safetyCopy);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private string SafetyCopyPath()
+    {
+        var stamp = time.GetUtcNow().ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+        var path = Path.Combine(paths.DataDirectory, $"config.before-restore-{stamp}.db");
+        for (var i = 2; File.Exists(path); i++)
+        {
+            path = Path.Combine(paths.DataDirectory, $"config.before-restore-{stamp}-{i}.db");
+        }
+
+        return path;
+    }
+
+    private static GatewayConfiguration Copy(GatewayConfiguration configuration) =>
+        GatewayConfigurationJson.Parse(GatewayConfigurationJson.Serialize(configuration)).Configuration
+            ?? throw new InvalidOperationException("The configuration could not be copied.");
 
     public async Task<ActivationResult> ImportAppSettingsAsync(string author, CancellationToken cancellationToken)
     {
@@ -173,6 +270,9 @@ internal sealed partial class GatewayConfigurationService(
 
     [LoggerMessage(EventId = 20, Level = LogLevel.Information, Message = "Configuration version {Version} activated by {Author}.")]
     private static partial void LogActivated(ILogger logger, long version, string author);
+
+    [LoggerMessage(EventId = 22, Level = LogLevel.Warning, Message = "Backup restored by {Author}: {VersionCount} version(s), version {ActiveVersion} active. The previous database was copied to {SafetyCopy}.")]
+    private static partial void LogRestored(ILogger logger, string author, int versionCount, long activeVersion, string safetyCopy);
 
     [LoggerMessage(EventId = 21, Level = LogLevel.Warning, Message = "Configuration change by {Author} rejected with {ErrorCount} error(s); the running configuration is unchanged.")]
     private static partial void LogRejected(ILogger logger, string author, int errorCount);

@@ -1,0 +1,144 @@
+@page "/history/{Version:long}"
+@inject IGatewayConfigurationService Configurations
+@inject ConfigurationStore Store
+@inject NavigationManager Navigation
+
+<PageTitle>Version @Version · @ProductInfo.Name</PageTitle>
+
+<p><a href="history">← Configuration history</a></p>
+
+@if (_stored is null || _active is null)
+{
+    <h1>Version @Version</h1>
+    <div class="alert alert-danger" role="alert">Configuration version @Version does not exist. <a href="history">Back to the history</a>.</div>
+}
+else
+{
+    <h1>
+        Version @_stored.Version
+        @if (IsActive)
+        {
+            <span class="badge badge-ok">Active</span>
+        }
+    </h1>
+
+    <dl class="details">
+        <dt>Stored (UTC)</dt>
+        <dd>@_stored.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)</dd>
+        <dt>By</dt>
+        <dd>@_stored.Author</dd>
+        <dt>Description</dt>
+        <dd>@(_stored.Comment ?? "-")</dd>
+    </dl>
+
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>The version was not restored.</strong> The running configuration is unchanged.
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <section class="preview" aria-labelledby="restore-heading">
+        <h2 id="restore-heading">Restore this version</h2>
+        @if (IsActive)
+        {
+            <p>This version is the running configuration.</p>
+        }
+        else if (_restoreChanges.Count == 0)
+        {
+            <p>The running configuration (version @_active.Version) is identical to this version; restoring it would change nothing.</p>
+        }
+        else
+        {
+            <p>Restoring makes this configuration active again, as a new version. Compared with the running configuration (version @_active.Version), this changes:</p>
+            <ChangeList Changes="_restoreChanges" Before="_active.Configuration" After="_stored.Configuration" />
+            <EditForm Model="RestoreForm" FormName="restore-version" OnSubmit="RestoreAsync" Enhance>
+                <input type="hidden" name="RestoreForm.BaseVersion" value="@_active.Version" />
+                <button type="submit" class="button">Restore version @_stored.Version</button>
+            </EditForm>
+        }
+    </section>
+
+    <section aria-labelledby="changed-heading">
+        <h2 id="changed-heading">What this version changed</h2>
+        @if (_previous is null)
+        {
+            <p>This is the first stored version.</p>
+        }
+        else if (_ownChanges.Count == 0)
+        {
+            <p>Same configuration as version @_previous.Version.</p>
+        }
+        else
+        {
+            <p class="muted">Compared with version @_previous.Version.</p>
+            <ChangeList Changes="_ownChanges" Before="_previous.Configuration" After="_stored.Configuration" />
+        }
+    </section>
+
+    <section class="card section" aria-labelledby="export-heading">
+        <h2 id="export-heading">Export this version</h2>
+        <form method="post" action="export/configuration">
+            <AntiforgeryToken />
+            <input type="hidden" name="version" value="@_stored.Version" />
+            <SecretsCheckbox Id="export-secrets" Count="ConfigurationSecrets.Count(_stored.Configuration)" />
+            <button type="submit" class="button button-secondary">Download version @_stored.Version (JSON)</button>
+        </form>
+    </section>
+}
+
+@code {
+    private StoredConfiguration? _stored;
+    private StoredConfiguration? _previous;
+    private StoredConfiguration? _active;
+    private IReadOnlyList<ConfigurationChange> _restoreChanges = [];
+    private IReadOnlyList<ConfigurationChange> _ownChanges = [];
+    private IReadOnlyList<string> _errors = [];
+
+    [Parameter]
+    public long Version { get; set; }
+
+    [SupplyParameterFromForm(FormName = "restore-version")]
+    private RestoreVersionFormModel? RestoreForm { get; set; }
+
+    private bool IsActive => _active?.Version == _stored?.Version;
+
+    protected override async Task OnInitializedAsync()
+    {
+        RestoreForm ??= new RestoreVersionFormModel();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _stored = await Store.GetAsync(Version, CancellationToken.None);
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+        if (_stored is null || _active is null)
+        {
+            return;
+        }
+
+        _previous = Version > 1 ? await Store.GetAsync(Version - 1, CancellationToken.None) : null;
+        _ownChanges = _previous is null ? [] : ConfigurationDiff.Compare(_previous.Configuration, _stored.Configuration);
+        _restoreChanges = ConfigurationDiff.Compare(_active.Configuration, _stored.Configuration);
+    }
+
+    private async Task RestoreAsync()
+    {
+        var result = await Configurations.RollbackAsync(Version, RestoreForm!.BaseVersion, "admin UI", CancellationToken.None);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo($"history?saved={Uri.EscapeDataString($"Version {Version} restored as version {result.Version!.Version}.")}");
+            return;
+        }
+
+        _errors = result.Errors;
+        await LoadAsync();
+    }
+}
