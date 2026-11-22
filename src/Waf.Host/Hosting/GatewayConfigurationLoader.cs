@@ -18,7 +18,7 @@ internal static class GatewayConfigurationLoader
     public const string SectionName = "Gateway";
 
     /// <summary>Keys of the Gateway section that are not part of <see cref="GatewayConfiguration"/>.</summary>
-    private static readonly string[] HostKeys = ["Endpoints"];
+    private static readonly string[] HostKeys = ["Endpoints", "Storage"];
 
     /// <exception cref="OptionsValidationException">The configuration cannot be read or is invalid.</exception>
     public static GatewayConfiguration Load(IConfiguration configuration)
