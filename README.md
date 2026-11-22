@@ -83,6 +83,34 @@ The admin UI is exempt from user-defined WAF rules and from the fail-closed 503 
 - **Versions and rollback:** every change is stored as a configuration version. An invalid change never replaces the last working configuration, and any version can be restored.
 - **Import/export:** configuration can be exported to JSON, and the whole setup can be backed up and restored from the UI.
 
+### Routes in `appsettings.json`
+
+Until the web UI exists, routes are configured under `Gateway:Routes`:
+
+```json
+"Gateway": {
+  "Routes": [
+    {
+      "Name": "api",
+      "Match": { "Hosts": ["api.example.com"], "PathPrefix": "/api", "Methods": ["GET", "POST"] },
+      "Destinations": [ { "Scheme": "http", "Address": "10.0.0.5", "Port": 8080 } ],
+      "PreserveHost": true,
+      "AllowInvalidBackendCertificate": false,
+      "HealthCheck": { "Path": "/health", "IntervalSeconds": 10, "TimeoutSeconds": 5 }
+    }
+  ]
+}
+```
+
+- **Match:** all given conditions must match; leave one out to match anything. `Hosts` accepts `*.example.com`. `PathPrefix` matches whole path segments (`/api` matches `/api` and `/api/users`, not `/apix`); the most specific route wins, and the path is forwarded unchanged. Requests that match no route get 404.
+- **Destinations:** IP address or host name, port, `http` or `https`. Several destinations share the load; WebSockets are supported.
+- **PreserveHost** (default `true`): the backend receives the client's original `Host` header, as IIS host bindings need.
+- **AllowInvalidBackendCertificate** (default `false`): accept a self-signed certificate from an HTTPS backend you control.
+- **HealthCheck:** with a `Path`, each destination is probed and taken out of rotation while it fails. Passive checks (failed requests) are always on.
+- **Forwarded headers:** `X-Forwarded-For`, `-Proto` and `-Host` are always set by the gateway; values sent by clients are overwritten and a client `Forwarded` header is removed.
+
+Invalid routes stop the gateway at startup with a message that names the route and the problem.
+
 ## AI configuration assistant
 
 Optional and disabled unless you provide an API key (default provider: Anthropic Claude, behind a pluggable interface).

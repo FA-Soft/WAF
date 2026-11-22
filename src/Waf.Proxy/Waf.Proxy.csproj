@@ -5,6 +5,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Yarp.ReverseProxy" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Waf.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
     <ProjectReference Include="../Waf.Engine/Waf.Engine.csproj" />
   </ItemGroup>

@@ -25,6 +25,23 @@ public class StartupFailureTests
     }
 
     [Fact]
+    public async Task Run_returns_failure_exit_code_for_invalid_route()
+    {
+        var exitCode = await GatewayApplication.RunAsync(
+        [
+            $"--Gateway:Endpoints:HttpPort={GatewayFixture.FreePort()}",
+            $"--Gateway:Endpoints:HttpsPort={GatewayFixture.FreePort()}",
+            $"--Gateway:Endpoints:AdminPort={GatewayFixture.FreePort()}",
+            "--Gateway:Endpoints:PublicBindAddress=127.0.0.1",
+            "--Gateway:Routes:0:Name=broken",
+            "--Gateway:Routes:0:Destinations:0:Address=10",
+            "--Gateway:Routes:0:Destinations:0:Port=80",
+        ]);
+
+        Assert.Equal(GatewayApplication.StartupFailureExitCode, exitCode);
+    }
+
+    [Fact]
     public async Task Run_returns_failure_exit_code_for_invalid_configuration()
     {
         var exitCode = await GatewayApplication.RunAsync(

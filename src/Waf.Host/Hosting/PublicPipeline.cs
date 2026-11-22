@@ -1,18 +1,21 @@
+using Waf.Proxy;
+
 namespace Waf.Host.Hosting;
 
 /// <summary>
 /// Request pipeline for public traffic on the HTTP/HTTPS listeners.
-/// The WAF rule engine and reverse proxy are added here in later milestones.
+/// The WAF rule engine is inserted between routing and the proxy in later milestones.
 /// </summary>
 internal static class PublicPipeline
 {
-    public static void Configure(IApplicationBuilder app)
+    public static void Configure(WebApplication app)
     {
-        // No routes are configured yet: answer everything with 404.
-        app.Run(context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status404NotFound;
-            return Task.CompletedTask;
-        });
+        // Explicit UseRouting *after* the admin MapWhen branch. Without it, WebApplication inserts routing
+        // at the very start of the pipeline, a proxy route would be selected for admin requests too, and
+        // the admin branch's own routing would then be skipped.
+        app.UseRouting();
+
+        // Requests that match no route fall through to the default 404.
+        app.MapWafProxy();
     }
 }
