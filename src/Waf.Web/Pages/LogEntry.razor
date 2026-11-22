@@ -1,5 +1,6 @@
 @page "/logs/{Id:long}"
 @inject RequestLogReader Reader
+@inject IGatewayConfigurationService Configurations
 
 <PageTitle>Request @Id · @ProductInfo.Name</PageTitle>
 
@@ -63,15 +64,36 @@ else
         <dt>Latency</dt>
         <dd>@LogFormat.Latency(_entry.LatencyMs)</dd>
     </dl>
+    @if (_configuration is not null)
+    {
+        <section class="card section" aria-labelledby="actions-heading">
+            <h2 id="actions-heading">Turn this into configuration</h2>
+            <p class="muted">Each action opens a pre-filled form; nothing changes until you check it and save.</p>
+            <ul class="log-actions">
+                @foreach (var (action, actionLabel, help) in LogActions.Available(_entry, _configuration))
+                {
+                    <li>
+                        <a class="button @(action == LogAction.Allow || action == LogAction.Route ? null : "button-secondary")" href="@LogActions.Url(_entry, action, _configuration)">@actionLabel</a>
+                        <span class="muted">@help</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
     <p class="muted">Query strings, headers, cookies and bodies are not logged. For a detected attack, only the matching fragment (at most 100 characters) is kept as evidence, never from a cookie.</p>
 }
 
 @code {
     private RequestEvent? _entry;
+    private GatewayConfiguration? _configuration;
 
     [Parameter]
     public long Id { get; set; }
 
-    protected override async Task OnInitializedAsync() =>
+    protected override async Task OnInitializedAsync()
+    {
         _entry = await Reader.GetAsync(Id, CancellationToken.None);
+        _configuration = (await Configurations.GetActiveAsync(CancellationToken.None))?.Configuration;
+    }
 }

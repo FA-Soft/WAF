@@ -122,6 +122,48 @@
         </table>
     }
 
+    var exclusions = _active.Configuration.Settings.AttackDetection.Exclusions;
+    <section aria-labelledby="exclusions-heading" id="exclusions">
+        <h2 id="exclusions-heading">
+            Detection exclusions
+            <HelpTip Title="Detection exclusions">
+                <p>Places where attack detection is switched off, to allow a known false positive. Rules and rate limits still apply there. Add one from a blocked request in the <a href="logs?show=Blocked">request log</a>, or directly.</p>
+            </HelpTip>
+        </h2>
+        <p><a class="button button-secondary" href="detection/exclusions/new">Add an exclusion</a></p>
+        @if (exclusions.Count == 0)
+        {
+            <p>None: attack detection checks every path.</p>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr><th scope="col">Path</th><th scope="col">Checks switched off</th><th scope="col">Routes</th><th scope="col">Reason</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < exclusions.Count; i++)
+                    {
+                        var index = i;
+                        var exclusion = exclusions[i];
+                        <tr>
+                            <td><code>@exclusion.PathPrefix</code></td>
+                            <td>@(exclusion.Categories.Count == 0 ? "All" : string.Join(", ", exclusion.Categories.Select(LogActions.Label)))</td>
+                            <td>@(exclusion.Routes.Count == 0 ? "All" : string.Join(", ", exclusion.Routes))</td>
+                            <td>@exclusion.Reason</td>
+                            <td>
+                                <form method="post" @formname="@($"remove-exclusion-{index}")" @onsubmit="() => RemoveExclusionAsync(index, exclusion.PathPrefix)" data-enhance>
+                                    <AntiforgeryToken />
+                                    <button type="submit" class="link-button">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
     <p class="muted">Rate limits are managed on the <a href="rate-limits">Rate limits</a> page. Use <a href="test-request">Test a request</a> to check what the rules do.</p>
 }
 
@@ -153,6 +195,19 @@
         return $"Rule '{name}' {(rule.Enabled ? "enabled" : "disabled")}.";
     });
 
+    private Task RemoveExclusionAsync(int index, string pathPrefix) => ChangeAsync(configuration =>
+    {
+        // Check the position still holds the same exclusion: the list may have changed since the page was shown.
+        var exclusions = configuration.Settings.AttackDetection.Exclusions;
+        if (index >= exclusions.Count || exclusions[index].PathPrefix != pathPrefix)
+        {
+            return null;
+        }
+
+        exclusions.RemoveAt(index);
+        return $"Detection exclusion for {pathPrefix} removed.";
+    });
+
     /// <summary>Applies <paramref name="change"/> to a copy of the running configuration and activates it.</summary>
     private async Task ChangeAsync(Func<GatewayConfiguration, string?> change)
     {
@@ -161,7 +216,7 @@
         var description = change(configuration);
         if (description is null)
         {
-            _errors = ["The rule no longer exists."];
+            _errors = ["The rule or exclusion no longer exists; the page was out of date."];
             return;
         }
 

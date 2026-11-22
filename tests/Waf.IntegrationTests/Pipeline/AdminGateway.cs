@@ -113,6 +113,78 @@ public abstract partial class AdminGateway : GatewayFixture
         return response.StatusCode;
     }
 
+    /// <summary>
+    /// The fields a browser would post for the form in <paramref name="html"/> that contains the handler
+    /// <paramref name="handler"/>: inputs (checkboxes only when ticked), textareas and selected options.
+    /// </summary>
+    public static Dictionary<string, string> ScrapeForm(string html, string handler)
+    {
+        var start = html.IndexOf($"name=\"_handler\" value=\"{handler}\"", StringComparison.Ordinal);
+        Assert.True(start >= 0, $"Form '{handler}' not found.");
+        var formStart = html.LastIndexOf("<form", start, StringComparison.Ordinal);
+        var formEnd = html.IndexOf("</form>", start, StringComparison.Ordinal);
+        var form = html[formStart..formEnd];
+
+        var fields = new Dictionary<string, string>();
+        foreach (Match input in InputPattern().Matches(form))
+        {
+            var attributes = Attributes(input.Value);
+            if (!attributes.TryGetValue("name", out var name) || name is "_handler" or "__RequestVerificationToken")
+            {
+                continue;
+            }
+
+            var type = attributes.GetValueOrDefault("type", "text");
+            if (type is "checkbox" or "radio" && !attributes.ContainsKey("checked"))
+            {
+                continue;
+            }
+
+            if (type is not ("submit" or "button" or "file"))
+            {
+                fields[name] = attributes.GetValueOrDefault("value", type == "checkbox" ? "on" : string.Empty);
+            }
+        }
+
+        foreach (Match textarea in TextareaPattern().Matches(form))
+        {
+            fields[Attributes(textarea.Groups["tag"].Value)["name"]] = WebUtility.HtmlDecode(textarea.Groups["content"].Value);
+        }
+
+        foreach (Match select in SelectPattern().Matches(form))
+        {
+            var options = OptionPattern().Matches(select.Groups["options"].Value).Select(o => Attributes(o.Value)).ToList();
+            var chosen = options.FirstOrDefault(o => o.ContainsKey("selected")) ?? options.FirstOrDefault();
+            if (chosen is not null)
+            {
+                fields[Attributes(select.Groups["tag"].Value)["name"]] = chosen.GetValueOrDefault("value", string.Empty);
+            }
+        }
+
+        return fields;
+    }
+
+    private static Dictionary<string, string> Attributes(string tag) =>
+        AttributePattern().Matches(tag).ToDictionary(
+            m => m.Groups["name"].Value,
+            m => WebUtility.HtmlDecode(m.Groups["value"].Success ? m.Groups["value"].Value : string.Empty),
+            StringComparer.Ordinal);
+
     [GeneratedRegex("""name="__RequestVerificationToken" value="(?<token>[^"]+)""")]
     private static partial Regex AntiforgeryPattern();
+
+    [GeneratedRegex("""<input\b[^>]*>""")]
+    private static partial Regex InputPattern();
+
+    [GeneratedRegex("""<textarea(?<tag>\b[^>]*)>(?<content>[^<]*)</textarea>""")]
+    private static partial Regex TextareaPattern();
+
+    [GeneratedRegex("""<select(?<tag>\b[^>]*)>(?<options>.*?)</select>""", RegexOptions.Singleline)]
+    private static partial Regex SelectPattern();
+
+    [GeneratedRegex("""<option\b[^>]*>""")]
+    private static partial Regex OptionPattern();
+
+    [GeneratedRegex("""(?<name>[a-zA-Z_:][-a-zA-Z0-9_:.\[\]]*)(?:="(?<value>[^"]*)")?""")]
+    private static partial Regex AttributePattern();
 }

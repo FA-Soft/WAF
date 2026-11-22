@@ -2,6 +2,7 @@
 @page "/rules/{RuleName}/edit"
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
+@inject RequestLogReader LogReader
 
 <PageTitle>@(RuleName is null ? "Add a rule" : $"Edit rule {RuleName}") · @ProductInfo.Name</PageTitle>
 
@@ -15,6 +16,7 @@
 else if (Model is not null)
 {
     <TemplateNotice Title="@(RuleName is null ? TemplateLibrary.FindRule(Template)?.Title : null)" />
+    <LogSourceNotice Entry="_logEntry" Missing="_logMissing" Message="@_logMessage" />
 
     @if (_errors.Count > 0)
     {
@@ -104,6 +106,18 @@ else if (Model is not null)
     [SupplyParameterFromQuery]
     public string? Template { get; set; }
 
+    /// <summary>Pre-fills the form from a request log entry, for <see cref="Action"/>.</summary>
+    [SupplyParameterFromQuery(Name = LogActions.FromLogParameter)]
+    public long? FromLog { get; set; }
+
+    /// <summary>Rule, Block or Allow (see <see cref="LogAction"/>).</summary>
+    [SupplyParameterFromQuery(Name = LogActions.ActionParameter)]
+    public string? Action { get; set; }
+
+    private RequestEvent? _logEntry;
+    private bool _logMissing;
+    private string? _logMessage;
+
     [SupplyParameterFromForm(FormName = "rule-edit")]
     private RuleFormModel? Model { get; set; }
 
@@ -118,9 +132,18 @@ else if (Model is not null)
         var routes = active?.Configuration.Routes.Select(r => r.Name).ToList() ?? [];
         var version = active?.Version ?? 0;
 
+        var action = Enum.TryParse<LogAction>(Action, ignoreCase: true, out var parsed) ? parsed : LogAction.Rule;
+        if (FromLog is { } id && active is not null)
+        {
+            _logEntry = await LogReader.GetAsync(id, CancellationToken.None);
+            _logMissing = _logEntry is null;
+        }
+
         if (RuleName is null)
         {
-            Model = RuleFormModel.ForNewRule(version, routes, Template);
+            Model = _logEntry is not null
+                ? LogActions.NewRule(_logEntry, action, active!.Configuration, version)
+                : RuleFormModel.ForNewRule(version, routes, Template);
             return;
         }
 
@@ -132,6 +155,12 @@ else if (Model is not null)
         }
 
         Model = RuleFormModel.FromRule(rule, version, routes);
+        if (_logEntry is not null && action == LogAction.Block)
+        {
+            _logMessage = LogActions.AddToBlockList(Model, _logEntry)
+                ? $"{_logEntry.ClientIp} was added to this IP block list."
+                : $"{_logEntry.ClientIp} is already covered by this list.";
+        }
     }
 
     private async Task HandleAsync(EditContext editContext)

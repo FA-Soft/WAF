@@ -1,0 +1,120 @@
+@page "/detection/exclusions/new"
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+@inject RequestLogReader LogReader
+
+<PageTitle>Allow a false positive · @ProductInfo.Name</PageTitle>
+
+<p><a href="rules#exclusions">← Rules</a></p>
+<h1>
+    Allow a false positive
+    <HelpTip Title="Detection exclusions">
+        <p>Attack detection sometimes flags normal traffic, for example a content editor that saves HTML. An exclusion switches detection off for one path (and everything below it), optionally only on some routes and only for some kinds of attack. Rules and rate limits still apply.</p>
+    </HelpTip>
+</h1>
+
+@if (Model is not null)
+{
+    <LogSourceNotice Entry="_logEntry" Missing="_logMissing" />
+
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>The exclusion was not saved.</strong> The running configuration is unchanged.
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <EditForm Model="Model" FormName="exclusion-edit" OnValidSubmit="SaveAsync" Enhance class="form">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-danger validation-summary" />
+        <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
+
+        <fieldset>
+            <legend>Where</legend>
+            <FormField Id="path" Label="Path" Help="Detection is switched off for this path and everything below it, e.g. /cms/editor. Keep it as narrow as possible." For="() => Model.PathPrefix">
+                <InputText id="path" aria-describedby="path-help" @bind-Value="Model.PathPrefix" autocomplete="off" />
+            </FormField>
+            <RouteScopeEditor Prefix="Model" Choices="Model.RouteChoices" />
+        </fieldset>
+
+        <fieldset>
+            <legend>Which checks to switch off</legend>
+            <p class="field-help">None ticked: all attack checks. Tick only what caused the false positive.</p>
+            <div class="checkbox-row">
+                @for (var i = 0; i < Model.Categories.Count; i++)
+                {
+                    var choice = Model.Categories[i];
+                    var name = $"Model.Categories[{i.ToString(System.Globalization.CultureInfo.InvariantCulture)}]";
+                    <input type="hidden" name="@($"{name}.Category")" value="@choice.Category" />
+                    <label><input type="checkbox" name="@($"{name}.Selected")" value="true" checked="@choice.Selected" /> @LogActions.Label(choice.Category)</label>
+                }
+            </div>
+        </fieldset>
+
+        <FormField Id="reason" Label="Reason" Optional Help="Why this is safe; shown in the list of exclusions." For="() => Model.Reason">
+            <InputText id="reason" aria-describedby="reason-help" @bind-Value="Model.Reason" autocomplete="off" />
+        </FormField>
+
+        <div class="actions">
+            <button type="submit" class="button">Add exclusion</button>
+            <a class="button button-secondary" href="@(_logEntry is null ? "rules#exclusions" : $"logs/{_logEntry.Id}")">Cancel</a>
+        </div>
+        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+    </EditForm>
+}
+
+@code {
+    private IReadOnlyList<string> _errors = [];
+    private RequestEvent? _logEntry;
+    private bool _logMissing;
+
+    [SupplyParameterFromQuery(Name = LogActions.FromLogParameter)]
+    public long? FromLog { get; set; }
+
+    [SupplyParameterFromForm(FormName = "exclusion-edit")]
+    private ExclusionFormModel? Model { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Model is not null)
+        {
+            return; // posted form
+        }
+
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var version = active?.Version ?? 0;
+        var routes = active?.Configuration.Routes.Select(r => r.Name).ToList() ?? [];
+        if (FromLog is { } id && active is not null)
+        {
+            _logEntry = await LogReader.GetAsync(id, CancellationToken.None);
+            _logMissing = _logEntry is null;
+        }
+
+        Model = _logEntry is null ? ExclusionFormModel.ForNew(version, routes) : LogActions.NewExclusion(_logEntry, active!.Configuration, version);
+    }
+
+    private async Task SaveAsync()
+    {
+        var model = Model!;
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        var exclusion = model.ToExclusion();
+        configuration.Settings.AttackDetection.Exclusions.Add(exclusion);
+
+        var result = await Configurations.ActivateIfCurrentAsync(
+            model.BaseVersion, configuration, "admin UI", $"Detection exclusion for {exclusion.PathPrefix} added.", CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"rules?saved={Uri.EscapeDataString($"Detection exclusion for {exclusion.PathPrefix} added (version {result.Version!.Version}).")}#exclusions");
+    }
+}
