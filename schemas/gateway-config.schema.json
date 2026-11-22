@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WAF Gateway configuration",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "SchemaVersion": {
+      "type": "integer"
+    },
+    "Settings": {
+      "type": "object",
+      "properties": {
+        "DetectionOnly": {
+          "type": "boolean"
+        },
+        "TrustedProxies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "Acme": {
+          "type": "object",
+          "properties": {
+            "Email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "AcceptTermsOfService": {
+              "type": "boolean"
+            },
+            "UseStaging": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "Routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Match": {
+            "type": "object",
+            "properties": {
+              "Hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "PathPrefix": {
+                "type": "string"
+              },
+              "Methods": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "Destinations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Scheme": {
+                  "type": "string"
+                },
+                "Address": {
+                  "type": "string"
+                },
+                "Port": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "PreserveHost": {
+            "type": "boolean"
+          },
+          "AllowInvalidBackendCertificate": {
+            "type": "boolean"
+          },
+          "HealthCheck": {
+            "type": "object",
+            "properties": {
+              "Path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "IntervalSeconds": {
+                "type": "integer"
+              },
+              "TimeoutSeconds": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "Rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Enabled": {
+            "type": "boolean"
+          },
+          "Priority": {
+            "type": "integer"
+          },
+          "Action": {
+            "enum": [
+              "Allow",
+              "Block",
+              "LogOnly"
+            ]
+          },
+          "DetectionOnly": {
+            "type": "boolean"
+          },
+          "Routes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Conditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Field": {
+                  "enum": [
+                    "ClientIp",
+                    "Host",
+                    "Path",
+                    "QueryString",
+                    "Method",
+                    "Header",
+                    "UserAgent"
+                  ]
+                },
+                "HeaderName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "Operator": {
+                  "enum": [
+                    "Equals",
+                    "StartsWith",
+                    "EndsWith",
+                    "Contains",
+                    "Regex",
+                    "InCidr"
+                  ]
+                },
+                "Values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "CaseSensitive": {
+                  "type": "boolean"
+                },
+                "Negate": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "Certificates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "HostName": {
+            "type": "string"
+          },
+          "Source": {
+            "enum": [
+              "LetsEncrypt",
+              "File"
+            ]
+          },
+          "CertificatePath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "KeyPath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

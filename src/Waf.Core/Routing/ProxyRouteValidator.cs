@@ -25,7 +25,7 @@ public static class ProxyRouteValidator
             {
                 errors.Add($"{label}: a name is required.");
             }
-            else if (!route.Name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.'))
+            else if (!IsValidName(route.Name))
             {
                 errors.Add($"{label}: the name may only contain letters, digits, '-', '_' and '.'.");
             }
@@ -41,6 +41,10 @@ public static class ProxyRouteValidator
 
         return errors;
     }
+
+    /// <summary>True for a non-empty name of letters, digits, '-', '_' and '.' (route and rule names).</summary>
+    public static bool IsValidName(string? name) =>
+        !string.IsNullOrEmpty(name) && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
 
     /// <summary>
     /// True for an IP address in strict notation or a DNS host name. Rejects legacy numeric forms such as

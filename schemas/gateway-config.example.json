@@ -1,0 +1,67 @@
+{
+  "$schema": "./gateway-config.schema.json",
+  "SchemaVersion": 1,
+  "Settings": {
+    "DetectionOnly": false,
+    "TrustedProxies": [ "10.0.0.1", "192.168.10.0/24" ],
+    "Acme": {
+      "Email": "admin@example.com",
+      "AcceptTermsOfService": true,
+      "UseStaging": false
+    }
+  },
+  "Routes": [
+    {
+      "Name": "website",
+      "Match": { "Hosts": [ "www.example.com", "example.com" ] },
+      "Destinations": [ { "Scheme": "http", "Address": "127.0.0.1", "Port": 8080 } ]
+    },
+    {
+      "Name": "api",
+      "Match": { "Hosts": [ "api.example.com" ], "PathPrefix": "/v1", "Methods": [ "GET", "POST" ] },
+      "Destinations": [
+        { "Scheme": "https", "Address": "10.0.0.5", "Port": 8443 },
+        { "Scheme": "https", "Address": "10.0.0.6", "Port": 8443 }
+      ],
+      "AllowInvalidBackendCertificate": true,
+      "HealthCheck": { "Path": "/health", "IntervalSeconds": 10, "TimeoutSeconds": 5 }
+    }
+  ],
+  "Rules": [
+    {
+      "Name": "office-only-admin",
+      "Description": "Only the office network may open /admin on the website.",
+      "Priority": 10,
+      "Action": "Block",
+      "Routes": [ "website" ],
+      "Conditions": [
+        { "Field": "Path", "Operator": "StartsWith", "Values": [ "/admin" ] },
+        { "Field": "ClientIp", "Operator": "InCidr", "Values": [ "203.0.113.0/24" ], "Negate": true }
+      ]
+    },
+    {
+      "Name": "require-api-key",
+      "Priority": 20,
+      "Action": "Block",
+      "Routes": [ "api" ],
+      "Conditions": [
+        { "Field": "Header", "HeaderName": "X-Api-Key", "Operator": "Regex", "Values": [ "^[A-Za-z0-9]{32}$" ], "CaseSensitive": true, "Negate": true }
+      ]
+    },
+    {
+      "Name": "watch-old-clients",
+      "Description": "Try-out: log requests from very old browsers before deciding to block them.",
+      "Priority": 50,
+      "Action": "Block",
+      "DetectionOnly": true,
+      "Conditions": [
+        { "Field": "UserAgent", "Operator": "Contains", "Values": [ "MSIE 6.0", "MSIE 7.0" ] }
+      ]
+    }
+  ],
+  "Certificates": [
+    { "HostName": "www.example.com", "Source": "LetsEncrypt" },
+    { "HostName": "example.com", "Source": "LetsEncrypt" },
+    { "HostName": "api.example.com", "Source": "File", "CertificatePath": "certs/api.pem", "KeyPath": "certs/api.key" }
+  ]
+}

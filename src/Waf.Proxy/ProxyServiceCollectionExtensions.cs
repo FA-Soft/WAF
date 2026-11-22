@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Waf.Core.Routing;
@@ -13,23 +12,22 @@ namespace Waf.Proxy;
 public static class ProxyServiceCollectionExtensions
 {
     /// <summary>
-    /// Loads routes from <c>Gateway:Routes</c>, validates them and registers YARP with an in-memory
-    /// configuration (the hook for hot reload later).
+    /// Validates <paramref name="routes"/> and registers YARP with an in-memory configuration
+    /// (the hook for hot reload later).
     /// </summary>
     /// <exception cref="OptionsValidationException">The route configuration is invalid.</exception>
-    public static IServiceCollection AddWafProxy(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWafProxy(this IServiceCollection services, IEnumerable<ProxyRouteOptions> routes)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(routes);
 
-        var routes = LoadRoutes(configuration);
-
-        var errors = ProxyRouteValidator.Validate(routes);
+        var list = routes.ToList();
+        var errors = ProxyRouteValidator.Validate(list);
         if (errors.Count > 0)
         {
             throw new OptionsValidationException(ProxyRouteOptions.SectionName, typeof(ProxyRouteOptions), errors);
         }
 
-        var (yarpRoutes, clusters) = YarpConfigMapper.Map(routes);
+        var (yarpRoutes, clusters) = YarpConfigMapper.Map(list);
         services.AddReverseProxy().LoadFromMemory(yarpRoutes, clusters);
         return services;
     }
@@ -37,7 +35,4 @@ public static class ProxyServiceCollectionExtensions
     /// <summary>Maps the proxy endpoints (load balancing and passive health checks included).</summary>
     public static ReverseProxyConventionBuilder MapWafProxy(this IEndpointRouteBuilder endpoints) =>
         endpoints.MapReverseProxy();
-
-    internal static List<ProxyRouteOptions> LoadRoutes(IConfiguration configuration) =>
-        configuration.GetSection(ProxyRouteOptions.SectionName).Get<List<ProxyRouteOptions>>() ?? [];
 }
