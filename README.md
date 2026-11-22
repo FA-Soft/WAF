@@ -70,6 +70,10 @@ The WAF owns ports 80 and 443. If IIS or another web server runs on the same mac
 
 ## Admin UI access
 
+![Admin UI dashboard showing the firewall state, the active configuration version, routes and rules](docs/images/admin-dashboard.png)
+
+The admin UI currently offers a **dashboard** (firewall state, active configuration version, rejected changes, routes, rules, rate limits and attack detection in plain language), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) and the **configuration history**. Editing routes and rules follows in the next milestones. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
+
 - **Localhost:** always available on `http://127.0.0.1:8900`. It cannot be disabled and needs no hostname or certificate.
 - **Remote:** off by default. The admin enables it under **Settings → Remote access** by registering an admin URL such as `https://admin.example.com`.
 - **Registration requirements:** 2FA enabled, a valid certificate for that hostname, and a hostname not used by any route.

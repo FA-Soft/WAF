@@ -1,0 +1,157 @@
+@page "/"
+@inject WafEngineHolder Engines
+@inject ConfigurationStore Store
+@inject ConfigurationStatus Status
+
+<PageTitle>Dashboard · @ProductInfo.Name</PageTitle>
+
+<h1>Dashboard</h1>
+
+@if (Engines.Current is null)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>The firewall is not running: public traffic is refused (503).</strong>
+        <p>@Engines.UnavailableReason</p>
+    </div>
+}
+else if (Engines.Current.DetectionOnly)
+{
+    <div class="alert alert-warning" role="status">
+        <strong>Detection only.</strong> Requests that would be blocked are logged but let through.
+        <HelpTip Title="Detection only">
+            <p>Use this mode to try out rules without risk. Switch it off in the settings once the logs show no unwanted blocks.</p>
+        </HelpTip>
+    </div>
+}
+
+@if (Status.HasRejection)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>A configuration change was rejected.</strong>
+        The previous, working configuration is still running. Fix the problems below and save again.
+        <ul>
+            @foreach (var error in Status.RejectedErrors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+        <p class="muted">Source: @Status.RejectedSource, @Status.RejectedAt?.ToString("u", System.Globalization.CultureInfo.InvariantCulture)</p>
+    </div>
+}
+
+@if (_active is null)
+{
+    <p>No configuration has been activated yet.</p>
+}
+else
+{
+    var configuration = _active.Configuration;
+    var detections = Describe.EnabledDetections(configuration.Settings.AttackDetection);
+
+    <section class="cards" aria-label="Summary">
+        <div class="card">
+            <h2>Configuration</h2>
+            <p class="metric">Version @_active.Version</p>
+            <p class="muted">
+                Activated @_active.CreatedAtUtc.ToString("u", System.Globalization.CultureInfo.InvariantCulture) by @_active.Author
+            </p>
+            @if (!string.IsNullOrEmpty(_active.Comment))
+            {
+                <p>@_active.Comment</p>
+            }
+            <a href="history">View history</a>
+        </div>
+        <div class="card">
+            <h2>
+                Routes
+                <HelpTip Title="Routes"><p>A route decides which backend receives a request, based on host name, path and method. Requests that match no route get 404.</p></HelpTip>
+            </h2>
+            <p class="metric">@configuration.Routes.Count</p>
+        </div>
+        <div class="card">
+            <h2>
+                Rules
+                <HelpTip Title="Rules"><p>Rules allow or block requests, for example by IP address or path. They run in priority order; the first Allow or Block decides.</p></HelpTip>
+            </h2>
+            <p class="metric">@configuration.Rules.Count(r => r.Enabled)</p>
+            <p class="muted">@configuration.Rules.Count(r => !r.Enabled) disabled</p>
+        </div>
+        <div class="card">
+            <h2>
+                Attack detection
+                <HelpTip Title="Attack detection"><p>Built-in checks for common attacks in the path, query string, headers and (optionally) the body.</p></HelpTip>
+            </h2>
+            <p class="metric">@(detections.Count == 0 ? "Off" : $"{detections.Count} of 5")</p>
+            <p class="muted">@string.Join(", ", detections)</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="routes-heading">
+        <h2 id="routes-heading">Routes</h2>
+        @if (configuration.Routes.Count == 0)
+        {
+            <p>No routes yet: every public request gets 404.</p>
+        }
+        else
+        {
+            <table>
+                <thead><tr><th scope="col">Name</th><th scope="col">Handles</th><th scope="col">Forwards to</th></tr></thead>
+                <tbody>
+                    @foreach (var route in configuration.Routes)
+                    {
+                        <tr>
+                            <td>@route.Name</td>
+                            <td>@Describe.Match(route.Match)</td>
+                            <td>@Describe.Destinations(route.Destinations)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    <section aria-labelledby="rules-heading">
+        <h2 id="rules-heading">Rules</h2>
+        @if (configuration.Rules.Count == 0)
+        {
+            <p>No rules yet. Attack detection and rate limits still apply.</p>
+        }
+        else
+        {
+            <table>
+                <thead><tr><th scope="col">Priority</th><th scope="col">Name</th><th scope="col">When</th><th scope="col">Then</th></tr></thead>
+                <tbody>
+                    @foreach (var rule in configuration.Rules.OrderBy(r => r.Priority).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
+                    {
+                        <tr class="@(rule.Enabled ? null : "disabled")">
+                            <td>@rule.Priority</td>
+                            <td>@rule.Name @(rule.Enabled ? null : "(disabled)")</td>
+                            <td>@Describe.Conditions(rule.Conditions)</td>
+                            <td>@Describe.Action(rule, configuration.Settings.DetectionOnly)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    @if (configuration.RateLimits.Count > 0)
+    {
+        <section aria-labelledby="limits-heading">
+            <h2 id="limits-heading">Rate limits</h2>
+            <ul>
+                @foreach (var limit in configuration.RateLimits.Where(l => l.Enabled))
+                {
+                    <li><strong>@limit.Name</strong>: @Describe.RateLimit(limit)</li>
+                }
+            </ul>
+        </section>
+    }
+}
+
+@code {
+    private StoredConfiguration? _active;
+
+    protected override async Task OnInitializedAsync() =>
+        _active = await Store.GetLastKnownGoodAsync(CancellationToken.None);
+}

@@ -28,6 +28,9 @@ internal static partial class GatewayApplication
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             Args = args,
+            // Fixed, so the admin UI's static assets manifest (WafGateway.staticwebassets.endpoints.json) is
+            // found whichever process hosts the gateway (the service, or a test runner).
+            ApplicationName = typeof(GatewayApplication).Assembly.GetName().Name,
             // A Windows service starts in System32; resolve appsettings next to the executable instead.
             ContentRootPath = WindowsServiceHelpers.IsWindowsService() ? AppContext.BaseDirectory : null,
         });
@@ -57,6 +60,7 @@ internal static partial class GatewayApplication
 
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
+        builder.Services.AddRazorComponents();
         builder.Services.AddHealthChecks()
             .AddCheck<WafEngineHealthCheck>("waf-engine")
             .AddCheck<ConfigurationHealthCheck>("configuration");

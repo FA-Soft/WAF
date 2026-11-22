@@ -1,0 +1,57 @@
+@*
+    A labelled form field with a short help text and its validation message. Put the input as child content
+    and give it id="@Id" and aria-describedby="@HelpId", e.g.:
+
+    <FormField Id="path" Label="Path" Help="The part after the host name." For="() => Model.Path">
+        <InputText id="path" aria-describedby="path-help" @bind-Value="Model.Path" />
+    </FormField>
+*@
+@typeparam TValue
+
+<div class="field">
+    <label for="@Id">
+        @Label
+        @if (Optional)
+        {
+            <span class="field-optional">(optional)</span>
+        }
+    </label>
+    @if (Help is not null)
+    {
+        <p class="field-help" id="@HelpId">@Help</p>
+    }
+    @ChildContent
+    @if (For is not null)
+    {
+        <ValidationMessage For="For" class="field-error" />
+    }
+</div>
+
+@code {
+    /// <summary>The id of the input inside; the label points to it.</summary>
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>Short, plain-language label.</summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>One or two sentences explaining what to enter, shown under the label.</summary>
+    [Parameter]
+    public string? Help { get; set; }
+
+    /// <summary>Marks the field as optional in the label.</summary>
+    [Parameter]
+    public bool Optional { get; set; }
+
+    /// <summary>The model property, for its validation message.</summary>
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<TValue>>? For { get; set; }
+
+    /// <summary>The input element.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The id of the help text; use it as the input's aria-describedby.</summary>
+    public string HelpId => $"{Id}-help";
+}

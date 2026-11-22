@@ -1,0 +1,18 @@
+@* Shows at a glance whether public traffic is protected, only observed, or refused. *@
+@inject WafEngineHolder Engines
+
+@{
+    var engine = Engines.Current;
+}
+@if (engine is null)
+{
+    <span class="badge badge-danger" title="@Engines.UnavailableReason">Unavailable: public traffic is refused</span>
+}
+else if (engine.DetectionOnly)
+{
+    <span class="badge badge-warning" title="Blocks are logged, not enforced.">Detection only</span>
+}
+else
+{
+    <span class="badge badge-ok">Protecting</span>
+}

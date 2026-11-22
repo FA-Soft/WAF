@@ -1,0 +1,52 @@
+@page "/history"
+@inject ConfigurationStore Store
+
+<PageTitle>Configuration history · @ProductInfo.Name</PageTitle>
+
+<h1>
+    Configuration history
+    <HelpTip Title="Configuration history">
+        <p>Every change to the configuration is kept as a numbered version. Only checked, working configurations become active; the active one is marked.</p>
+    </HelpTip>
+</h1>
+
+@if (_versions.Count == 0)
+{
+    <p>No versions stored yet.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr><th scope="col">Version</th><th scope="col">Stored (UTC)</th><th scope="col">By</th><th scope="col">Description</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var version in _versions)
+            {
+                <tr>
+                    <td>
+                        @version.Version
+                        @if (version.Version == _activeVersion)
+                        {
+                            <span class="badge badge-ok">Active</span>
+                        }
+                    </td>
+                    <td>@version.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)</td>
+                    <td>@version.Author</td>
+                    <td>@version.Comment</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<StoredConfiguration> _versions = [];
+    private long? _activeVersion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _versions = await Store.GetHistoryAsync(100, CancellationToken.None);
+        _activeVersion = (await Store.GetLastKnownGoodAsync(CancellationToken.None))?.Version;
+    }
+}
