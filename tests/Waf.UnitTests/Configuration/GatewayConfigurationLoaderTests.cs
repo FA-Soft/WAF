@@ -54,6 +54,58 @@ public class GatewayConfigurationLoaderTests
     }
 
     [Fact]
+    public void Every_section_of_the_model_is_loaded()
+    {
+        // The JSON example covers every section; flatten it into configuration keys and load it.
+        var json = File.ReadAllText(Path.Combine(RepoRoot(), "schemas", "gateway-config.example.json"));
+        var fromJson = GatewayConfigurationJson.Parse(json).Configuration!;
+        fromJson.Schema = null; // editor hint, not configuration
+        var values = new Dictionary<string, string?>();
+        Flatten(System.Text.Json.Nodes.JsonNode.Parse(json, documentOptions: new() { CommentHandling = System.Text.Json.JsonCommentHandling.Skip })!, "Gateway", values);
+        values.Remove("Gateway:$schema");
+
+        var loaded = GatewayConfigurationLoader.Load(Config(values));
+
+        Assert.Equal(GatewayConfigurationJson.Serialize(fromJson), GatewayConfigurationJson.Serialize(loaded));
+        Assert.NotEmpty(loaded.RateLimits);
+    }
+
+    private static void Flatten(System.Text.Json.Nodes.JsonNode node, string prefix, Dictionary<string, string?> values)
+    {
+        switch (node)
+        {
+            case System.Text.Json.Nodes.JsonObject obj:
+                foreach (var (key, child) in obj)
+                {
+                    Flatten(child!, $"{prefix}:{key}", values);
+                }
+
+                break;
+            case System.Text.Json.Nodes.JsonArray array:
+                for (var i = 0; i < array.Count; i++)
+                {
+                    Flatten(array[i]!, $"{prefix}:{i}", values);
+                }
+
+                break;
+            default:
+                values[prefix] = node.ToString();
+                break;
+        }
+    }
+
+    private static string RepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "WafGateway.sln")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory!.FullName;
+    }
+
+    [Fact]
     public void Invalid_enum_value_is_reported_with_its_key()
     {
         var ex = Assert.Throws<OptionsValidationException>(() => GatewayConfigurationLoader.Load(Config(new()

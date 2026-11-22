@@ -41,6 +41,9 @@
             }
           },
           "additionalProperties": false
+        },
+        "RateLimitMaxTrackedClients": {
+          "type": "integer"
         }
       },
       "additionalProperties": false
@@ -202,6 +205,55 @@
                 }
               },
               "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "RateLimits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Enabled": {
+            "type": "boolean"
+          },
+          "PermitLimit": {
+            "type": "integer"
+          },
+          "WindowSeconds": {
+            "type": "integer"
+          },
+          "Key": {
+            "enum": [
+              "ClientIp",
+              "ClientIpAndRoute",
+              "Route"
+            ]
+          },
+          "DetectionOnly": {
+            "type": "boolean"
+          },
+          "Routes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/properties/Rules/items/properties/Conditions/items"
             }
           }
         },

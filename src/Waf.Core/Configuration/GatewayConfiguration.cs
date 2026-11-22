@@ -29,6 +29,9 @@ public sealed class GatewayConfiguration
     /// <summary>WAF rules, evaluated by priority (lowest number first).</summary>
     public IList<WafRule> Rules { get; } = [];
 
+    /// <summary>Rate limits; every limit that applies to a request is checked.</summary>
+    public IList<RateLimitRule> RateLimits { get; } = [];
+
     /// <summary>TLS certificates per host name.</summary>
     public IList<CertificateBinding> Certificates { get; } = [];
 }
@@ -50,6 +53,15 @@ public sealed class GatewaySettings
 
     /// <summary>Let's Encrypt account settings.</summary>
     public AcmeSettings Acme { get; set; } = new();
+
+    /// <summary>
+    /// Upper bound on rate-limit counters kept in memory (all limits together). When full, idle counters
+    /// and those with the fewest requests are dropped first.
+    /// </summary>
+    public int RateLimitMaxTrackedClients { get; set; } = DefaultRateLimitMaxTrackedClients;
+
+    /// <summary>Default for <see cref="RateLimitMaxTrackedClients"/>.</summary>
+    public const int DefaultRateLimitMaxTrackedClients = 100_000;
 }
 
 /// <summary>Let's Encrypt (ACME) account settings.</summary>

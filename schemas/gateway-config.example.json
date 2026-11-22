@@ -59,6 +59,33 @@
       ]
     }
   ],
+  "RateLimits": [
+    {
+      "Name": "login-brute-force",
+      "Description": "At most 5 login attempts per minute per client.",
+      "PermitLimit": 5,
+      "WindowSeconds": 60,
+      "Routes": [ "website" ],
+      "Conditions": [
+        { "Field": "Path", "Operator": "Equals", "Values": [ "/login" ] },
+        { "Field": "Method", "Operator": "Equals", "Values": [ "POST" ] }
+      ]
+    },
+    {
+      "Name": "per-client",
+      "Description": "General limit for every client.",
+      "PermitLimit": 600,
+      "WindowSeconds": 60
+    },
+    {
+      "Name": "protect-api-backend",
+      "Description": "The API backend handles at most 2000 requests per minute in total.",
+      "PermitLimit": 2000,
+      "WindowSeconds": 60,
+      "Key": "Route",
+      "Routes": [ "api" ]
+    }
+  ],
   "Certificates": [
     { "HostName": "www.example.com", "Source": "LetsEncrypt" },
     { "HostName": "example.com", "Source": "LetsEncrypt" },
