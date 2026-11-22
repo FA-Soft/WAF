@@ -163,6 +163,45 @@ public sealed class ConfigurationStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Last_known_good_is_empty_until_set_and_follows_the_latest_activation()
+    {
+        await Store.InitializeAsync(Ct);
+        var first = await Store.SaveAsync(Config(), "a", null, Ct);
+        var second = await Store.SaveAsync(Config(Rule("r", RuleAction.LogOnly, 1)), "a", null, Ct);
+
+        Assert.Null(await Store.GetLastKnownGoodAsync(Ct));
+
+        await Store.SetLastKnownGoodAsync(second.Version, Ct);
+        Assert.Equal(second.Version, (await Store.GetLastKnownGoodAsync(Ct))!.Version);
+
+        await Store.SetLastKnownGoodAsync(first.Version, Ct);
+        Assert.Equal(first.Version, (await Store.GetLastKnownGoodAsync(Ct))!.Version);
+    }
+
+    [Fact]
+    public async Task Last_known_good_must_be_an_existing_version()
+    {
+        await Store.InitializeAsync(Ct);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Store.SetLastKnownGoodAsync(42, Ct));
+        Assert.Null(await Store.GetLastKnownGoodAsync(Ct));
+    }
+
+    [Fact]
+    public async Task History_lists_the_newest_versions_first()
+    {
+        await Store.InitializeAsync(Ct);
+        for (var i = 1; i <= 5; i++)
+        {
+            await Store.SaveAsync(Config(Rule($"r{i}", RuleAction.LogOnly, i)), "a", $"change {i}", Ct);
+        }
+
+        var history = await Store.GetHistoryAsync(3, Ct);
+
+        Assert.Equal(["change 5", "change 4", "change 3"], history.Select(h => h.Comment));
+    }
+
+    [Fact]
     public async Task Unusable_database_file_is_reported_as_a_storage_error()
     {
         await File.WriteAllTextAsync(Path.Combine(_directory, StoragePaths.ConfigDatabaseFileName), "this is not a SQLite database", Ct);

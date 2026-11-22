@@ -15,12 +15,30 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261122141223_InitialCreate";
+    public override string LastMigrationId => "20261122145344_AddConfigurationState";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "11.0.0");
+
+        modelBuilder.Entity("Waf.Data.ConfigurationState", b =>
+            {
+                b.Property<int>("Id")
+                    .HasColumnType("INTEGER");
+
+                b.Property<DateTime?>("ActivatedAtUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<long?>("LastKnownGoodVersionId")
+                    .HasColumnType("INTEGER");
+
+                b.HasKey("Id");
+
+                b.HasIndex("LastKnownGoodVersionId");
+
+                b.ToTable("ConfigurationState");
+            });
 
         modelBuilder.Entity("Waf.Data.ConfigurationVersion", b =>
             {
@@ -58,6 +76,14 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
                 b.HasIndex("CreatedAtUtc");
 
                 b.ToTable("ConfigurationVersions");
+            });
+
+        modelBuilder.Entity("Waf.Data.ConfigurationState", b =>
+            {
+                b.HasOne("Waf.Data.ConfigurationVersion", null)
+                    .WithMany()
+                    .HasForeignKey("LastKnownGoodVersionId")
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 #pragma warning restore 612, 618
     }

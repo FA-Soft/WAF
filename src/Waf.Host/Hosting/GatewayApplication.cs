@@ -44,14 +44,17 @@ internal static partial class GatewayApplication
 
         var storagePaths = ConfigureStorage(builder);
 
+        // Decide which configuration runs: appsettings if valid, otherwise the last-known-good from config.db.
+        var store = ConfigurationStore.Create(storagePaths, TimeProvider.System);
+        var bootstrap = ConfigurationBootstrap.Run(builder.Configuration, storagePaths, store, TimeProvider.System);
+        var gatewayConfiguration = bootstrap.Configuration;
+
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
         builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
-        var gatewayConfiguration = GatewayConfigurationLoader.Load(builder.Configuration);
-        builder.Services.AddWafData(storagePaths);
-        builder.Services.AddHostedService<ConfigurationStorageService>();
-        builder.Services.AddSingleton(gatewayConfiguration);
-        builder.Services.AddSingleton(TrustedProxies.Parse(gatewayConfiguration.Settings.TrustedProxies));
+        builder.Services.AddSingleton(storagePaths);
+        builder.Services.AddSingleton(store);
+        builder.Services.AddSingleton<GatewayConfigurationService>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<WafEngineHolder>();
         builder.Services.AddSingleton<IWafEventSink, LoggingWafEventSink>();
@@ -74,6 +77,7 @@ internal static partial class GatewayApplication
 
         var app = builder.Build();
 
+        LogBootstrap(app.Logger, bootstrap, storagePaths);
         ActivateWafEngine(app, gatewayConfiguration);
 
         var classifier = app.Services.GetRequiredService<ListenerClassifier>();
@@ -95,6 +99,11 @@ internal static partial class GatewayApplication
             await Console.Error.WriteLineAsync($"{ProductInfo.Name} configuration error: {ex.Message}").ConfigureAwait(false);
             return StartupFailureExitCode;
         }
+        catch (StorageInitializationException ex)
+        {
+            await Console.Error.WriteLineAsync($"{ProductInfo.Name} could not start. {ex.Message}").ConfigureAwait(false);
+            return StartupFailureExitCode;
+        }
 
         await using (app.ConfigureAwait(false))
         {
@@ -107,11 +116,6 @@ internal static partial class GatewayApplication
             catch (Exception ex) when (StartupErrorReporter.TryDescribe(ex, OperatingSystem.IsWindows(), out var message))
             {
                 LogStartupFailed(app.Logger, ex, ProductInfo.Name, message);
-                return StartupFailureExitCode;
-            }
-            catch (StorageInitializationException ex)
-            {
-                LogStartupFailed(app.Logger, ex, ProductInfo.Name, ex.Message);
                 return StartupFailureExitCode;
             }
 
@@ -164,6 +168,32 @@ internal static partial class GatewayApplication
             LogEngineUnavailable(app.Logger, ex);
         }
     }
+
+    private static void LogBootstrap(ILogger logger, BootstrapResult bootstrap, StoragePaths paths)
+    {
+        if (bootstrap.UsesLastKnownGood)
+        {
+            LogUsingLastKnownGood(logger, bootstrap.Version.Version, string.Join(" ", bootstrap.RejectedErrors));
+        }
+        else if (bootstrap.Created)
+        {
+            LogVersionStored(logger, bootstrap.Version.Version, paths.ConfigDatabasePath);
+        }
+        else
+        {
+            LogVersionUnchanged(logger, bootstrap.Version.Version);
+        }
+    }
+
+    [LoggerMessage(EventId = 10, Level = LogLevel.Information, Message = "Configuration stored as version {Version} in {DatabasePath}.")]
+    private static partial void LogVersionStored(ILogger logger, long version, string databasePath);
+
+    [LoggerMessage(EventId = 11, Level = LogLevel.Information, Message = "Configuration unchanged since version {Version}.")]
+    private static partial void LogVersionUnchanged(ILogger logger, long version);
+
+    [LoggerMessage(EventId = 12, Level = LogLevel.Critical,
+        Message = "The configuration in appsettings is invalid and was NOT activated; running the last-known-good version {Version} instead. Errors: {Errors}")]
+    private static partial void LogUsingLastKnownGood(ILogger logger, long version, string errors);
 
     [LoggerMessage(EventId = 2, Level = LogLevel.Critical, Message = "The WAF engine could not be built; public traffic is refused with 503 until the configuration is fixed.")]
     private static partial void LogEngineUnavailable(ILogger logger, Exception exception);

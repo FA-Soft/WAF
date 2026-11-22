@@ -36,6 +36,8 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
 {
     public DbSet<ConfigurationVersion> ConfigurationVersions => Set<ConfigurationVersion>();
 
+    public DbSet<ConfigurationState> ConfigurationState => Set<ConfigurationState>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -52,7 +54,37 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
             entity.Property(v => v.Sha256).IsRequired().HasMaxLength(64).IsFixedLength();
             entity.HasIndex(v => v.CreatedAtUtc);
         });
+
+        modelBuilder.Entity<ConfigurationState>(entity =>
+        {
+            entity.ToTable("ConfigurationState");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Id).ValueGeneratedNever();
+            entity.HasOne<ConfigurationVersion>()
+                .WithMany()
+                .HasForeignKey(s => s.LastKnownGoodVersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
+}
+
+/// <summary>
+/// Single-row table (<see cref="SingletonId"/>) pointing to the last-known-good version: the version that
+/// was most recently activated successfully. Only validated configurations are ever activated, so it is
+/// also the active version.
+/// </summary>
+public sealed class ConfigurationState
+{
+    /// <summary>The id of the only row.</summary>
+    public const int SingletonId = 1;
+
+    public int Id { get; set; } = SingletonId;
+
+    /// <summary>Version that was last activated successfully; null before the first activation.</summary>
+    public long? LastKnownGoodVersionId { get; set; }
+
+    /// <summary>When it was activated (UTC).</summary>
+    public DateTime? ActivatedAtUtc { get; set; }
 }
 
 /// <summary>Used by <c>dotnet ef</c> to create migrations; not used at runtime.</summary>

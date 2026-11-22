@@ -23,6 +23,13 @@ internal static class GatewayConfigurationLoader
     /// <exception cref="OptionsValidationException">The configuration cannot be read or is invalid.</exception>
     public static GatewayConfiguration Load(IConfiguration configuration)
     {
+        var (result, errors) = TryLoad(configuration);
+        return result ?? throw new OptionsValidationException(SectionName, typeof(GatewayConfiguration), errors);
+    }
+
+    /// <summary>Like <see cref="Load"/>, but returns the errors instead of throwing (configuration is null then).</summary>
+    public static (GatewayConfiguration? Configuration, IReadOnlyList<string> Errors) TryLoad(IConfiguration configuration)
+    {
         ArgumentNullException.ThrowIfNull(configuration);
 
         var section = configuration.GetSection(SectionName);
@@ -66,12 +73,7 @@ internal static class GatewayConfigurationLoader
             errors.AddRange(GatewayConfigurationValidator.Validate(result));
         }
 
-        if (errors.Count > 0)
-        {
-            throw new OptionsValidationException(SectionName, typeof(GatewayConfiguration), errors);
-        }
-
-        return result;
+        return errors.Count > 0 ? (null, errors) : (result, errors);
     }
 
     private static bool IsKnownKey(string key) =>

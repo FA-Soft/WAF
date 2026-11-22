@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Waf.Core.Configuration;
 
 namespace Waf.Data;
@@ -20,6 +21,64 @@ public sealed class StorageInitializationException(string message, Exception inn
 /// </summary>
 public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contexts, TimeProvider time)
 {
+    /// <summary>Creates a store for <c>config.db</c> in <paramref name="paths"/> without dependency injection (startup).</summary>
+    public static ConfigurationStore Create(StoragePaths paths, TimeProvider time)
+    {
+        var options = new DbContextOptionsBuilder<ConfigDbContext>()
+            .UseSqlite(DataServiceCollectionExtensions.ConnectionString(paths))
+            .Options;
+        return new ConfigurationStore(new PooledDbContextFactory<ConfigDbContext>(options), time);
+    }
+
+    /// <summary>The last-known-good version (the last one activated successfully), or null if none yet.</summary>
+    public async Task<StoredConfiguration?> GetLastKnownGoodAsync(CancellationToken cancellationToken)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var id = await db.ConfigurationState.AsNoTracking()
+            .Where(s => s.Id == ConfigurationState.SingletonId)
+            .Select(s => s.LastKnownGoodVersionId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return id is null ? null : await GetAsync(id.Value, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Records <paramref name="version"/> as the last-known-good (active) version.</summary>
+    /// <exception cref="ArgumentException">The version does not exist.</exception>
+    public async Task SetLastKnownGoodAsync(long version, CancellationToken cancellationToken)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        if (!await db.ConfigurationVersions.AnyAsync(v => v.Id == version, cancellationToken).ConfigureAwait(false))
+        {
+            throw new ArgumentException($"Configuration version {version} does not exist.", nameof(version));
+        }
+
+        var state = await db.ConfigurationState.FirstOrDefaultAsync(s => s.Id == ConfigurationState.SingletonId, cancellationToken).ConfigureAwait(false);
+        if (state is null)
+        {
+            state = new ConfigurationState();
+            db.ConfigurationState.Add(state);
+        }
+
+        state.LastKnownGoodVersionId = version;
+        state.ActivatedAtUtc = time.GetUtcNow().UtcDateTime;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The newest versions first (metadata and configuration), at most <paramref name="take"/>.</summary>
+    public async Task<IReadOnlyList<StoredConfiguration>> GetHistoryAsync(int take, CancellationToken cancellationToken)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
+
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var versions = await db.ConfigurationVersions.AsNoTracking()
+            .OrderByDescending(v => v.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return [.. versions.Select(ToStored)];
+    }
     /// <summary>
     /// Creates the database if needed, applies pending migrations and enables write-ahead logging
     /// (readers do not block the writer).

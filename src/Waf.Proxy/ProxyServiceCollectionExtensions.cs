@@ -29,6 +29,7 @@ public static class ProxyServiceCollectionExtensions
 
         var (yarpRoutes, clusters) = YarpConfigMapper.Map(list);
         services.AddReverseProxy().LoadFromMemory(yarpRoutes, clusters);
+        services.AddSingleton<ProxyRouteUpdater>();
         return services;
     }
 

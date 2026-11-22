@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Waf.Core.Net;
+using Waf.Engine;
 using Waf.Proxy;
 
 namespace Waf.UnitTests.Net;
@@ -17,9 +18,30 @@ public class ClientIpMiddlewareTests
             context.Request.Headers[ClientIpResolver.ForwardedForHeader] = forwardedFor;
         }
 
-        var middleware = new ClientIpMiddleware(_ => Task.CompletedTask, TrustedProxies.Parse(trusted), NullLogger<ClientIpMiddleware>.Instance);
+        var configuration = Waf.UnitTests.Engine.RuleBuilder.Config();
+        foreach (var proxy in trusted)
+        {
+            configuration.Settings.TrustedProxies.Add(proxy);
+        }
+
+        var engines = new WafEngineHolder();
+        engines.Activate(WafEngine.Build(configuration));
+
+        var middleware = new ClientIpMiddleware(_ => Task.CompletedTask, engines, NullLogger<ClientIpMiddleware>.Instance);
         await middleware.InvokeAsync(context);
         return context;
+    }
+
+    [Fact]
+    public async Task Without_an_active_engine_nobody_is_trusted()
+    {
+        var context = new DefaultHttpContext();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("10.0.0.1");
+        context.Request.Headers[ClientIpResolver.ForwardedForHeader] = "203.0.113.7";
+
+        await new ClientIpMiddleware(_ => Task.CompletedTask, new WafEngineHolder(), NullLogger<ClientIpMiddleware>.Instance).InvokeAsync(context);
+
+        Assert.Equal(IPAddress.Parse("10.0.0.1"), context.Connection.RemoteIpAddress);
     }
 
     [Fact]

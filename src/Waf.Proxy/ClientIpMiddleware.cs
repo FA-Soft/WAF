@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Waf.Core.Net;
+using Waf.Engine;
 
 namespace Waf.Proxy;
 
@@ -24,7 +25,11 @@ public interface IClientIpFeature
 /// <see cref="ConnectionInfo.RemoteIpAddress"/>, so everything downstream (rules, rate limiting,
 /// logging and the X-Forwarded-For sent to backends) uses the same, trustworthy value.
 /// </summary>
-public sealed partial class ClientIpMiddleware(RequestDelegate next, TrustedProxies trustedProxies, ILogger<ClientIpMiddleware> logger)
+/// <remarks>
+/// The trusted proxies come from the active <see cref="WafEngine"/>, so they change together with the rest of
+/// the configuration. Without an active engine nobody is trusted (the fail-closed guard refuses the request anyway).
+/// </remarks>
+public sealed partial class ClientIpMiddleware(RequestDelegate next, WafEngineHolder engines, ILogger<ClientIpMiddleware> logger)
 {
     public Task InvokeAsync(HttpContext context)
     {
@@ -36,7 +41,7 @@ public sealed partial class ClientIpMiddleware(RequestDelegate next, TrustedProx
             var resolution = ClientIpResolver.Resolve(
                 connectionIp,
                 context.Request.Headers[ClientIpResolver.ForwardedForHeader],
-                trustedProxies);
+                engines.Current?.TrustedProxies ?? TrustedProxies.None);
 
             if (resolution.IgnoredInvalidEntry)
             {

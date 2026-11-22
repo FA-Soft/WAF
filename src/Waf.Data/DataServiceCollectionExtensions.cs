@@ -12,16 +12,22 @@ public static class DataServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(paths);
 
-        var connectionString = new SqliteConnectionStringBuilder
+        services.AddSingleton(paths);
+        services.AddDbContextFactory<ConfigDbContext>(options => options.UseSqlite(ConnectionString(paths)));
+        services.AddSingleton<ConfigurationStore>();
+        return services;
+    }
+
+    /// <summary>Connection string for <c>config.db</c> in <paramref name="paths"/>.</summary>
+    public static string ConnectionString(StoragePaths paths)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+
+        return new SqliteConnectionStringBuilder
         {
             DataSource = paths.ConfigDatabasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
             Cache = SqliteCacheMode.Private,
         }.ToString();
-
-        services.AddSingleton(paths);
-        services.AddDbContextFactory<ConfigDbContext>(options => options.UseSqlite(connectionString));
-        services.AddSingleton<ConfigurationStore>();
-        return services;
     }
 }
