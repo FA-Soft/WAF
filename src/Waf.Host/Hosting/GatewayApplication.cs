@@ -40,7 +40,9 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
         builder.Services.AddHealthChecks();
-        builder.Services.AddWafProxy(builder.Configuration);
+        var gatewayConfiguration = GatewayConfigurationLoader.Load(builder.Configuration);
+        builder.Services.AddSingleton(gatewayConfiguration);
+        builder.Services.AddWafProxy(gatewayConfiguration.Routes);
 
         var endpoints = builder.Configuration
             .GetSection(GatewayEndpointOptions.SectionName)

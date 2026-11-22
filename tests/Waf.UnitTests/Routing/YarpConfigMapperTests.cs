@@ -138,7 +138,7 @@ public class YarpConfigMapperTests
             ["Gateway:Routes:0:HealthCheck:Path"] = "/health",
         }).Build();
 
-        var route = Assert.Single(ProxyServiceCollectionExtensions.LoadRoutes(configuration));
+        var route = Assert.Single(Waf.Host.Hosting.GatewayConfigurationLoader.Load(configuration).Routes);
 
         Assert.Equal("api", route.Name);
         Assert.Equal(["a.example.com", "b.example.com"], route.Match.Hosts);
