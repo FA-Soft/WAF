@@ -5,7 +5,7 @@ using Waf.Core.Hosting;
 using Waf.Core.Net;
 using Waf.Core.Tls;
 using Waf.Engine;
-using Waf.Engine.RateLimiting;
+using Waf.Core.Configuration;
 using Waf.Proxy;
 
 namespace Waf.Host.Hosting;
@@ -42,13 +42,15 @@ internal static partial class GatewayApplication
 
         builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
         builder.Services.AddSingleton<ListenerClassifier>();
-        builder.Services.AddHealthChecks();
+        builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
         var gatewayConfiguration = GatewayConfigurationLoader.Load(builder.Configuration);
         builder.Services.AddSingleton(gatewayConfiguration);
         builder.Services.AddSingleton(TrustedProxies.Parse(gatewayConfiguration.Settings.TrustedProxies));
         builder.Services.AddSingleton(TimeProvider.System);
-        builder.Services.AddSingleton(sp => new RateLimiter(gatewayConfiguration, sp.GetRequiredService<TimeProvider>()));
+        builder.Services.AddSingleton<WafEngineHolder>();
         builder.Services.AddSingleton<IWafEventSink, LoggingWafEventSink>();
+        builder.Services.AddSingleton<InMemoryAcmeChallengeStore>();
+        builder.Services.AddSingleton<IAcmeChallengeStore>(sp => sp.GetRequiredService<InMemoryAcmeChallengeStore>());
         builder.Services.AddWafProxy(gatewayConfiguration.Routes);
 
         var endpoints = builder.Configuration
@@ -65,6 +67,8 @@ internal static partial class GatewayApplication
         builder.WebHost.ConfigureKestrel(kestrel => KestrelListeners.Configure(kestrel, endpoints));
 
         var app = builder.Build();
+
+        ActivateWafEngine(app, gatewayConfiguration);
 
         var classifier = app.Services.GetRequiredService<ListenerClassifier>();
         app.MapWhen(classifier.IsAdminListener, AdminPipeline.Configure);
@@ -104,6 +108,29 @@ internal static partial class GatewayApplication
             return 0;
         }
     }
+
+    /// <summary>
+    /// Builds the WAF engine. If that fails, the gateway still starts but fails closed: the admin UI is
+    /// reachable to fix the configuration and public traffic gets 503.
+    /// </summary>
+    private static void ActivateWafEngine(WebApplication app, GatewayConfiguration configuration)
+    {
+        var holder = app.Services.GetRequiredService<WafEngineHolder>();
+        try
+        {
+            holder.Activate(WafEngine.Build(configuration, app.Services.GetRequiredService<TimeProvider>()));
+        }
+#pragma warning disable CA1031 // Any failure must leave the gateway closed, not crashed or open.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            holder.MarkUnavailable($"The WAF engine could not be built: {ex.Message}");
+            LogEngineUnavailable(app.Logger, ex);
+        }
+    }
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Critical, Message = "The WAF engine could not be built; public traffic is refused with 503 until the configuration is fixed.")]
+    private static partial void LogEngineUnavailable(ILogger logger, Exception exception);
 
     [LoggerMessage(EventId = 1, Level = LogLevel.Critical, Message = "{ProductName} could not start. {Reason}")]
     private static partial void LogStartupFailed(ILogger logger, Exception exception, string productName, string reason);

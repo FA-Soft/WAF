@@ -31,13 +31,16 @@ Internet ──► :80  ─► ACME challenge / redirect to HTTPS
 
 Request pipeline for public traffic:
 
-1. ACME challenge responder
+1. ACME challenge responder (only pending tokens; works even while the WAF is unavailable)
 2. Client IP resolution (trusted proxies only)
-3. Fail-closed guard
-4. WAF rule engine (immutable, hot-swappable rule set)
+3. Fail-closed guard: `503` with `Retry-After` while no WAF engine is active
+4. WAF, judging each request with one consistent, hot-swappable engine snapshot:
+   rules (a `Block` rule gives `403`; an explicit `Allow` rule skips the remaining checks), then rate limits (`429`), then attack detection (`403`). If evaluation fails for any reason, the request gets `503`: it is never forwarded unchecked.
 5. HTTPS redirect / HSTS
 6. [YARP](https://github.com/microsoft/reverse-proxy) reverse proxy with health checks and forwarded headers
-7. Asynchronous event logging
+7. Asynchronous event logging (every block, detection-only match and fail-closed refusal is reported as a security event)
+
+Blocked requests get a generic message without rule names. The admin listener is handled before this pipeline: it is never subject to rules, rate limits, detection or the 503 state, and its `/healthz` reports `Degraded` (with the reason) while the WAF engine is unavailable. If the WAF engine cannot be built at startup, the gateway still starts: the admin UI stays reachable to fix the configuration, and public traffic is refused.
 
 ## Supported platforms
 
