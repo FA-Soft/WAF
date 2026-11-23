@@ -91,6 +91,8 @@ public static class AuditActions
     public const string AdminAllowlistChanged = "admin-access.allowlist-changed";
     public const string AiKeySaved = "ai.key-saved";
     public const string AiKeyRemoved = "ai.key-removed";
+    public const string AiProposalRequested = "ai.proposal-requested";
+    public const string AiProposalDiscarded = "ai.proposal-discarded";
     public const string CertificateUploaded = "certificate.uploaded";
     public const string CertificateDeleted = "certificate.deleted";
     public const string CertificateIssued = "certificate.issued";

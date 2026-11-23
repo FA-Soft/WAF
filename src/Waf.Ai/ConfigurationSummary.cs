@@ -19,8 +19,8 @@ public static class ConfigurationSummary
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    /// <summary>Settings sent as they are.</summary>
-    private static readonly string[] AllowedSettings =
+    /// <summary>Settings sent as they are (and the only settings a proposal may change).</summary>
+    internal static readonly string[] AllowedSettings =
         [nameof(GatewaySettings.DetectionOnly), nameof(GatewaySettings.TrustedProxies), nameof(GatewaySettings.AttackDetection),
          nameof(GatewaySettings.LogRetention), nameof(GatewaySettings.Hsts)];
 

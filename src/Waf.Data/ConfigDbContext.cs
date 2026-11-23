@@ -46,6 +46,8 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
 
     public DbSet<AiSettings> AiSettings => Set<AiSettings>();
 
+    public DbSet<AiProposal> AiProposals => Set<AiProposal>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -119,6 +121,20 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
             entity.Property(s => s.ProtectedApiKey).IsRequired();
             entity.Property(s => s.KeyHint).IsRequired().HasMaxLength(8);
             entity.Property(s => s.UpdatedBy).IsRequired().HasMaxLength(256);
+        });
+
+        modelBuilder.Entity<AiProposal>(entity =>
+        {
+            entity.ToTable("AiProposals");
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Id).ValueGeneratedOnAdd();
+            entity.Property(p => p.UserName).IsRequired().HasMaxLength(256);
+            entity.Property(p => p.Prompt).IsRequired().HasMaxLength(4000);
+            entity.Property(p => p.Summary).IsRequired().HasMaxLength(4000);
+            entity.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(p => p.DecidedBy).HasMaxLength(256);
+            entity.Property(p => p.Model).IsRequired().HasMaxLength(100);
+            entity.Ignore(p => p.ErrorList);
         });
 
         modelBuilder.Entity<AcmeAccount>(entity =>

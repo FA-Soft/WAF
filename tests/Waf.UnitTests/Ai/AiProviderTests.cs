@@ -186,6 +186,49 @@ public sealed class AiProviderTests
     }
 
     [Fact]
+    public async Task A_proposal_request_asks_for_structured_output()
+    {
+        var (provider, handler) = Provider(HttpStatusCode.OK, MessageJson());
+        using (provider)
+        {
+            await provider.CompleteAsync(ConfigurationProposal.Request("Turn on detection-only mode.", Sensitive()), Ct);
+
+            var (_, body) = Assert.Single(handler.Requests);
+            AssertNothingSensitive(body);
+            using var json = JsonDocument.Parse(body);
+            var output = json.RootElement.GetProperty("output_config");
+            Assert.Equal("high", output.GetProperty("effort").GetString());
+            Assert.Equal("json_schema", output.GetProperty("format").GetProperty("type").GetString());
+            var schema = output.GetProperty("format").GetProperty("schema");
+            Assert.Equal(["summary", "configuration"], schema.GetProperty("required").EnumerateArray().Select(e => e.GetString()));
+            Assert.False(schema.GetProperty("additionalProperties").GetBoolean());
+        }
+    }
+
+    [Fact]
+    public async Task A_cut_off_answer_is_reported()
+    {
+        var (provider, _) = Provider(HttpStatusCode.OK, MessageJson("{", "max_tokens"));
+        using (provider)
+        {
+            var ex = await Assert.ThrowsAsync<AiProviderException>(() => provider.CompleteAsync(new AiRequest("i", "p", "{}"), Ct));
+            Assert.Equal(AiFailure.Incomplete, ex.Failure);
+        }
+    }
+
+    [Fact]
+    public async Task Another_api_address_can_be_configured()
+    {
+        var handler = new CapturingHandler(HttpStatusCode.OK, MessageJson());
+        using var provider = new AnthropicAiProvider(ApiKey, new HttpClient(handler), baseUrl: new Uri("https://llm-gateway.example.test/anthropic/"));
+
+        await provider.CompleteAsync(new AiRequest("i", "p", "{}"), Ct);
+
+        var (sent, _) = Assert.Single(handler.Requests);
+        Assert.Equal("https://llm-gateway.example.test/anthropic/v1/messages", sent.RequestUri!.GetLeftPart(UriPartial.Path));
+    }
+
+    [Fact]
     public void A_route_without_secrets_is_sent_as_it_is()
     {
         var configuration = new GatewayConfiguration();

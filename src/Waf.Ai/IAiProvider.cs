@@ -29,7 +29,11 @@ public interface IAiProvider : IDisposable
 /// <param name="Instructions">Fixed instructions of the gateway (the system prompt).</param>
 /// <param name="Prompt">What the administrator typed.</param>
 /// <param name="Configuration">The sanitized configuration summary (<see cref="ConfigurationSummary.Create"/>).</param>
-public sealed record AiRequest(string Instructions, string Prompt, string Configuration);
+/// <param name="ResponseSchema">
+/// A JSON schema the answer must follow (structured output), as JSON; null for free text. The answer is still checked
+/// by the caller: a schema only shapes it.
+/// </param>
+public sealed record AiRequest(string Instructions, string Prompt, string Configuration, string? ResponseSchema = null);
 
 /// <summary>The model's answer.</summary>
 public sealed record AiCompletion(string Text, string Model, long InputTokens, long OutputTokens);
@@ -48,6 +52,9 @@ public enum AiFailure
 
     /// <summary>The model declined to answer.</summary>
     Refused,
+
+    /// <summary>The answer was cut off (too long).</summary>
+    Incomplete,
 
     /// <summary>Any other error.</summary>
     Failed,

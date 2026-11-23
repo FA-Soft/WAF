@@ -15,7 +15,7 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261123203844_AddAiSettings";
+    public override string LastMigrationId => "20261123212341_AddAiProposals";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -48,6 +48,73 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
                 b.HasKey("DirectoryUrl");
 
                 b.ToTable("AcmeAccounts");
+            });
+
+        modelBuilder.Entity("FASoft.Waf.Data.AiProposal", b =>
+            {
+                b.Property<long>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<long?>("AppliedVersion")
+                    .HasColumnType("INTEGER");
+
+                b.Property<long>("BaseVersion")
+                    .HasColumnType("INTEGER");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime?>("DecidedAtUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("DecidedBy")
+                    .HasMaxLength(256)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Errors")
+                    .HasColumnType("TEXT");
+
+                b.Property<long>("InputTokens")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Model")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<long>("OutputTokens")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Prompt")
+                    .IsRequired()
+                    .HasMaxLength(4000)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("ProposalJson")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Summary")
+                    .IsRequired()
+                    .HasMaxLength(4000)
+                    .HasColumnType("TEXT");
+
+                b.Property<long?>("UndoneVersion")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("UserName")
+                    .IsRequired()
+                    .HasMaxLength(256)
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.ToTable("AiProposals");
             });
 
         modelBuilder.Entity("FASoft.Waf.Data.AiSettings", b =>

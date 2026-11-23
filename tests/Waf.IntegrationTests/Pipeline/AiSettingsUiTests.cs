@@ -36,17 +36,17 @@ public sealed class AiSettingsUiTests
     {
         await using var gateway = await StartAsync();
 
-        var page = await gateway.GetPageAsync("/ai");
+        var page = await gateway.GetPageAsync("/ai/settings");
         Assert.Contains("No API key: the AI features are off", page, StringComparison.Ordinal);
         Assert.Null(await gateway.Assistant.CreateProviderAsync(Ct));
 
         // A malformed key is refused.
-        var refused = await gateway.PostAsync("/ai", "ai-key", new() { ["Key.ApiKey"] = "not-a-key" });
+        var refused = await gateway.PostAsync("/ai/settings", "ai-key", new() { ["Key.ApiKey"] = "not-a-key" });
         Assert.Contains("does not look like an Anthropic API key", refused, StringComparison.Ordinal);
         Assert.Null(await gateway.Assistant.GetStatusAsync(Ct));
 
         // A key turns it on; the page shows only its last four characters.
-        var saved = await gateway.PostAsync("/ai", "ai-key", new() { ["Key.ApiKey"] = ApiKey });
+        var saved = await gateway.PostAsync("/ai/settings", "ai-key", new() { ["Key.ApiKey"] = ApiKey });
         Assert.Contains("The API key is saved", saved, StringComparison.Ordinal);
         Assert.Contains("…QRST", saved, StringComparison.Ordinal);
         Assert.DoesNotContain(ApiKey, saved, StringComparison.Ordinal);
@@ -57,7 +57,7 @@ public sealed class AiSettingsUiTests
         }
 
         // Removing it turns everything off again.
-        var removed = await gateway.PostAsync("/ai", "ai-remove", []);
+        var removed = await gateway.PostAsync("/ai/settings", "ai-remove", []);
         Assert.Contains("The API key is removed", removed, StringComparison.Ordinal);
         Assert.Contains("No API key: the AI features are off", removed, StringComparison.Ordinal);
         Assert.Null(await gateway.Assistant.CreateProviderAsync(Ct));
@@ -72,7 +72,7 @@ public sealed class AiSettingsUiTests
     public async Task The_key_is_encrypted_and_never_part_of_versions_or_backups()
     {
         await using var gateway = await StartAsync();
-        await gateway.PostAsync("/ai", "ai-key", new() { ["Key.ApiKey"] = ApiKey });
+        await gateway.PostAsync("/ai/settings", "ai-key", new() { ["Key.ApiKey"] = ApiKey });
 
         foreach (var file in Directory.GetFiles(gateway.DataDirectory, "*.db*"))
         {
@@ -118,7 +118,7 @@ public sealed class AiSettingsUiTests
         configuration.Settings.Acme.Email = "owner@private.example";
         Assert.True((await gateway.Configurations.ActivateAsync(configuration, AuditActor.System("test"), null, Ct)).Succeeded);
 
-        var page = await gateway.GetPageAsync("/ai");
+        var page = await gateway.GetPageAsync("/ai/settings");
 
         Assert.Contains("require-api-key", page, StringComparison.Ordinal);
         Assert.Contains(ConfigurationSecrets.Placeholder, page, StringComparison.Ordinal);
