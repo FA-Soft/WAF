@@ -42,6 +42,8 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
 
     public DbSet<StoredCertificate> StoredCertificates => Set<StoredCertificate>();
 
+    public DbSet<AcmeAccount> AcmeAccounts => Set<AcmeAccount>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -99,7 +101,21 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
             entity.Property(c => c.DnsNames).IsRequired();
             entity.Property(c => c.ProtectedPfx).IsRequired();
             entity.Property(c => c.UploadedBy).IsRequired().HasMaxLength(256);
+            entity.Property(c => c.AcmeHostName).HasMaxLength(253);
+            entity.Property(c => c.AcmeDirectory).HasMaxLength(500);
+            entity.HasIndex(c => c.AcmeHostName);
             entity.Ignore(c => c.DnsNameList);
+            entity.Ignore(c => c.IsAcme);
+        });
+
+        modelBuilder.Entity<AcmeAccount>(entity =>
+        {
+            entity.ToTable("AcmeAccounts");
+            entity.HasKey(a => a.DirectoryUrl);
+            entity.Property(a => a.DirectoryUrl).HasMaxLength(500);
+            entity.Property(a => a.AccountUrl).IsRequired().HasMaxLength(500);
+            entity.Property(a => a.Email).IsRequired().HasMaxLength(320);
+            entity.Property(a => a.ProtectedKey).IsRequired();
         });
     }
 }

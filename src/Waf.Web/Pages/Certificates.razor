@@ -90,6 +90,61 @@
     }
 </section>
 
+@if (_active is not null)
+{
+    <section class="card section" aria-labelledby="letsencrypt-heading">
+        <h2 id="letsencrypt-heading">
+            Let's Encrypt
+            <HelpTip Title="Let's Encrypt">
+                <p>Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate.</p>
+                <p>The <strong>staging</strong> environment issues test certificates that browsers do not trust, with much higher limits: use it to try things out, then switch it off. Switching gets new certificates from the other environment.</p>
+            </HelpTip>
+        </h2>
+        <EditForm Model="Acme" FormName="acme-settings" OnValidSubmit="SaveAcmeAsync" Enhance class="form">
+            <DataAnnotationsValidator />
+            <input type="hidden" name="Acme.BaseVersion" value="@_active.Version" />
+            <div class="field-row">
+                <FormField Id="acme-email" Label="Contact e-mail" Help="Let's Encrypt sends notices about your certificates here." For="() => Acme!.Email">
+                    <InputText id="acme-email" type="email" aria-describedby="acme-email-help" @bind-Value="Acme!.Email" autocomplete="email" />
+                </FormField>
+            </div>
+            <div class="field checkbox-field">
+                <InputCheckbox id="acme-tos" @bind-Value="Acme!.AcceptTermsOfService" />
+                <label for="acme-tos">I accept the <a href="https://letsencrypt.org/repository/" rel="noopener noreferrer" target="_blank">Let's Encrypt subscriber agreement</a></label>
+            </div>
+            <div class="field checkbox-field">
+                <InputCheckbox id="acme-staging" @bind-Value="Acme!.UseStaging" aria-describedby="acme-staging-help" />
+                <label for="acme-staging">Use the staging environment (test certificates)</label>
+                <p class="field-help" id="acme-staging-help">For trying things out: staging certificates are not trusted by browsers.</p>
+            </div>
+            <button type="submit" class="button button-secondary">Save Let's Encrypt settings</button>
+        </EditForm>
+
+        <EditForm Model="LetsEncryptHost" FormName="use-letsencrypt" OnSubmit="UseLetsEncryptAsync" Enhance class="form">
+            <input type="hidden" name="LetsEncryptHost.BaseVersion" value="@_active.Version" />
+            <FormField Id="letsencrypt-host" Label="Use Let's Encrypt for a host name" Help="E.g. www.example.com. A host name that has another certificate switches to Let's Encrypt." For="() => LetsEncryptHost!.HostName">
+                <InputText id="letsencrypt-host" list="hosts-without-certificate" aria-describedby="letsencrypt-host-help" @bind-Value="LetsEncryptHost!.HostName" autocomplete="off" />
+            </FormField>
+            <datalist id="hosts-without-certificate">
+                @foreach (var host in CertificateEditing.HostsWithoutCertificate(_active.Configuration))
+                {
+                    <option value="@host"></option>
+                }
+            </datalist>
+            <button type="submit" class="button">Use Let's Encrypt</button>
+        </EditForm>
+
+        @if (_statuses.Any(s => s.Source == CertificateSource.LetsEncrypt && s.State is CertificateState.Pending or CertificateState.Missing))
+        {
+            <form method="post" @formname="request-letsencrypt" @onsubmit="RequestNow" data-enhance>
+                <AntiforgeryToken />
+                <p class="muted">Certificates are requested automatically. After fixing a problem (DNS, port 80), you can ask again right away:</p>
+                <button type="submit" class="button button-secondary">Request certificates now</button>
+            </form>
+        }
+    </section>
+}
+
 <section class="section" aria-labelledby="stored-heading">
     <h2 id="stored-heading">Uploaded certificates</h2>
     @if (_stored.Count == 0)
@@ -148,7 +203,68 @@
     [SupplyParameterFromQuery]
     public string? Saved { get; set; }
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    [SupplyParameterFromForm(FormName = "acme-settings")]
+    private AcmeFormModel? Acme { get; set; }
+
+    [SupplyParameterFromForm(FormName = "use-letsencrypt")]
+    private LetsEncryptHostFormModel? LetsEncryptHost { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        LetsEncryptHost ??= new LetsEncryptHostFormModel();
+        await LoadAsync();
+        if (Acme is null && _active is not null)
+        {
+            var settings = _active.Configuration.Settings.Acme;
+            Acme = new AcmeFormModel { Email = settings.Email, AcceptTermsOfService = settings.AcceptTermsOfService, UseStaging = settings.UseStaging };
+        }
+
+        Acme ??= new AcmeFormModel();
+    }
+
+    private async Task SaveAcmeAsync()
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        configuration.Settings.Acme.Email = string.IsNullOrWhiteSpace(Acme!.Email) ? null : Acme.Email.Trim();
+        configuration.Settings.Acme.AcceptTermsOfService = Acme.AcceptTermsOfService;
+        configuration.Settings.Acme.UseStaging = Acme.UseStaging;
+        await SaveAsync(Acme.BaseVersion, configuration, "Let's Encrypt settings changed.", "Let's Encrypt settings saved");
+    }
+
+    private async Task UseLetsEncryptAsync()
+    {
+        var host = LetsEncryptHost!.HostName?.Trim().TrimEnd('.').ToLowerInvariant();
+        if (string.IsNullOrEmpty(host))
+        {
+            _errors = ["Enter a host name, e.g. www.example.com."];
+            await LoadAsync();
+            return;
+        }
+
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        await SaveAsync(LetsEncryptHost.BaseVersion, CertificateEditing.UseLetsEncrypt(active!.Configuration, host),
+            $"Let's Encrypt used for {host}.", $"{host} gets its certificate from Let's Encrypt");
+    }
+
+    private async Task SaveAsync(long baseVersion, GatewayConfiguration configuration, string description, string message)
+    {
+        var result = await Configurations.ActivateIfCurrentAsync(baseVersion, configuration, AdminActor.From(HttpContext), description, CancellationToken.None);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo($"certificates?saved={Uri.EscapeDataString($"{message} (version {result.Version!.Version}).")}");
+            return;
+        }
+
+        _errors = result.Errors;
+        await LoadAsync();
+    }
+
+    private void RequestNow()
+    {
+        Manager.RequestLetsEncryptNow();
+        Navigation.NavigateTo($"certificates?saved={Uri.EscapeDataString("Let's Encrypt certificates are being requested; reload this page in a minute.")}");
+    }
 
     private async Task LoadAsync()
     {

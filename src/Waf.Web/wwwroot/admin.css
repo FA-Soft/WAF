@@ -239,7 +239,7 @@ tr.disabled td { color: var(--muted); }
 .field-help { margin: 0 0 0.35rem; color: var(--muted); font-size: 0.9rem; }
 .field-error, .validation-message { color: var(--danger); font-size: 0.9rem; margin-top: 0.25rem; }
 
-input[type="text"], input[type="search"], input[type="number"], input[type="password"], input:not([type]), select, textarea {
+input[type="text"], input[type="search"], input[type="number"], input[type="password"], input[type="email"], input:not([type]), select, textarea {
     width: 100%;
     padding: 0.5rem 0.6rem;
     font: inherit;

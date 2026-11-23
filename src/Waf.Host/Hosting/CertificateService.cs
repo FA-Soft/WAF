@@ -29,6 +29,8 @@ internal sealed partial class CertificateService(
     ConfigurationStore configurations,
     CertificateStore store,
     AuditLogStore audit,
+    AcmeState acme,
+    Microsoft.Extensions.Options.IOptions<AcmeHostOptions> acmeOptions,
     TimeProvider time,
     ILogger<CertificateService> logger) : IServerCertificateSelector, Web.ICertificateManager, IDisposable
 {
@@ -70,7 +72,11 @@ internal sealed partial class CertificateService(
         return null;
     }
 
-    public Task<IReadOnlyList<StoredCertificate>> GetStoredAsync(CancellationToken cancellationToken) => store.GetAllAsync(cancellationToken);
+    /// <summary>Uploaded certificates only; Let's Encrypt certificates are managed automatically.</summary>
+    public async Task<IReadOnlyList<StoredCertificate>> GetStoredAsync(CancellationToken cancellationToken) =>
+        [.. (await store.GetAllAsync(cancellationToken).ConfigureAwait(false)).Where(c => !c.IsAcme)];
+
+    public void RequestLetsEncryptNow() => acme.Trigger(resetBackoff: true);
 
     public async Task<Web.CertificateUploadResult> UploadAsync(
         byte[] certificateFile, string? password, byte[]? keyFile, AuditActor actor, CancellationToken cancellationToken)
@@ -140,7 +146,7 @@ internal sealed partial class CertificateService(
         try
         {
             var active = await configurations.GetLastKnownGoodAsync(cancellationToken).ConfigureAwait(false);
-            var snapshot = await BuildAsync(active?.Configuration.Certificates ?? [], cancellationToken).ConfigureAwait(false);
+            var snapshot = await BuildAsync(active?.Configuration, cancellationToken).ConfigureAwait(false);
             var previous = Interlocked.Exchange(ref _snapshot, snapshot);
             WarnAboutProblems(snapshot.Statuses);
             if (previous.Loaded.Count > 0)
@@ -154,8 +160,11 @@ internal sealed partial class CertificateService(
         }
     }
 
-    private async Task<Snapshot> BuildAsync(IEnumerable<CertificateBinding> bindings, CancellationToken cancellationToken)
+    private async Task<Snapshot> BuildAsync(GatewayConfiguration? configuration, CancellationToken cancellationToken)
     {
+        var bindings = configuration?.Certificates ?? [];
+        var directory = acmeOptions.Value.Directory(configuration?.Settings.Acme);
+        var acmeDue = false;
         var now = time.GetUtcNow().UtcDateTime;
         var exact = new Dictionary<string, SslStreamCertificateContext>(StringComparer.OrdinalIgnoreCase);
         var wildcards = new List<(string, SslStreamCertificateContext)>();
@@ -164,18 +173,37 @@ internal sealed partial class CertificateService(
 
         foreach (var binding in bindings)
         {
+            string? acmeThumbprint = null;
             if (binding.Source == CertificateSource.LetsEncrypt)
             {
-                statuses.Add(new CertificateStatus(binding.HostName, binding.Source, CertificateState.Pending, null, null, null,
-                    "Let's Encrypt certificates are not requested yet."));
-                continue;
+                // The newest certificate from the current directory: switching staging to production gets a new one.
+                var issued = await store.FindAcmeAsync(binding.HostName, directory, cancellationToken).ConfigureAwait(false);
+                var failure = acme.Get(binding.HostName)?.LastError;
+                if (issued is null)
+                {
+                    acmeDue = true;
+                    statuses.Add(failure is null
+                        ? new CertificateStatus(binding.HostName, binding.Source, CertificateState.Pending, null, null, null,
+                            "Requested from Let's Encrypt; this usually takes less than a minute.")
+                        : new CertificateStatus(binding.HostName, binding.Source, CertificateState.Missing, null, null, null,
+                            $"Let's Encrypt failed: {failure}"));
+                    continue;
+                }
+
+                acmeDue |= AcmeService.IsDue(issued, now);
+                acmeThumbprint = issued.Thumbprint;
             }
 
             // One load per certificate, shared by the host names that use it.
-            var key = binding.Source == CertificateSource.Uploaded ? $"store:{binding.Thumbprint}" : $"file:{binding.CertificatePath}|{binding.KeyPath}";
+            var key = binding.Source switch
+            {
+                CertificateSource.Uploaded => $"store:{binding.Thumbprint}",
+                CertificateSource.LetsEncrypt => $"store:{acmeThumbprint}",
+                _ => $"file:{binding.CertificatePath}|{binding.KeyPath}",
+            };
             if (!loaded.TryGetValue(key, out var entry))
             {
-                var (certificate, problem) = await LoadAsync(binding, cancellationToken).ConfigureAwait(false);
+                var (certificate, problem) = await LoadAsync(binding, acmeThumbprint, cancellationToken).ConfigureAwait(false);
                 if (certificate is null)
                 {
                     statuses.Add(new CertificateStatus(binding.HostName, binding.Source, CertificateState.Missing, null, binding.Thumbprint, null, problem));
@@ -198,16 +226,21 @@ internal sealed partial class CertificateService(
             statuses.Add(Status(binding, entry.Certificate, now));
         }
 
+        if (acmeDue)
+        {
+            acme.Trigger();
+        }
+
         return new Snapshot(exact, wildcards, statuses, [.. loaded.Values.Select(v => v.Certificate)]);
     }
 
-    private async Task<(ServerCertificate? Certificate, string? Problem)> LoadAsync(CertificateBinding binding, CancellationToken cancellationToken)
+    private async Task<(ServerCertificate? Certificate, string? Problem)> LoadAsync(CertificateBinding binding, string? acmeThumbprint, CancellationToken cancellationToken)
     {
         try
         {
-            if (binding.Source == CertificateSource.Uploaded)
+            if (binding.Source is CertificateSource.Uploaded or CertificateSource.LetsEncrypt)
             {
-                var certificate = await store.LoadAsync(binding.Thumbprint!, cancellationToken).ConfigureAwait(false);
+                var certificate = await store.LoadAsync(acmeThumbprint ?? binding.Thumbprint!, cancellationToken).ConfigureAwait(false);
                 return certificate is null
                     ? (null, "The uploaded certificate is not in the certificate store (deleted, or a backup was restored without secrets). Upload it again.")
                     : (certificate, null);
@@ -223,8 +256,13 @@ internal sealed partial class CertificateService(
         }
     }
 
-    private static CertificateStatus Status(CertificateBinding binding, ServerCertificate certificate, DateTime now)
+    private CertificateStatus Status(CertificateBinding binding, ServerCertificate certificate, DateTime now)
     {
+        // Let's Encrypt certificates renew 30 days ahead: only warn when renewal is clearly not working.
+        var warningPeriod = binding.Source == CertificateSource.LetsEncrypt ? TimeSpan.FromDays(20) : CertificateStatus.WarningPeriod;
+        var acmeError = binding.Source == CertificateSource.LetsEncrypt && acme.Get(binding.HostName)?.LastError is { } error
+            ? $" Renewal failed: {error}"
+            : string.Empty;
         var leaf = certificate.Leaf;
         var notBefore = leaf.NotBefore.ToUniversalTime();
         var notAfter = leaf.NotAfter.ToUniversalTime();
@@ -234,7 +272,7 @@ internal sealed partial class CertificateService(
                 (CertificateState.WrongHost, $"The certificate is for {string.Join(", ", certificate.DnsNames)}, not {binding.HostName}."),
             _ when notAfter <= now => (CertificateState.Expired, $"Expired on {notAfter:yyyy-MM-dd}."),
             _ when notBefore > now => (CertificateState.NotYetValid, $"Valid from {notBefore:yyyy-MM-dd HH:mm} UTC."),
-            _ when notAfter - now <= CertificateStatus.WarningPeriod => (CertificateState.ExpiresSoon, $"Expires on {notAfter:yyyy-MM-dd}."),
+            _ when notAfter - now <= warningPeriod => (CertificateState.ExpiresSoon, $"Expires on {notAfter:yyyy-MM-dd}.{acmeError}"),
             _ => (CertificateState.Ok, (string?)null),
         };
         return new CertificateStatus(binding.HostName, binding.Source, state, leaf.Subject, certificate.Thumbprint, notAfter, problem);

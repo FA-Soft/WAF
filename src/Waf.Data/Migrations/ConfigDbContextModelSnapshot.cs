@@ -15,12 +15,40 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261123175214_AddStoredCertificates";
+    public override string LastMigrationId => "20261123182948_AddAcme";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "11.0.0");
+
+        modelBuilder.Entity("FASoft.Waf.Data.AcmeAccount", b =>
+            {
+                b.Property<string>("DirectoryUrl")
+                    .HasMaxLength(500)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("AccountUrl")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Email")
+                    .IsRequired()
+                    .HasMaxLength(320)
+                    .HasColumnType("TEXT");
+
+                b.Property<byte[]>("ProtectedKey")
+                    .IsRequired()
+                    .HasColumnType("BLOB");
+
+                b.HasKey("DirectoryUrl");
+
+                b.ToTable("AcmeAccounts");
+            });
 
         modelBuilder.Entity("FASoft.Waf.Data.AuditEntry", b =>
             {
@@ -143,6 +171,14 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("TEXT")
                     .IsFixedLength();
 
+                b.Property<string>("AcmeDirectory")
+                    .HasMaxLength(500)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("AcmeHostName")
+                    .HasMaxLength(253)
+                    .HasColumnType("TEXT");
+
                 b.Property<string>("DnsNames")
                     .IsRequired()
                     .HasColumnType("TEXT");
@@ -176,6 +212,8 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("TEXT");
 
                 b.HasKey("Thumbprint");
+
+                b.HasIndex("AcmeHostName");
 
                 b.ToTable("StoredCertificates");
             });

@@ -35,6 +35,25 @@ internal static class CertificateEditing
         return copy;
     }
 
+    /// <summary>A copy in which <paramref name="hostName"/> gets its certificate from Let's Encrypt (replacing another).</summary>
+    public static GatewayConfiguration UseLetsEncrypt(GatewayConfiguration configuration, string hostName)
+    {
+        var copy = Without(configuration, hostName);
+        copy.Certificates.Add(new CertificateBinding { HostName = hostName, Source = CertificateSource.LetsEncrypt });
+        return copy;
+    }
+
+    /// <summary>Route host names that have no certificate yet: suggestions for Let's Encrypt.</summary>
+    public static IReadOnlyList<string> HostsWithoutCertificate(GatewayConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return [.. configuration.Routes.SelectMany(r => r.Match.Hosts)
+            .Where(h => !h.Contains('*', StringComparison.Ordinal))
+            .Where(h => !configuration.Certificates.Any(c => CertificateNames.Matches(c.HostName, h)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)];
+    }
+
     /// <summary>A copy without the certificate binding of <paramref name="hostName"/>.</summary>
     public static GatewayConfiguration Without(GatewayConfiguration configuration, string hostName)
     {
@@ -106,4 +125,25 @@ internal sealed class CertificateUploadFormModel
 internal sealed class CertificateHostsFormModel
 {
     public long BaseVersion { get; set; }
+}
+
+/// <summary>The Let's Encrypt account settings form.</summary>
+internal sealed class AcmeFormModel
+{
+    public long BaseVersion { get; set; }
+
+    [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Enter a valid e-mail address.")]
+    public string? Email { get; set; }
+
+    public bool AcceptTermsOfService { get; set; }
+
+    public bool UseStaging { get; set; }
+}
+
+/// <summary>The "use Let's Encrypt for a host name" form.</summary>
+internal sealed class LetsEncryptHostFormModel
+{
+    public long BaseVersion { get; set; }
+
+    public string? HostName { get; set; }
 }

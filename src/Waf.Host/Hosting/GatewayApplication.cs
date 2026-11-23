@@ -62,6 +62,11 @@ internal static partial class GatewayApplication
 
         builder.Services.AddSingleton<ICertificateProtector, DataProtectionCertificateProtector>();
         builder.Services.AddSingleton(sp => CertificateStore.Create(storagePaths, sp.GetRequiredService<ICertificateProtector>(), TimeProvider.System));
+        builder.Services.AddOptions<AcmeHostOptions>().Bind(builder.Configuration.GetSection(AcmeHostOptions.SectionName));
+        builder.Services.AddSingleton<AcmeState>();
+        builder.Services.AddSingleton(sp => AcmeAccountStore.Create(storagePaths, sp.GetRequiredService<ICertificateProtector>(), TimeProvider.System));
+        builder.Services.AddSingleton<AcmeService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<AcmeService>());
         builder.Services.AddSingleton<CertificateService>();
         builder.Services.AddSingleton<IServerCertificateSelector>(sp => sp.GetRequiredService<CertificateService>());
         builder.Services.AddSingleton<Waf.Web.ICertificateManager>(sp => sp.GetRequiredService<CertificateService>());
