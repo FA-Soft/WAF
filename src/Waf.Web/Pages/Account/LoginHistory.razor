@@ -1,0 +1,56 @@
+@page "/account/history"
+@inject SignInHistory History
+
+<PageTitle>Login history · @ProductInfo.Name</PageTitle>
+
+<p><a href="account">← Your account</a></p>
+<h1>
+    Login history
+    <HelpTip Title="Login history">
+        <p>Every sign-in, failed attempt, lockout and sign-out of the admin UI, newest first. The last @SignInHistory.MaxEvents entries of at most @SignInHistory.MaxAge.TotalDays days are kept. For an unknown user name, the name typed is not stored: it may be a password typed into the wrong field.</p>
+    </HelpTip>
+</h1>
+
+@if (_events.Count == 0)
+{
+    <p class="muted">Nothing yet.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Time (UTC)</th>
+                <th scope="col">What happened</th>
+                <th scope="col">Account</th>
+                <th scope="col">From</th>
+                <th scope="col">Browser</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in _events)
+            {
+                var failed = SignInHistory.Failures.Contains(entry.Result);
+                <tr class="@(failed ? "row-failed" : null)">
+                    <td>@DateTimeOffset.FromUnixTimeMilliseconds(entry.TimestampMs).UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture)</td>
+                    <td>@SignInHistory.Describe(entry.Result)</td>
+                    <td>@(entry.UserName ?? "–")</td>
+                    <td>@entry.ClientIp</td>
+                    <td class="muted" title="@entry.UserAgent">@Shorten(entry.UserAgent)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private const int Shown = 200;
+    private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    private List<SignInEvent> _events = [];
+
+    protected override async Task OnInitializedAsync() => _events = await History.GetRecentAsync(Shown);
+
+    private static string Shorten(string? userAgent) =>
+        userAgent is null ? "–" : userAgent.Length <= 50 ? userAgent : userAgent[..50] + "…";
+}

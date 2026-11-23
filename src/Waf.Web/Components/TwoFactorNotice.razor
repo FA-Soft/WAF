@@ -1,0 +1,25 @@
+@* A reminder on the dashboard while the signed-in account has no two-factor sign-in. *@
+@inject UserManager<IdentityUser> Users
+
+@if (_show)
+{
+    <div class="alert alert-info" role="note">
+        <strong>Two-factor sign-in is off.</strong> Anyone who learns your password can sign in.
+        <a href="account/two-factor">Turn it on</a>: it takes a minute with an authenticator app, and remote access requires it.
+    </div>
+}
+
+@code {
+    private bool _show;
+
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpContext?.User is { } principal && await Users.GetUserAsync(principal) is { } user)
+        {
+            _show = !await Users.GetTwoFactorEnabledAsync(user);
+        }
+    }
+}

@@ -46,3 +46,28 @@ internal sealed class ChangePasswordFormModel
     [Compare(nameof(NewPassword), ErrorMessage = "The passwords do not match.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 }
+
+/// <summary>Form model of the 2FA code and recovery-code sign-in pages.</summary>
+internal sealed class CodeFormModel
+{
+    [Required(ErrorMessage = "Enter the code.")]
+    [StringLength(32, ErrorMessage = "That is too long for a code.")]
+    public string Code { get; set; } = string.Empty;
+
+    public string? ReturnUrl { get; set; }
+}
+
+/// <summary>Form model of "turn on two-factor sign-in": the first code from the authenticator app.</summary>
+internal sealed class EnableTwoFactorFormModel
+{
+    [Required(ErrorMessage = "Enter the code your authenticator app shows.")]
+    [StringLength(9, ErrorMessage = "Enter the 6-digit code.")]
+    public string Code { get; set; } = string.Empty;
+}
+
+/// <summary>Form model of the 2FA changes that need the password (new recovery codes, turning 2FA off).</summary>
+internal sealed class ConfirmPasswordFormModel
+{
+    [Required(ErrorMessage = "Enter your password.")]
+    public string Password { get; set; } = string.Empty;
+}

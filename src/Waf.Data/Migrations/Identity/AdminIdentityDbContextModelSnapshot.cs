@@ -15,7 +15,7 @@ partial class AdminIdentityDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261122231823_InitialIdentity";
+    public override string LastMigrationId => "20261123061508_AddSignInHistory";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -212,6 +212,44 @@ partial class AdminIdentityDbContextModelSnapshot : ModelSnapshot
                 b.HasKey("UserId", "LoginProvider", "Name");
 
                 b.ToTable("AspNetUserTokens");
+            });
+
+        modelBuilder.Entity("Waf.Data.SignInEvent", b =>
+            {
+                b.Property<long>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("ClientIp")
+                    .IsRequired()
+                    .HasMaxLength(45)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Result")
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .HasColumnType("TEXT");
+
+                b.Property<long>("TimestampMs")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("UserAgent")
+                    .HasMaxLength(200)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("UserId")
+                    .HasMaxLength(450)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("UserName")
+                    .HasMaxLength(256)
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.HasIndex("TimestampMs");
+
+                b.ToTable("SignInEvents");
             });
 
         modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

@@ -86,7 +86,7 @@ public sealed partial class AdminLoginTests
 
         var pages = Pages();
         Assert.True(pages.Count > 20, $"Only {pages.Count} pages found.");
-        Assert.Equal(["/account/login", "/account/setup"], pages.Where(p => p.Anonymous).Select(p => p.Path));
+        Assert.Equal(["/account/login", "/account/login/recovery", "/account/login/two-factor", "/account/setup"], pages.Where(p => p.Anonymous).Select(p => p.Path));
 
         foreach (var (path, _) in pages.Where(p => !p.Anonymous))
         {

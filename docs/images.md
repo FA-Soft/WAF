@@ -24,6 +24,10 @@ The sign-in page. Every other page needs a signed-in admin.
 
 ![Sign in](images/admin-login.png)
 
+With two-factor sign-in on, the code from the authenticator app comes after the password.
+
+![Two-factor sign-in](images/admin-two-factor-login.png)
+
 ## Dashboard
 
 The firewall state, the active configuration version, and the routes, rules, rate limits and attack detection in plain language.
@@ -136,6 +140,14 @@ The preview of an import: the file was exported without secrets, so the running 
 
 ## Your account
 
-The signed-in account, and changing its password.
+Two-factor sign-in, the previous sign-in with the failed attempts since, sessions, and changing the password.
 
 ![Your account](images/admin-account.png)
+
+Turning on two-factor sign-in: scan the QR code, or type the key, and enter the first code.
+
+![Two-factor setup](images/admin-two-factor-setup.png)
+
+The login history: sign-ins, failed attempts (highlighted), lockouts and sign-outs.
+
+![Login history](images/admin-login-history.png)
