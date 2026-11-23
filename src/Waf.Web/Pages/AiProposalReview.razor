@@ -1,0 +1,203 @@
+@page "/ai/proposals/{Id:long}"
+@inject AiAssistant Assistant
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>AI proposal @Id · @ProductInfo.Name</PageTitle>
+
+<p><a href="ai">← AI assistant</a></p>
+<h1>AI proposal @Id</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved</div>
+}
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (_proposal is null)
+{
+    <p>This proposal does not exist.</p>
+}
+else
+{
+    <section class="card section" aria-labelledby="ai-request-heading">
+        <h2 id="ai-request-heading">Request</h2>
+        <p class="ai-prompt">@_proposal.Prompt</p>
+        <dl class="details">
+            <dt>Asked</dt>
+            <dd>@_proposal.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) UTC by @_proposal.UserName, for <a href="@($"history/{_proposal.BaseVersion}")">version @_proposal.BaseVersion</a></dd>
+            <dt>Status</dt>
+            <dd><span class="badge @AiProposalText.Badge(_proposal.Status)">@AiProposalText.Status(_proposal.Status)</span></dd>
+            <dt>Model</dt>
+            <dd><code>@_proposal.Model</code>, @_proposal.InputTokens.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) tokens in, @_proposal.OutputTokens.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) out</dd>
+        </dl>
+        @if (!string.IsNullOrEmpty(_proposal.Summary))
+        {
+            <h3>The assistant's answer</h3>
+            <p class="ai-summary">@_proposal.Summary</p>
+        }
+    </section>
+
+    @switch (_proposal.Status)
+    {
+        case AiProposalStatus.Ready when _active is not null && _active.Version != _proposal.BaseVersion:
+            <div class="alert alert-warning" role="alert">
+                The configuration changed after this proposal was made (it was made for version @_proposal.BaseVersion; version @_active.Version is running now), so it can no longer be applied. <a href="ai">Ask again</a>.
+            </div>
+            <div class="actions">@Discard()</div>
+            break;
+
+        case AiProposalStatus.Ready when _review is { Candidate: not null }:
+            <section class="preview" aria-labelledby="ai-changes-heading">
+                <h2 id="ai-changes-heading">What will change</h2>
+                <ChangeList Changes="_review.Changes" Before="_active!.Configuration" After="_review.Candidate" />
+                <p class="muted">Applying creates version @(_active.Version + 1) and takes effect immediately, without a restart. You can undo it afterwards.</p>
+            </section>
+            <div class="actions">
+                <form method="post" @formname="ai-approve" @onsubmit="ApproveAsync" data-enhance>
+                    <AntiforgeryToken />
+                    <button type="submit" class="button">Apply these changes</button>
+                </form>
+                @Discard()
+            </div>
+            break;
+
+        case AiProposalStatus.Ready or AiProposalStatus.Invalid:
+            <div class="alert alert-danger" role="alert">
+                <strong>This proposal was rejected by the checks and cannot be applied.</strong> The running configuration is unchanged.
+                <ul>
+                    @foreach (var error in _proposal.Status == AiProposalStatus.Invalid ? _proposal.ErrorList : _review?.Errors ?? [])
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+            <div class="actions">@Discard()</div>
+            break;
+
+        case AiProposalStatus.NoChange:
+            <div class="alert alert-info" role="status">The assistant proposed no change; its answer above says why. <a href="ai">Ask again</a> with more detail.</div>
+            break;
+
+        case AiProposalStatus.Applied:
+            <div class="alert alert-ok" role="status">
+                Applied as <a href="@($"history/{_proposal.AppliedVersion}")">version @_proposal.AppliedVersion</a> by @_proposal.DecidedBy.
+            </div>
+            @if (_active?.Version == _proposal.AppliedVersion)
+            {
+                <form method="post" @formname="ai-undo" @onsubmit="UndoAsync" data-enhance class="actions">
+                    <AntiforgeryToken />
+                    <button type="submit" class="button button-secondary">Undo (restore version @_proposal.BaseVersion)</button>
+                </form>
+            }
+            else
+            {
+                <p class="muted">The configuration changed after this proposal was applied. To undo it anyway, restore <a href="@($"history/{_proposal.BaseVersion}")">version @_proposal.BaseVersion</a>.</p>
+            }
+            break;
+
+        case AiProposalStatus.Undone:
+            <div class="alert alert-info" role="status">
+                Applied as <a href="@($"history/{_proposal.AppliedVersion}")">version @_proposal.AppliedVersion</a>, then undone by @_proposal.DecidedBy: <a href="@($"history/{_proposal.UndoneVersion}")">version @_proposal.UndoneVersion</a> restored version @_proposal.BaseVersion.
+            </div>
+            break;
+
+        case AiProposalStatus.Discarded:
+            <div class="alert alert-info" role="status">Discarded by @_proposal.DecidedBy without applying it.</div>
+            break;
+    }
+
+    @if (_proposal.ProposalJson is not null)
+    {
+        <details class="advanced">
+            <summary>Show the proposal as it came back</summary>
+            <pre class="code-block">@Pretty(_proposal.ProposalJson)</pre>
+        </details>
+    }
+}
+
+@code {
+    private AiProposal? _proposal;
+    private StoredConfiguration? _active;
+    private ProposalReview? _review;
+    private IReadOnlyList<string> _errors = [];
+
+    [Parameter]
+    public long Id { get; set; }
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        if (_proposal is null && HttpContext is not null)
+        {
+            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _proposal = await Assistant.GetProposalAsync(Id, CancellationToken.None);
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _review = _proposal is { Status: AiProposalStatus.Ready } && _active is not null && _active.Version == _proposal.BaseVersion
+            ? AiAssistant.Review(_proposal.ProposalJson, _active.Configuration)
+            : null;
+    }
+
+    private RenderFragment Discard() =>
+        @<form method="post" @formname="ai-discard" @onsubmit="DiscardAsync" data-enhance>
+            <AntiforgeryToken />
+            <button type="submit" class="button button-secondary">Discard</button>
+        </form>;
+
+    private Task ApproveAsync() => DecideAsync(Assistant.ApproveAsync(Id, Actor, CancellationToken.None), r => $"Applied: version {r.Version} is active now.");
+
+    private Task UndoAsync() => DecideAsync(Assistant.UndoAsync(Id, Actor, CancellationToken.None), r => $"Undone: version {r.Version} restored the configuration of version {_proposal!.BaseVersion}.");
+
+    private Task DiscardAsync() => DecideAsync(Assistant.DiscardAsync(Id, Actor, CancellationToken.None), _ => "The proposal is discarded.");
+
+    private AuditActor Actor => AdminActor.From(HttpContext, AiAssistant.AuditSource);
+
+    private async Task DecideAsync(Task<AiActionResult> action, Func<AiActionResult, string> message)
+    {
+        var result = await action;
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo($"ai/proposals/{Id}?saved={Uri.EscapeDataString(message(result))}");
+            return;
+        }
+
+        _errors = result.Errors;
+        await LoadAsync();
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions Indented = new() { WriteIndented = true };
+
+    private static string Pretty(string json)
+    {
+        try
+        {
+            return System.Text.Json.Nodes.JsonNode.Parse(json)?.ToJsonString(Indented) ?? json;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return json;
+        }
+    }
+}

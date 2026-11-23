@@ -389,3 +389,14 @@ tr.row-failed td { background: var(--danger-bg); }
     border: 1px solid var(--border);
     border-radius: 6px;
 }
+
+/* AI assistant: the request and the answer as written */
+.ai-prompt,
+.ai-summary {
+    white-space: pre-wrap;
+}
+
+/* Status badges in tables stay on one line */
+td .badge {
+    white-space: nowrap;
+}

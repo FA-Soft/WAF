@@ -181,9 +181,17 @@ Remote access: off by default; the requirements, the admin address and the optio
 
 ## AI assistant
 
-The AI assistant: off until an Anthropic API key is saved; the key's last four characters, and the summary of the configuration that would be sent.
+The AI assistant: describe a change in a sentence; the list of proposals with their status.
 
 ![AI assistant](images/admin-ai.png)
+
+Reviewing a proposal: the model's summary, the differences in plain language, and Apply or Discard.
+
+![AI proposal](images/admin-ai-proposal.png)
+
+The AI assistant settings: off until an Anthropic API key is saved; the key's last four characters, and the summary of the configuration that would be sent.
+
+![AI assistant settings](images/admin-ai-settings.png)
 
 ## Your account
 

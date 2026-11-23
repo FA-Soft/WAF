@@ -27,16 +27,21 @@ public sealed class AnthropicAiProvider : IAiProvider, IDisposable
     /// <param name="apiKey">The Anthropic API key (from the gateway's encrypted settings).</param>
     /// <param name="httpClient">HTTP client to use (tests, proxies); a default one when null.</param>
     /// <param name="model">Model ID.</param>
-    public AnthropicAiProvider(string apiKey, HttpClient? httpClient = null, string model = DefaultModel)
+    /// <param name="baseUrl">The API address; <see cref="DefaultBaseUrl"/> when null (never taken from environment variables).</param>
+    public AnthropicAiProvider(string apiKey, HttpClient? httpClient = null, string model = DefaultModel, Uri? baseUrl = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(model);
 
         Model = model;
+        var address = (baseUrl ?? DefaultBaseUrl).ToString().TrimEnd('/');
         _client = httpClient is null
-            ? new AnthropicClient { ApiKey = apiKey }
-            : new AnthropicClient { ApiKey = apiKey, HttpClient = httpClient };
+            ? new AnthropicClient { ApiKey = apiKey, BaseUrl = address }
+            : new AnthropicClient { ApiKey = apiKey, BaseUrl = address, HttpClient = httpClient };
     }
+
+    /// <summary>Anthropic's API.</summary>
+    public static Uri DefaultBaseUrl { get; } = new("https://api.anthropic.com");
 
     public string Name => "Anthropic Claude";
 
@@ -52,7 +57,9 @@ public sealed class AnthropicAiProvider : IAiProvider, IDisposable
             MaxTokens = MaxOutputTokens,
             Betas = [AnthropicBeta.ServerSideFallback2026_07_01],
             Fallbacks = new Default(),
-            OutputConfig = new BetaOutputConfig { Effort = Effort.High },
+            OutputConfig = request.ResponseSchema is null
+                ? new BetaOutputConfig { Effort = Effort.High }
+                : new BetaOutputConfig { Effort = Effort.High, Format = new BetaJsonOutputFormat { Schema = Schema(request.ResponseSchema) } },
             System = request.Instructions,
             Messages =
             [
@@ -73,6 +80,11 @@ public sealed class AnthropicAiProvider : IAiProvider, IDisposable
         if (response.StopReason == "refusal")
         {
             throw new AiProviderException(AiFailure.Refused, "The model declined to answer this request. Rephrase it as a configuration change.");
+        }
+
+        if (response.StopReason == "max_tokens")
+        {
+            throw new AiProviderException(AiFailure.Incomplete, "The answer was too long and was cut off. Ask for a smaller change, or split it into steps.");
         }
 
         var text = new StringBuilder();
@@ -114,6 +126,13 @@ public sealed class AnthropicAiProvider : IAiProvider, IDisposable
             {request.Prompt}
             </request>
             """;
+    }
+
+    /// <summary>The properties of a JSON schema object, as the SDK takes them.</summary>
+    private static Dictionary<string, System.Text.Json.JsonElement> Schema(string json)
+    {
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        return document.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.Clone(), StringComparer.Ordinal);
     }
 
     /// <summary>SDK errors as <see cref="AiProviderException"/> with a plain-language message; null for anything else.</summary>

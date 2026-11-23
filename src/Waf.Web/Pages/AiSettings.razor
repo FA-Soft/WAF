@@ -1,12 +1,13 @@
-@page "/ai"
+@page "/ai/settings"
 @inject AiAssistant Assistant
 @inject NavigationManager Navigation
 
-<PageTitle>AI assistant · @ProductInfo.Name</PageTitle>
+<PageTitle>AI assistant settings · @ProductInfo.Name</PageTitle>
 
+<p><a href="ai">← AI assistant</a></p>
 <h1>
-    AI assistant
-    <HelpTip Title="AI assistant">
+    AI assistant settings
+    <HelpTip Title="AI assistant settings">
         <p>Optional: with an API key from Anthropic, a Claude model can help you change the configuration. It only proposes changes; nothing is applied without your review.</p>
         <p>Without a key, everything AI-related is off and the gateway sends nothing anywhere.</p>
     </HelpTip>
@@ -107,7 +108,7 @@
         Key.ApiKey = null; // never echoed back
         if (_errors.Count == 0)
         {
-            Navigation.NavigateTo($"ai?saved={Uri.EscapeDataString("The API key is saved; the AI assistant is on. Use \"Check the key\" to test it.")}");
+            Navigation.NavigateTo($"ai/settings?saved={Uri.EscapeDataString("The API key is saved; the AI assistant is on. Use \"Check the key\" to test it.")}");
             return;
         }
 
@@ -119,7 +120,7 @@
         var problem = await Assistant.CheckKeyAsync(CancellationToken.None);
         if (problem is null)
         {
-            Navigation.NavigateTo($"ai?saved={Uri.EscapeDataString("The key works: Anthropic accepted it.")}");
+            Navigation.NavigateTo($"ai/settings?saved={Uri.EscapeDataString("The key works: Anthropic accepted it.")}");
             return;
         }
 
@@ -130,6 +131,6 @@
     private async Task RemoveAsync()
     {
         await Assistant.RemoveKeyAsync(AdminActor.From(HttpContext), CancellationToken.None);
-        Navigation.NavigateTo($"ai?saved={Uri.EscapeDataString("The API key is removed; the AI features are off.")}");
+        Navigation.NavigateTo($"ai/settings?saved={Uri.EscapeDataString("The API key is removed; the AI features are off.")}");
     }
 }

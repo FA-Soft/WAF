@@ -65,7 +65,8 @@ internal static partial class GatewayApplication
         // AI assistant: off until an API key is saved (encrypted in config.db).
         builder.Services.AddSingleton<IApiKeyProtector, DataProtectionApiKeyProtector>();
         builder.Services.AddSingleton(sp => AiSettingsStore.Create(storagePaths, sp.GetRequiredService<IApiKeyProtector>(), TimeProvider.System));
-        builder.Services.AddSingleton<Waf.Web.IAiProviderFactory, Waf.Web.AiProviderFactory>();
+        builder.Services.AddSingleton<Waf.Web.IAiProviderFactory>(new Waf.Web.AiProviderFactory(AnthropicBaseUrl(builder.Configuration)));
+        builder.Services.AddSingleton(sp => AiProposalStore.Create(storagePaths, TimeProvider.System));
         builder.Services.AddSingleton<Waf.Web.AiAssistant>();
         builder.Services.AddSingleton(sp => CertificateStore.Create(storagePaths, sp.GetRequiredService<ICertificateProtector>(), TimeProvider.System));
         builder.Services.AddOptions<AcmeHostOptions>().Bind(builder.Configuration.GetSection(AcmeHostOptions.SectionName));
@@ -242,6 +243,23 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<IRequestLog>(sp => sp.GetRequiredService<RequestLogWriter>());
         builder.Services.AddSingleton<IRequestLogMonitor>(sp => sp.GetRequiredService<RequestLogWriter>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<RequestLogWriter>());
+    }
+
+    /// <summary>
+    /// <c>Gateway:Ai:AnthropicBaseUrl</c>: another address for Anthropic's API (an API gateway of your own); null when
+    /// not set. Only from the gateway's own settings, never from environment variables of the SDK.
+    /// </summary>
+    private static Uri? AnthropicBaseUrl(ConfigurationManager configuration)
+    {
+        var value = configuration[AiProviderFactory.AnthropicBaseUrlSetting];
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Uri.TryCreate(value, UriKind.Absolute, out var url) && (url.Scheme == Uri.UriSchemeHttps || url.Scheme == Uri.UriSchemeHttp)
+            ? url
+            : throw new InvalidOperationException($"{AiProviderFactory.AnthropicBaseUrlSetting} must be an http or https address; '{value}' is not.");
     }
 
     private static StoragePaths ConfigureStorage(WebApplicationBuilder builder)

@@ -248,14 +248,27 @@ Optional and disabled unless you provide an API key (default provider: Anthropic
 
 ![AI assistant page](docs/images/admin-ai.png)
 
-**Turning it on.** Create an API key in the [Anthropic Console](https://console.anthropic.com) and paste it on the **AI assistant** page; usage is billed by Anthropic to that account. The key is encrypted at rest (ASP.NET Core Data Protection, as for certificate keys) in `config.db`, is never shown again (only its last four characters), and is never part of configuration versions, exports or backups, not even a backup with secrets: it belongs to this machine and survives a backup restore. **Check the key** asks Anthropic whether the key works without running the model (free). **Remove the key** turns every AI feature off again. Saving and removing the key are recorded in the audit log. Without a key, nothing AI-related runs and the gateway sends nothing anywhere.
+**Turning it on.** Create an API key in the [Anthropic Console](https://console.anthropic.com) and paste it under **AI assistant → Settings and what is sent** (`/ai/settings`); usage is billed by Anthropic to that account. The key is encrypted at rest (ASP.NET Core Data Protection, as for certificate keys) in `config.db`, is never shown again (only its last four characters), and is never part of configuration versions, exports or backups, not even a backup with secrets: it belongs to this machine and survives a backup restore. **Check the key** asks Anthropic whether the key works without running the model (free). **Remove the key** turns every AI feature off again. Saving and removing the key are recorded in the audit log. Without a key, nothing AI-related runs and the gateway sends nothing anywhere.
 
 The assistant uses Claude Opus 5.5 (`claude-opus-5-5`) with high effort, through the official Anthropic SDK for .NET. If the model declines a request, Anthropic can answer it with a fallback model (server-side fallback); a refusal that remains is reported as such.
 
-1. Describe what you want, for example: *"Block everything except my office IP on /admin and forward api.example.com to 10.0.0.5:8080."*
-2. The assistant returns a structured proposal that is validated against a strict schema.
-3. You review a human-readable diff and approve it. Nothing is ever applied automatically.
-4. Undo restores the previous configuration in one click.
+1. **Ask.** On the **AI assistant** page, describe one change in your own words, for example: *"Only the office network 203.0.113.0/24 may open /admin."* Your request and the configuration summary are sent to Anthropic (recorded in the audit log), one request at a time.
+2. **Strict checks.** The model answers in a fixed format (structured output): a short summary and only the sections it changes. Every proposal is stored, and checked before you see an Approve button:
+   - it may only change routes, rules, rate limits and the settings for detection mode, trusted proxies, attack detection, log retention and HSTS; certificates, Let's Encrypt and other settings are refused;
+   - each section it contains replaces that section; the result is read as strictly as an imported file, against the same JSON schema (unknown properties, wrong value types, unknown enumeration values and `null`s are errors, with their location) and the full configuration validation;
+   - secret values the model saw as a placeholder are filled in from the running configuration, and only when they stay in the same rule or rate limit, at the same condition and header;
+   - a proposal that changes nothing is refused too.
+
+   A proposal that fails is shown as **Rejected by the checks**, with the reasons and the answer as it came back, and can never be applied. If the request is unclear, the model proposes no change and says why.
+3. **Review.** The proposal page lists the differences in plain language (added, changed and removed routes, rules, rate limits and settings, each with its configuration on request), with the model's summary. Nothing is applied until you click **Apply these changes**; a proposal is applied at most once, and only while the configuration it was made for is still running (otherwise ask again).
+4. **Approve.** Applying creates a new configuration version, with the comment "AI proposal N: …", the source "AI assistant" and your user name in the configuration history and the audit log. It takes effect immediately, without a restart.
+5. **Undo.** **Undo** on the proposal page rolls back to the version the proposal was made for (stored as a new version), as long as nothing else changed since; otherwise restore that version on the history page.
+
+![Reviewing an AI proposal](docs/images/admin-ai-proposal.png)
+
+Proposals (request, answer, status, versions and token use) are kept in `config.db` on this machine, like the key: they are not part of exports or backups.
+
+**Another API address.** To send the requests through an API gateway of your own instead of directly to Anthropic, set `Gateway:Ai:AnthropicBaseUrl` (for example `https://llm-gateway.example.com/anthropic`) in `appsettings.json`. The address is taken only from this setting, never from the Anthropic SDK's environment variables.
 
 Only your prompt and a sanitized summary of the current configuration are sent. Request bodies, cookies, secrets and log content are never sent. The summary is built from an allowlist: routes, rules, rate limits, and the settings for detection mode, trusted proxies, attack detection, log retention and HSTS, with secret values (such as API keys in header conditions) replaced by a placeholder; certificates appear only as host name and source, and the Let's Encrypt e-mail, certificate files, the request log, accounts and remote access settings are left out. The page shows exactly what would be sent. Tests check the HTTP request the SDK builds: only these fields, and none of the secrets.
 

@@ -1,0 +1,123 @@
+@page "/ai"
+@inject AiAssistant Assistant
+@inject NavigationManager Navigation
+
+<PageTitle>AI assistant · @ProductInfo.Name</PageTitle>
+
+<h1>
+    AI assistant
+    <HelpTip Title="AI assistant">
+        <p>Describe a change in a sentence. A Claude model proposes it; the gateway checks the proposal strictly and shows you the differences. Nothing is applied until you approve it, and an applied proposal can be undone in one click.</p>
+        <p>Only your request and a summary of the configuration without secrets are sent.</p>
+    </HelpTip>
+</h1>
+
+<p class="actions"><a class="button button-secondary" href="ai/settings">Settings and what is sent</a></p>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (_status is null)
+{
+    <section class="card section" aria-labelledby="ai-off-heading">
+        <h2 id="ai-off-heading">The AI assistant is off</h2>
+        <p><span class="badge badge-muted">Off</span> No API key is configured: nothing AI-related runs and nothing is sent anywhere.</p>
+        <p><a class="button" href="ai/settings">Turn it on</a></p>
+    </section>
+}
+else
+{
+    <section class="card section" aria-labelledby="ai-ask-heading">
+        <h2 id="ai-ask-heading">Ask for a change</h2>
+        <EditForm Model="Ask" FormName="ai-ask" OnSubmit="AskAsync" Enhance class="form">
+            <FormField Id="ai-prompt" Label="What should change?" Help="@($"One change at a time, in your own words (at most {ConfigurationProposal.MaxPromptLength} characters). For example: block everything except 203.0.113.0/24 on /admin.")" For="() => Ask!.Prompt">
+                <InputTextArea id="ai-prompt" aria-describedby="ai-prompt-help" @bind-Value="Ask!.Prompt" rows="4" maxlength="@ConfigurationProposal.MaxPromptLength" />
+            </FormField>
+            <button type="submit" class="button">Ask for a proposal</button>
+            <p class="muted">Sends your request and the configuration summary to Anthropic (<code>@AnthropicAiProvider.DefaultModel</code>); an answer can take a minute. You review the proposal before anything changes.</p>
+        </EditForm>
+    </section>
+}
+
+<section class="section" aria-labelledby="ai-proposals-heading">
+    <h2 id="ai-proposals-heading">Proposals</h2>
+    @if (_proposals.Count == 0)
+    {
+        <p class="muted">No proposals yet.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th scope="col">Asked (UTC)</th><th scope="col">By</th><th scope="col">Request</th><th scope="col">Status</th><th scope="col">Version</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var proposal in _proposals)
+                {
+                    <tr>
+                        <td><a href="@($"ai/proposals/{proposal.Id}")">@proposal.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)</a></td>
+                        <td>@proposal.UserName</td>
+                        <td>@Shorten(proposal.Prompt)</td>
+                        <td><span class="badge @AiProposalText.Badge(proposal.Status)">@AiProposalText.Status(proposal.Status)</span></td>
+                        <td>
+                            @if (proposal.AppliedVersion is { } applied)
+                            {
+                                <a href="@($"history/{applied}")">@applied</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+@code {
+    private const int Shown = 20;
+
+    private AiSettingsInfo? _status;
+    private IReadOnlyList<AiProposal> _proposals = [];
+    private IReadOnlyList<string> _errors = [];
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromForm(FormName = "ai-ask")]
+    private AiPromptFormModel? Ask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Ask ??= new AiPromptFormModel();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _status = await Assistant.GetStatusAsync(CancellationToken.None);
+        _proposals = await Assistant.RecentProposalsAsync(Shown, CancellationToken.None);
+    }
+
+    private async Task AskAsync()
+    {
+        var result = await Assistant.AskAsync(Ask!.Prompt, AdminActor.From(HttpContext, AiAssistant.AuditSource), CancellationToken.None);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo($"ai/proposals/{result.ProposalId}");
+            return;
+        }
+
+        _errors = result.Errors;
+        await LoadAsync();
+    }
+
+    private static string Shorten(string text) => text.Length > 120 ? text[..120] + "…" : text;
+}

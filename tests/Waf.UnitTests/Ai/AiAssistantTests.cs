@@ -45,21 +45,31 @@ public sealed class AiAssistantTests : IDisposable
     {
         public List<(string Provider, string ApiKey)> Created { get; } = [];
 
+        /// <summary>What the provider answers; an exception to throw instead.</summary>
+        public string Answer { get; set; } = string.Empty;
+
+        public AiProviderException? Failure { get; set; }
+
+        public List<AiRequest> Requests { get; } = [];
+
         public IAiProvider Create(string provider, string apiKey)
         {
             Created.Add((provider, apiKey));
-            return new NullProvider();
+            return new ScriptedProvider(this);
         }
     }
 
-    private sealed class NullProvider : IAiProvider
+    private sealed class ScriptedProvider(RecordingFactory factory) : IAiProvider
     {
         public string Name => "test";
 
         public string Model => "test-model";
 
-        public Task<AiCompletion> CompleteAsync(AiRequest request, CancellationToken cancellationToken) =>
-            Task.FromResult(new AiCompletion(string.Empty, Model, 0, 0));
+        public Task<AiCompletion> CompleteAsync(AiRequest request, CancellationToken cancellationToken)
+        {
+            factory.Requests.Add(request);
+            return factory.Failure is { } failure ? Task.FromException<AiCompletion>(failure) : Task.FromResult(new AiCompletion(factory.Answer, Model, 1000, 200));
+        }
 
         public Task CheckAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
@@ -71,8 +81,11 @@ public sealed class AiAssistantTests : IDisposable
     /// <summary>Only <see cref="GetActiveAsync"/> is used by the assistant.</summary>
     private sealed class ActiveConfiguration(GatewayConfiguration configuration) : IGatewayConfigurationService
     {
+        /// <summary>The running version; changing it stands for a change made by someone else.</summary>
+        public long Version { get; set; } = 1;
+
         public Task<StoredConfiguration?> GetActiveAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<StoredConfiguration?>(new StoredConfiguration(1, DateTime.UtcNow, "test", null, "sha", configuration));
+            Task.FromResult<StoredConfiguration?>(new StoredConfiguration(Version, DateTime.UtcNow, "test", null, "sha", configuration));
 
         public Task<ActivationResult> ActivateAsync(GatewayConfiguration candidate, AuditActor actor, string? comment, CancellationToken cancellationToken) => throw new NotSupportedException();
 
@@ -92,7 +105,122 @@ public sealed class AiAssistantTests : IDisposable
         await ConfigurationStore.Create(_paths, _time).InitializeAsync(Ct);
         var audit = AuditLogStore.Create(_paths, _time);
         var store = AiSettingsStore.Create(_paths, new ScramblingProtector(), _time);
-        return (new AiAssistant(store, _factory, new ActiveConfiguration(configuration ?? new GatewayConfiguration()), audit), audit);
+        _proposals = AiProposalStore.Create(_paths, _time);
+        _active = new ActiveConfiguration(configuration ?? new GatewayConfiguration());
+        return (new AiAssistant(store, _proposals, _factory, _active, audit), audit);
+    }
+
+    private AiProposalStore _proposals = null!;
+
+    private ActiveConfiguration _active = null!;
+
+    private static string Answer(string summary, string configuration) =>
+        new System.Text.Json.Nodes.JsonObject { ["summary"] = summary, ["configuration"] = configuration }.ToJsonString();
+
+    [Fact]
+    public async Task Asking_without_a_key_sends_nothing()
+    {
+        var (assistant, audit) = await CreateAsync();
+
+        var result = await assistant.AskAsync("Turn on detection-only mode.", _actor, Ct);
+
+        Assert.Contains("off", Assert.Single(result.Errors), StringComparison.Ordinal);
+        Assert.Empty(_factory.Requests);
+        Assert.Empty((await audit.ReadPageAsync(new AuditFilter(), null, null, 10, Ct)).Items);
+    }
+
+    [Fact]
+    public async Task A_valid_answer_becomes_a_proposal_waiting_for_review()
+    {
+        var (assistant, audit) = await CreateAsync(RuleBuilder.Config());
+        await assistant.SaveKeyAsync(ApiKey, _actor, Ct);
+        _factory.Answer = Answer("Turns on detection-only mode.", """{"Settings":{"DetectionOnly":true}}""");
+
+        var result = await assistant.AskAsync("  Turn on detection-only mode.  ", _actor, Ct);
+
+        Assert.True(result.Succeeded);
+        var request = Assert.Single(_factory.Requests);
+        Assert.Equal(("Turn on detection-only mode.", ConfigurationProposal.ResponseSchema), (request.Prompt, request.ResponseSchema));
+        var proposal = (await assistant.GetProposalAsync(result.ProposalId!.Value, Ct))!;
+        Assert.Equal((AiProposalStatus.Ready, 1L, "alice", "Turns on detection-only mode.", 1000L, 200L),
+            (proposal.Status, proposal.BaseVersion, proposal.UserName, proposal.Summary, proposal.InputTokens, proposal.OutputTokens));
+        Assert.Null(proposal.AppliedVersion); // nothing is applied without approval
+
+        var sent = (await audit.ReadPageAsync(new AuditFilter(), null, null, 10, Ct)).Items[0];
+        Assert.Equal((AuditActions.AiProposalRequested, "Turn on detection-only mode."), (sent.Action, sent.Details));
+    }
+
+    [Fact]
+    public async Task An_answer_that_fails_the_checks_is_kept_as_rejected()
+    {
+        var (assistant, _) = await CreateAsync(RuleBuilder.Config());
+        await assistant.SaveKeyAsync(ApiKey, _actor, Ct);
+        _factory.Answer = Answer("Adds a certificate.", """{"Certificates":[{"HostName":"x.example.com"}]}""");
+
+        var result = await assistant.AskAsync("Add a certificate.", _actor, Ct);
+
+        var proposal = (await assistant.GetProposalAsync(result.ProposalId!.Value, Ct))!;
+        Assert.Equal(AiProposalStatus.Invalid, proposal.Status);
+        Assert.Contains("'Certificates'", Assert.Single(proposal.ErrorList), StringComparison.Ordinal);
+        Assert.False((await assistant.ApproveAsync(proposal.Id, _actor, Ct)).Succeeded);
+    }
+
+    [Theory]
+    [InlineData("not json at all", AiProposalStatus.Invalid)]
+    [InlineData("""{"summary":"Which route do you mean?","configuration":""}""", AiProposalStatus.NoChange)]
+    public async Task Other_answers_are_kept_with_their_status(string answer, AiProposalStatus expected)
+    {
+        var (assistant, _) = await CreateAsync(RuleBuilder.Config());
+        await assistant.SaveKeyAsync(ApiKey, _actor, Ct);
+        _factory.Answer = answer;
+
+        var result = await assistant.AskAsync("Change the route.", _actor, Ct);
+
+        Assert.Equal(expected, (await assistant.GetProposalAsync(result.ProposalId!.Value, Ct))!.Status);
+    }
+
+    [Fact]
+    public async Task A_provider_failure_is_explained_and_nothing_is_stored()
+    {
+        var (assistant, _) = await CreateAsync(RuleBuilder.Config());
+        await assistant.SaveKeyAsync(ApiKey, _actor, Ct);
+        _factory.Failure = new AiProviderException(AiFailure.RateLimited, "Anthropic's rate limit was reached.");
+
+        var result = await assistant.AskAsync("Turn on detection-only mode.", _actor, Ct);
+
+        Assert.Equal(["Anthropic's rate limit was reached."], result.Errors);
+        Assert.Empty(await assistant.RecentProposalsAsync(10, Ct));
+    }
+
+    [Fact]
+    public async Task A_proposal_for_an_older_version_is_not_applied()
+    {
+        var (assistant, _) = await CreateAsync(RuleBuilder.Config());
+        await assistant.SaveKeyAsync(ApiKey, _actor, Ct);
+        _factory.Answer = Answer("Detection only.", """{"Settings":{"DetectionOnly":true}}""");
+        var id = (await assistant.AskAsync("Detection only.", _actor, Ct)).ProposalId!.Value;
+        _active.Version = 2; // changed by someone else in between (activation would throw in this fake)
+
+        var result = await assistant.ApproveAsync(id, _actor, Ct);
+
+        Assert.Contains("changed after this proposal was made", Assert.Single(result.Errors), StringComparison.Ordinal);
+        Assert.Equal(AiProposalStatus.Ready, (await assistant.GetProposalAsync(id, Ct))!.Status);
+        Assert.False((await assistant.UndoAsync(id, _actor, Ct)).Succeeded); // not applied: nothing to undo
+    }
+
+    [Fact]
+    public async Task A_discarded_proposal_cannot_be_approved()
+    {
+        var (assistant, _) = await CreateAsync(RuleBuilder.Config());
+        await assistant.SaveKeyAsync(ApiKey, _actor, Ct);
+        _factory.Answer = Answer("Detection only.", """{"Settings":{"DetectionOnly":true}}""");
+        var id = (await assistant.AskAsync("Detection only.", _actor, Ct)).ProposalId!.Value;
+
+        Assert.True((await assistant.DiscardAsync(id, _actor, Ct)).Succeeded);
+
+        Assert.Equal(AiProposalStatus.Discarded, (await assistant.GetProposalAsync(id, Ct))!.Status);
+        Assert.Contains("discarded", Assert.Single((await assistant.ApproveAsync(id, _actor, Ct)).Errors), StringComparison.Ordinal);
+        Assert.False((await assistant.DiscardAsync(id, _actor, Ct)).Succeeded);
     }
 
     [Fact]
