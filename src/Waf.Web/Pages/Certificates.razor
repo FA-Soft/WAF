@@ -145,6 +145,37 @@
     </section>
 }
 
+@if (_active is not null)
+{
+    <section class="card section" aria-labelledby="hsts-heading">
+        <h2 id="hsts-heading">
+            HSTS
+            <HelpTip Title="HTTP Strict Transport Security">
+                <p>Routes with "Tell browsers to use HTTPS only" send this header on HTTPS responses. Browsers then use HTTPS for the host name for the time below, even when someone types http://. Which routes send it is chosen per route.</p>
+                <p>Start short (a day) and raise it to a year once everything works over HTTPS. 0 tells browsers to forget it. <strong>Subdomains</strong> extends it to every subdomain; <strong>preload</strong> asks to be built into browsers (hstspreload.org) and is very hard to undo.</p>
+            </HelpTip>
+        </h2>
+        <EditForm Model="Hsts" FormName="hsts-settings" OnValidSubmit="SaveHstsAsync" Enhance class="form">
+            <DataAnnotationsValidator />
+            <input type="hidden" name="Hsts.BaseVersion" value="@_active.Version" />
+            <FormField Id="hsts-days" Label="Remember HTTPS for (days)" Help="365 is the usual value. 0 tells browsers to forget it." For="() => Hsts!.MaxAgeDays">
+                <InputNumber id="hsts-days" aria-describedby="hsts-days-help" @bind-Value="Hsts!.MaxAgeDays" min="0" max="730" />
+            </FormField>
+            <div class="field checkbox-field">
+                <InputCheckbox id="hsts-subdomains" @bind-Value="Hsts!.IncludeSubDomains" />
+                <label for="hsts-subdomains">Include subdomains</label>
+            </div>
+            <div class="field checkbox-field">
+                <InputCheckbox id="hsts-preload" @bind-Value="Hsts!.Preload" aria-describedby="hsts-preload-help" />
+                <label for="hsts-preload">Allow preloading</label>
+                <p class="field-help" id="hsts-preload-help">Needs subdomains and at least 365 days.</p>
+            </div>
+            <p class="muted">Header sent: <code>Strict-Transport-Security: @_active.Configuration.Settings.Hsts.HeaderValue()</code></p>
+            <button type="submit" class="button button-secondary">Save HSTS settings</button>
+        </EditForm>
+    </section>
+}
+
 <section class="section" aria-labelledby="stored-heading">
     <h2 id="stored-heading">Uploaded certificates</h2>
     @if (_stored.Count == 0)
@@ -209,6 +240,9 @@
     [SupplyParameterFromForm(FormName = "use-letsencrypt")]
     private LetsEncryptHostFormModel? LetsEncryptHost { get; set; }
 
+    [SupplyParameterFromForm(FormName = "hsts-settings")]
+    private HstsFormModel? Hsts { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         LetsEncryptHost ??= new LetsEncryptHostFormModel();
@@ -220,6 +254,23 @@
         }
 
         Acme ??= new AcmeFormModel();
+        if (Hsts is null && _active is not null)
+        {
+            var hsts = _active.Configuration.Settings.Hsts;
+            Hsts = new HstsFormModel { MaxAgeDays = hsts.MaxAgeSeconds / 86_400, IncludeSubDomains = hsts.IncludeSubDomains, Preload = hsts.Preload };
+        }
+
+        Hsts ??= new HstsFormModel();
+    }
+
+    private async Task SaveHstsAsync()
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        configuration.Settings.Hsts.MaxAgeSeconds = Hsts!.MaxAgeDays * 86_400;
+        configuration.Settings.Hsts.IncludeSubDomains = Hsts.IncludeSubDomains;
+        configuration.Settings.Hsts.Preload = Hsts.Preload;
+        await SaveAsync(Hsts.BaseVersion, configuration, "HSTS settings changed.", "HSTS settings saved");
     }
 
     private async Task SaveAcmeAsync()

@@ -54,6 +54,9 @@ public sealed class GatewaySettings
     /// <summary>Let's Encrypt account settings.</summary>
     public AcmeSettings Acme { get; set; } = new();
 
+    /// <summary>The Strict-Transport-Security header sent by routes that enable HSTS.</summary>
+    public HstsSettings Hsts { get; set; } = new();
+
     /// <summary>Built-in attack detection.</summary>
     public AttackDetectionSettings AttackDetection { get; set; } = new();
 
@@ -92,6 +95,36 @@ public sealed class LogRetentionSettings
 
     /// <summary>Largest size limit, in MB (1 TB).</summary>
     public const int MaxDatabaseSizeLimitMb = 1_048_576;
+}
+
+/// <summary>
+/// The HTTP Strict Transport Security header (RFC 6797) for routes with <c>Https.Hsts</c>. It is only sent over HTTPS.
+/// </summary>
+public sealed class HstsSettings
+{
+    /// <summary>One year: what browsers and the HSTS preload list expect.</summary>
+    public const int DefaultMaxAgeSeconds = 31_536_000;
+
+    /// <summary>Two years: the longest value accepted here.</summary>
+    public const int MaxMaxAgeSeconds = 63_072_000;
+
+    /// <summary>How long browsers use HTTPS only, in seconds. 0 tells browsers to forget the host's HSTS.</summary>
+    public int MaxAgeSeconds { get; set; } = DefaultMaxAgeSeconds;
+
+    /// <summary>Also for every subdomain of the host name. Only when all of them support HTTPS.</summary>
+    public bool IncludeSubDomains { get; set; }
+
+    /// <summary>
+    /// Ask to be included in browsers' built-in HSTS list (hstspreload.org). Needs IncludeSubDomains and a max-age
+    /// of at least one year; very hard to undo.
+    /// </summary>
+    public bool Preload { get; set; }
+
+    /// <summary>The header value, e.g. <c>max-age=31536000; includeSubDomains</c>.</summary>
+    public string HeaderValue() =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"max-age={MaxAgeSeconds}")
+        + (IncludeSubDomains ? "; includeSubDomains" : string.Empty)
+        + (Preload ? "; preload" : string.Empty);
 }
 
 /// <summary>Let's Encrypt (ACME) account settings.</summary>

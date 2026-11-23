@@ -42,6 +42,21 @@
           },
           "additionalProperties": false
         },
+        "Hsts": {
+          "type": "object",
+          "properties": {
+            "MaxAgeSeconds": {
+              "type": "integer"
+            },
+            "IncludeSubDomains": {
+              "type": "boolean"
+            },
+            "Preload": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
         "AttackDetection": {
           "type": "object",
           "properties": {
@@ -196,6 +211,18 @@
               },
               "TimeoutSeconds": {
                 "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          },
+          "Https": {
+            "type": "object",
+            "properties": {
+              "RedirectHttp": {
+                "type": "boolean"
+              },
+              "Hsts": {
+                "type": "boolean"
               }
             },
             "additionalProperties": false

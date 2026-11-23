@@ -68,6 +68,10 @@ Editing a route: host names, path prefix, methods, backends and health check.
 
 ![Editing a route](images/admin-route-edit.png)
 
+The HTTPS options of a route: redirect http:// to https://, and HSTS.
+
+![HTTPS options of a route](images/admin-route-https.png)
+
 Deleting a route is refused while rules or rate limits still refer to it.
 
 ![Deleting a route that is still in use](images/admin-route-delete.png)
@@ -113,6 +117,10 @@ After uploading: choose the host names that use the certificate.
 Let's Encrypt: the account settings, the staging switch, and choosing Let's Encrypt for a host name.
 
 ![Let's Encrypt](images/admin-letsencrypt.png)
+
+HSTS: how long browsers use HTTPS only, for the routes that send the header.
+
+![HSTS settings](images/admin-hsts.png)
 
 ## Templates and presets
 

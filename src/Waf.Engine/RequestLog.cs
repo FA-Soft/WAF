@@ -23,6 +23,9 @@ public enum RequestAction
 
     /// <summary>Answered by the gateway itself, e.g. a Let's Encrypt challenge.</summary>
     Answered,
+
+    /// <summary>Redirected from HTTP to HTTPS (308).</summary>
+    Redirected,
 }
 
 /// <summary>

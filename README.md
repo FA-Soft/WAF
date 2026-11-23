@@ -36,7 +36,7 @@ Request pipeline for public traffic:
 3. Fail-closed guard: `503` with `Retry-After` while no WAF engine is active
 4. WAF, judging each request with one consistent, hot-swappable engine snapshot:
    rules (a `Block` rule gives `403`; an explicit `Allow` rule skips the remaining checks), then rate limits (`429`), then attack detection (`403`). If evaluation fails for any reason, the request gets `503`: it is never forwarded unchecked.
-5. HTTPS redirect / HSTS
+5. HTTPS per route: plain HTTP gets a `308` redirect to HTTPS where the route asks for it, and HTTPS responses carry the HSTS header where enabled (see [Redirect to HTTPS and HSTS](#redirect-to-https-and-hsts))
 6. [YARP](https://github.com/microsoft/reverse-proxy) reverse proxy with health checks and forwarded headers
 7. Asynchronous event logging (every block, detection-only match and fail-closed refusal is reported as a security event)
 
@@ -127,7 +127,8 @@ Routes are normally managed in the admin UI. On a fresh install they can be seed
       "Destinations": [ { "Scheme": "http", "Address": "10.0.0.5", "Port": 8080 } ],
       "PreserveHost": true,
       "AllowInvalidBackendCertificate": false,
-      "HealthCheck": { "Path": "/health", "IntervalSeconds": 10, "TimeoutSeconds": 5 }
+      "HealthCheck": { "Path": "/health", "IntervalSeconds": 10, "TimeoutSeconds": 5 },
+      "Https": { "RedirectHttp": true, "Hsts": true }
     }
   ]
 }
@@ -137,6 +138,7 @@ Routes are normally managed in the admin UI. On a fresh install they can be seed
 - **Destinations:** IP address or host name, port, `http` or `https`. Several destinations share the load; WebSockets are supported.
 - **PreserveHost** (default `true`): the backend receives the client's original `Host` header, as IIS host bindings need.
 - **AllowInvalidBackendCertificate** (default `false`): accept a self-signed certificate from an HTTPS backend you control.
+- **Https** (both default `false`): `RedirectHttp` sends plain HTTP requests to HTTPS, `Hsts` adds the Strict-Transport-Security header; see [Redirect to HTTPS and HSTS](#redirect-to-https-and-hsts). With both off the route also works over plain HTTP.
 - **HealthCheck:** with a `Path`, each destination is probed and taken out of rotation while it fails. Passive checks (failed requests) are always on.
 - **Forwarded headers:** `X-Forwarded-For`, `-Proto` and `-Host` are always set by the gateway; values sent by clients are overwritten and a client `Forwarded` header is removed. `X-Forwarded-For` carries the resolved client IP (see below).
 
@@ -177,6 +179,20 @@ Host settings in `appsettings.json` (not part of the configuration; normally lef
   }
 }
 ```
+
+#### Redirect to HTTPS and HSTS
+
+![HTTPS options in the route editor](docs/images/admin-route-https.png)
+
+Per route, in the route editor (**HTTPS**):
+
+- **Redirect http:// to https://** (`Https.RedirectHttp`): plain HTTP requests get a permanent redirect (`308`, which keeps the method and body) to the same address over HTTPS, on the gateway's HTTPS port. Every host name of the route needs a certificate first; the configuration is refused otherwise, because visitors would be sent to a failing connection. The redirect comes after the WAF (an attack over HTTP is blocked, not redirected) and never affects Let's Encrypt challenges, which are answered first. Redirects show as "Redirected to HTTPS" in the request log.
+- **Tell browsers to use HTTPS only** (`Https.Hsts`): HTTPS responses carry `Strict-Transport-Security`, replacing one the backend may send. It is never sent over plain HTTP (browsers ignore it there, RFC 6797).
+- **Plain HTTP routes** stay possible: a route with both options off answers on port 80 as before.
+
+How long browsers remember HSTS is set once, on the **Certificates** page (`Settings.Hsts`): `MaxAgeSeconds` (default one year; up to two; 0 makes browsers forget it), `IncludeSubDomains` and `Preload` (for the browsers' built-in list at hstspreload.org; needs subdomains and at least a year, and is very hard to undo). Start with a short time and raise it once HTTPS works everywhere.
+
+Behind a load balancer or proxy that terminates TLS and is on the trusted-proxy list, its `X-Forwarded-Proto: https` counts as HTTPS: no redirect loop, and HSTS is sent back; requests it received over plain HTTP are redirected to the standard HTTPS port.
 
 ### Client IP and trusted proxies
 
