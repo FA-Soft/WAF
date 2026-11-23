@@ -8,7 +8,13 @@
 
   <ItemGroup>
     <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
+    <ProjectReference Include="../Waf.Engine/Waf.Engine.csproj" />
     <ProjectReference Include="../Waf.Data/Waf.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Waf.UnitTests" />
+    <InternalsVisibleTo Include="Waf.IntegrationTests" />
   </ItemGroup>
 
 </Project>

@@ -26,6 +26,9 @@ internal sealed partial class GatewayConfigurationService(
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
 
+    /// <summary>Tag of a version activated elsewhere that could not be applied; not retried until it changes.</summary>
+    private string? _failedExternalTag;
+
     public void Dispose() => _gate.Dispose();
 
     public Task<ActivationResult> ActivateAsync(GatewayConfiguration candidate, AuditActor actor, string? comment, CancellationToken cancellationToken) =>
@@ -184,6 +187,70 @@ internal sealed partial class GatewayConfigurationService(
         }
     }
 
+    /// <summary>
+    /// Applies the last-known-good version when another process changed it (the recovery tool <c>wafctl</c> stores a
+    /// version and marks it active while the gateway runs). The version was checked when it was stored; it is built
+    /// and swapped in like any other change. Returns true when something was applied.
+    /// </summary>
+    public async Task<bool> SyncWithStoreAsync(CancellationToken cancellationToken)
+    {
+        // Cheap check first: only the number and hash, no lock.
+        var head = await store.GetLastKnownGoodHeadAsync(cancellationToken).ConfigureAwait(false);
+        if (head is null || !NeedsSync(ConfigurationStore.ConfigTag(head.Value.Sha256)))
+        {
+            return false;
+        }
+
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            // Again under the lock: an activation from the admin UI stores its version before marking it active.
+            var stored = await store.GetLastKnownGoodAsync(cancellationToken).ConfigureAwait(false);
+            if (stored is null)
+            {
+                return false;
+            }
+
+            var tag = ConfigurationStore.ConfigTag(stored.Sha256);
+            if (!NeedsSync(tag))
+            {
+                return false;
+            }
+
+            WafEngine engine;
+            try
+            {
+                engine = WafEngine.Build(stored.Configuration, time, tag);
+            }
+            catch (ArgumentException ex)
+            {
+                _failedExternalTag = tag;
+                LogExternalFailed(logger, stored.Version, ex.Message);
+                return false;
+            }
+
+            var (prepared, routeErrors) = await routes.PrepareAsync(stored.Configuration.Routes, tag).ConfigureAwait(false);
+            if (prepared is null)
+            {
+                _failedExternalTag = tag;
+                LogExternalFailed(logger, stored.Version, string.Join(" ", routeErrors));
+                return false;
+            }
+
+            engines.Activate(engine);
+            routes.Apply(prepared);
+            _failedExternalTag = null;
+            LogExternalApplied(logger, stored.Version, stored.Author);
+            return true;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private bool NeedsSync(string tag) => engines.Current?.ConfigTag != tag && tag != _failedExternalTag;
+
     /// <summary>The running configuration (last-known-good), or null if none was activated yet.</summary>
     public Task<StoredConfiguration?> GetActiveAsync(CancellationToken cancellationToken) =>
         store.GetLastKnownGoodAsync(cancellationToken);
@@ -278,6 +345,12 @@ internal sealed partial class GatewayConfigurationService(
 
     [LoggerMessage(EventId = 22, Level = LogLevel.Warning, Message = "Backup restored by {Author}: {VersionCount} version(s), version {ActiveVersion} active. The previous database was copied to {SafetyCopy}.")]
     private static partial void LogRestored(ILogger logger, string author, int versionCount, long activeVersion, string safetyCopy);
+
+    [LoggerMessage(EventId = 23, Level = LogLevel.Warning, Message = "Configuration version {Version}, activated by {Author} outside the gateway (wafctl), is now running.")]
+    private static partial void LogExternalApplied(ILogger logger, long version, string author);
+
+    [LoggerMessage(EventId = 24, Level = LogLevel.Error, Message = "Configuration version {Version}, activated outside the gateway (wafctl), could not be applied; the running configuration is unchanged. {Reason}")]
+    private static partial void LogExternalFailed(ILogger logger, long version, string reason);
 
     [LoggerMessage(EventId = 21, Level = LogLevel.Warning, Message = "Configuration change by {Author} rejected with {ErrorCount} error(s); the running configuration is unchanged.")]
     private static partial void LogRejected(ILogger logger, string author, int errorCount);

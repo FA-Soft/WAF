@@ -125,7 +125,7 @@ jobs:
 
       - name: Smoke run wafctl (native)
         if: matrix.rid == 'win-x64'
-        run: ./publish/win-x64/wafctl.exe
+        run: ./publish/win-x64/wafctl.exe --help
 
       - name: Check ARM64 binaries (cross-compiled)
         if: matrix.rid == 'linux-arm64'

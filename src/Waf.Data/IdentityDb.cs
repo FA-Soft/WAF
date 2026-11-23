@@ -18,6 +18,9 @@ public sealed class AdminIdentityDbContext(DbContextOptions<AdminIdentityDbConte
     /// <summary>The login history.</summary>
     public DbSet<SignInEvent> SignInEvents => Set<SignInEvent>();
 
+    /// <summary>Remote admin access of this machine (one row).</summary>
+    public DbSet<AdminAccess> AdminAccessSettings => Set<AdminAccess>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -35,6 +38,14 @@ public sealed class AdminIdentityDbContext(DbContextOptions<AdminIdentityDbConte
             entity.Property(e => e.Result).IsRequired().HasConversion<string>().HasMaxLength(32);
             entity.HasIndex(e => e.TimestampMs);
         });
+        builder.Entity<AdminAccess>(entity =>
+        {
+            entity.ToTable("AdminAccess");
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.Id).ValueGeneratedNever();
+            entity.Property(a => a.RemoteUrl).HasMaxLength(AdminAccess.MaxUrlLength);
+            entity.Property(a => a.AllowedNetworks).IsRequired();
+        });
     }
 
     public static string ConnectionString(StoragePaths paths)
@@ -47,6 +58,65 @@ public sealed class AdminIdentityDbContext(DbContextOptions<AdminIdentityDbConte
             Mode = SqliteOpenMode.ReadWriteCreate,
             Cache = SqliteCacheMode.Private,
         }.ToString();
+    }
+}
+
+/// <summary>
+/// Remote admin access of this machine: the registered admin URL and the networks allowed to use it. Single row
+/// (<see cref="SingletonId"/>) in <c>identity.db</c>: machine-local like the admin account, so never part of
+/// configuration versions, exports or backups. Localhost access to the admin UI does not depend on it.
+/// </summary>
+public sealed class AdminAccess
+{
+    public const int SingletonId = 1;
+
+    public const int MaxUrlLength = 300;
+
+    public int Id { get; set; } = SingletonId;
+
+    /// <summary>The registered remote admin URL, e.g. <c>https://admin.example.com</c>; null: remote access is off.</summary>
+    public string? RemoteUrl { get; set; }
+
+    /// <summary>Addresses and CIDR ranges allowed to use remote admin access, one per line; empty: any address.</summary>
+    public string AllowedNetworks { get; set; } = string.Empty;
+
+    /// <summary>When it was last changed (UTC).</summary>
+    public DateTime? UpdatedAtUtc { get; set; }
+
+    /// <summary>The entries of <see cref="AllowedNetworks"/>.</summary>
+    public IReadOnlyList<string> AllowedNetworkList =>
+        AllowedNetworks.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+}
+
+/// <summary>
+/// Rules for admin accounts, shared by the admin UI and <c>wafctl</c> so both accept the same passwords.
+/// </summary>
+public static class AdminAccountPolicy
+{
+    /// <summary>Minimum password length. Length matters more than character classes, so no other rules apply.</summary>
+    public const int MinPasswordLength = 12;
+
+    /// <summary>Wrong passwords or codes in a row after which an account is locked.</summary>
+    public const int MaxFailedAttempts = 5;
+
+    /// <summary>How long a locked account stays locked.</summary>
+    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
+    /// <summary>Applies the password, user and lockout rules.</summary>
+    public static void Apply(IdentityOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        options.Password.RequiredLength = MinPasswordLength;
+        options.Password.RequiredUniqueChars = 5;
+        options.Password.RequireDigit = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireNonAlphanumeric = false;
+        options.User.RequireUniqueEmail = false;
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = MaxFailedAttempts;
+        options.Lockout.DefaultLockoutTimeSpan = LockoutDuration;
     }
 }
 

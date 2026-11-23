@@ -73,6 +73,7 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<GatewayConfigurationService>();
         builder.Services.AddSingleton<FASoft.Waf.Web.IGatewayConfigurationService>(sp => sp.GetRequiredService<GatewayConfigurationService>());
         builder.Services.AddHostedService<AppSettingsWatcher>();
+        builder.Services.AddHostedService<StoreChangeWatcher>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<WafEngineHolder>();
         builder.Services.AddSingleton<IWafEventSink, LoggingWafEventSink>();

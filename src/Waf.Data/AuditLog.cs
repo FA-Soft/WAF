@@ -83,6 +83,10 @@ public static class AuditActions
     public const string TwoFactorEnabled = "2fa.enabled";
     public const string TwoFactorDisabled = "2fa.disabled";
     public const string RecoveryCodesGenerated = "2fa.recovery-codes";
+    public const string PasswordReset = "password.reset";
+    public const string TwoFactorReset = "2fa.reset";
+    public const string AdminIpAllowed = "admin-access.ip-allowed";
+    public const string AdminUrlUnregistered = "admin-access.url-unregistered";
 }
 
 /// <summary>Who did something, for the audit log.</summary>
