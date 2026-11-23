@@ -377,3 +377,15 @@ tr.row-failed td { background: var(--danger-bg); }
     margin: 0.25rem 0 0;
     font-size: 0.85em;
 }
+
+/* AI assistant: the configuration summary that is sent */
+.code-block {
+    white-space: pre-wrap;
+    max-height: 28rem;
+    overflow: auto;
+    padding: 0.75rem;
+    font-size: 0.85em;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}

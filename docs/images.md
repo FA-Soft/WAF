@@ -179,6 +179,12 @@ Remote access: off by default; the requirements, the admin address and the optio
 
 ![Remote access](images/admin-remote-access.png)
 
+## AI assistant
+
+The AI assistant: off until an Anthropic API key is saved; the key's last four characters, and the summary of the configuration that would be sent.
+
+![AI assistant](images/admin-ai.png)
+
 ## Your account
 
 Two-factor sign-in, the previous sign-in with the failed attempts since, sessions, and changing the password.

@@ -11,6 +11,7 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="11.0.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="QRCoder" Version="1.9.0" />
+    <PackageVersion Include="Anthropic" Version="13.13.0" />
   </ItemGroup>
 
   <ItemGroup Label="Data">
