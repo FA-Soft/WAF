@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Security;
+using System.Security.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using FASoft.Waf.Core.Hosting;
@@ -19,12 +21,22 @@ internal static class KestrelListeners
         ListenPublic(kestrel, endpoints.PublicBindAddress, endpoints.HttpPort, _ => { });
 
         ListenPublic(kestrel, endpoints.PublicBindAddress, endpoints.HttpsPort, listen =>
-            listen.UseHttps(new HttpsConnectionAdapterOptions
+            listen.UseHttps(new TlsHandshakeCallbackOptions
             {
-                // Certificates are resolved per SNI host name at handshake time. Without a matching
-                // certificate the handshake is rejected instead of serving a wrong or default certificate.
-                ServerCertificateSelector = (_, hostName) =>
-                    listen.ApplicationServices.GetRequiredService<IServerCertificateSelector>().SelectCertificate(hostName),
+                // Certificates are resolved per SNI host name at handshake time, with their intermediate certificates.
+                // Without a matching certificate the handshake is rejected instead of serving a wrong or default one.
+                OnConnection = context =>
+                {
+                    var certificate = listen.ApplicationServices.GetRequiredService<IServerCertificateSelector>()
+                        .SelectCertificate(context.ClientHelloInfo.ServerName)
+                        ?? throw new AuthenticationException("No certificate is configured for this host name.");
+                    return ValueTask.FromResult(new SslServerAuthenticationOptions
+                    {
+                        ServerCertificateContext = certificate,
+                        EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                        ApplicationProtocols = [SslApplicationProtocol.Http2, SslApplicationProtocol.Http11],
+                    });
+                },
             }));
 
         // Admin UI: loopback only, never all interfaces. Not configurable on purpose.

@@ -368,6 +368,8 @@ public static class GatewayConfigurationValidator
     private static bool IsHeaderNameChar(char c) =>
         char.IsAsciiLetterOrDigit(c) || "!#$%&'*+-.^_`|~".Contains(c, StringComparison.Ordinal);
 
+    private static bool IsThumbprint(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
+
     private static void ValidateCertificates(IList<CertificateBinding> certificates, GatewaySettings? settings, List<string> errors)
     {
         var hosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -399,9 +401,9 @@ public static class GatewayConfigurationValidator
                         errors.Add($"{label}: Let's Encrypt cannot issue wildcard certificates with HTTP validation; use your own certificate file.");
                     }
 
-                    if (certificate.CertificatePath is not null || certificate.KeyPath is not null)
+                    if (certificate.CertificatePath is not null || certificate.KeyPath is not null || certificate.Thumbprint is not null)
                     {
-                        errors.Add($"{label}: CertificatePath and KeyPath are only used with Source 'File'.");
+                        errors.Add($"{label}: CertificatePath, KeyPath and Thumbprint are not used with Source 'LetsEncrypt'.");
                     }
 
                     break;
@@ -417,10 +419,28 @@ public static class GatewayConfigurationValidator
                         errors.Add($"{label}: KeyPath is only used with PEM certificates; a PFX file contains the key.");
                     }
 
+                    if (certificate.Thumbprint is not null)
+                    {
+                        errors.Add($"{label}: Thumbprint is only used with Source 'Uploaded'.");
+                    }
+
+                    break;
+
+                case CertificateSource.Uploaded:
+                    if (certificate.Thumbprint is null || !IsThumbprint(certificate.Thumbprint))
+                    {
+                        errors.Add($"{label}: Thumbprint (the SHA-256 hash of an uploaded certificate, 64 hex digits) is required for Source 'Uploaded'.");
+                    }
+
+                    if (certificate.CertificatePath is not null || certificate.KeyPath is not null)
+                    {
+                        errors.Add($"{label}: CertificatePath and KeyPath are only used with Source 'File'.");
+                    }
+
                     break;
 
                 default:
-                    errors.Add($"{label}: source must be LetsEncrypt or File.");
+                    errors.Add($"{label}: source must be LetsEncrypt, File or Uploaded.");
                     break;
             }
         }

@@ -62,6 +62,7 @@ public static class AdminDownloads
     private static async Task<IResult> ExportBackupAsync(
         [FromForm(Name = "includeSecrets")] bool? includeSecrets,
         ConfigurationStore store,
+        CertificateStore certificates,
         AuditLogStore audit,
         HttpContext context,
         TimeProvider time,
@@ -77,11 +78,16 @@ public static class AdminDownloads
             return Results.Conflict(ex.Message);
         }
 
+        if (backup.IncludesSecrets)
+        {
+            backup = backup with { Certificates = await certificates.ExportAllAsync(cancellationToken).ConfigureAwait(false) };
+        }
+
         await audit.RecordAsync(
             AuditCategory.Maintenance,
             AuditActions.BackupDownloaded,
             AdminActor.From(context),
-            $"Backup downloaded: {backup.Versions.Count} version(s){(backup.IncludesSecrets ? " with secrets" : " without secrets")}.",
+            $"Backup downloaded: {backup.Versions.Count} version(s){(backup.IncludesSecrets ? $" with secrets and {backup.Certificates.Count} certificate(s)" : " without secrets")}.",
             null,
             cancellationToken).ConfigureAwait(false);
 

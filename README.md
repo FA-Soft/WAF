@@ -72,7 +72,7 @@ The WAF owns ports 80 and 443. If IIS or another web server runs on the same mac
 
 ![Admin UI dashboard showing the firewall state, the active configuration version, routes and rules](docs/images/admin-dashboard.png)
 
-The admin UI currently offers a **dashboard** (firewall state, active configuration version, routes, rules, rate limits and attack detection in plain language), **Routes** (list, add, edit, enable/disable and delete routes), **Rules** (rules with any number of conditions, priority, action, per-rule and global detection-only mode, and IP block/allow lists where you paste addresses and CIDR ranges one per line), **Rate limits** (limit, window, what is counted, routes and conditions), **Templates and presets** (templates open the route, rule or rate-limit editor pre-filled for common cases such as a load-balanced site, an API key header or login attempts; one-click presets such as "Block common attacks", "Lock a path to your IP addresses" and "Protect a login page" first show a preview of exactly what will change, and applying one twice changes nothing), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) the **configuration history** (open any version to see what it changed, compare it with the running configuration and restore it) and **Backup and import** (export the configuration as JSON, import a file with a preview of the changes, download a full backup of every version and restore it). Every change made in the UI is checked, stored as a new configuration version and applied immediately, without a restart; if someone else changed the configuration in the meantime, the change is refused instead of overwriting theirs. The forms work without JavaScript: buttons such as "Add another condition" re-show the form without saving. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
+The admin UI currently offers a **dashboard** (firewall state, active configuration version, routes, rules, rate limits and attack detection in plain language), **Routes** (list, add, edit, enable/disable and delete routes), **Rules** (rules with any number of conditions, priority, action, per-rule and global detection-only mode, and IP block/allow lists where you paste addresses and CIDR ranges one per line), **Rate limits** (limit, window, what is counted, routes and conditions), **Certificates** (upload your own PFX or PEM certificates, choose their host names, see expiry warnings), **Templates and presets** (templates open the route, rule or rate-limit editor pre-filled for common cases such as a load-balanced site, an API key header or login attempts; one-click presets such as "Block common attacks", "Lock a path to your IP addresses" and "Protect a login page" first show a preview of exactly what will change, and applying one twice changes nothing), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) the **configuration history** (open any version to see what it changed, compare it with the running configuration and restore it) and **Backup and import** (export the configuration as JSON, import a file with a preview of the changes, download a full backup of every version and restore it). Every change made in the UI is checked, stored as a new configuration version and applied immediately, without a restart; if someone else changed the configuration in the meantime, the change is refused instead of overwriting theirs. The forms work without JavaScript: buttons such as "Add another condition" re-show the form without saving. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
 
 - **Localhost:** always available on `http://127.0.0.1:8900`. It cannot be disabled and needs no hostname or certificate.
 - **Remote:** off by default. The admin enables it under **Settings → Remote access** by registering an admin URL such as `https://admin.example.com`.
@@ -108,7 +108,7 @@ The admin UI is exempt from user-defined WAF rules and from the fail-closed 503 
 
 - **Routes:** match by host, path and/or method, then forward to a destination IP/hostname and port.
 - **Rules:** each has a name, conditions, an action (Allow, Block or LogOnly), a priority and an enabled flag. Rules can run in detection-only mode, per rule or globally.
-- **Certificates:** Let's Encrypt (HTTP-01, with a staging switch) or your own PFX/PEM, per hostname.
+- **Certificates:** Let's Encrypt (HTTP-01, with a staging switch) or your own PFX/PEM, per hostname (see [HTTPS and certificates](#https-and-certificates)).
 - **Versions and rollback:** every change is stored as a configuration version. An invalid change never replaces the last working configuration, and any version can be restored.
 - **Import/export:** the configuration (or any earlier version) can be exported to JSON and imported again, with a preview of the changes; export followed by import yields the identical configuration.
 - **Backup and restore:** a full backup (`.zip`) holds every configuration version and which one is active. Restoring it replaces the history after checking everything; the previous `config.db` is kept as `config.before-restore-<time>.db` in the data folder.
@@ -139,6 +139,18 @@ Routes are normally managed in the admin UI. On a fresh install they can be seed
 - **AllowInvalidBackendCertificate** (default `false`): accept a self-signed certificate from an HTTPS backend you control.
 - **HealthCheck:** with a `Path`, each destination is probed and taken out of rotation while it fails. Passive checks (failed requests) are always on.
 - **Forwarded headers:** `X-Forwarded-For`, `-Proto` and `-Host` are always set by the gateway; values sent by clients are overwritten and a client `Forwarded` header is removed. `X-Forwarded-For` carries the resolved client IP (see below).
+
+### HTTPS and certificates
+
+![Certificates page with three host names and their uploaded certificates](docs/images/admin-certificates.png)
+
+HTTPS on port 443 picks the certificate per connection by the host name the browser asks for (SNI). An exact host name wins over a wildcard (`*.example.com` covers `shop.example.com`, not `example.com` or `a.b.example.com`). A host name without a certificate gets no HTTPS connection at all: the gateway never serves a wrong or default certificate. Only TLS 1.2 and 1.3 are offered, with HTTP/2.
+
+- **Upload your own** on the **Certificates** page: a PFX file (with its password) or PEM files (the certificate followed by its intermediate certificates, and the private key, optionally encrypted). The gateway checks that the key belongs to the certificate and that it has not expired, then stores it in `config.db` with the private key **encrypted** (ASP.NET Core Data Protection; the keys are in the data folder and protected with DPAPI on Windows). Then choose the host names it is used for; only names the certificate is valid for are offered. Intermediate certificates are sent with it.
+- **Files on disk** (`Source: "File"` in the configuration): a PFX without password, or a PEM certificate and key; useful when another tool renews them. They are reloaded every 5 minutes.
+- **Let's Encrypt** (`Source: "LetsEncrypt"`) follows in the next step.
+- **Warnings:** a certificate that expires within 30 days, has expired, is missing or does not name its host is shown on the Certificates page and the dashboard, and written to the service log once a day.
+- **Backups:** which certificate a host name uses is part of the configuration (by SHA-256 thumbprint), so it is versioned and can be rolled back. The certificates themselves are not part of configuration versions or JSON exports; a full backup contains them, with their private keys, only with "Include secrets", and restoring it adds them to the certificate store. Uploads and deletions are recorded in the audit log.
 
 ### Client IP and trusted proxies
 
@@ -322,7 +334,7 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds a
 
 - Fail-closed by design; there is no fail-open mode.
 - Secrets, authorization headers and full request bodies are not logged by default.
-- Private keys and the AI API key are stored encrypted at rest and never included in exports unless explicitly chosen. The same applies today to the values of header conditions (such as API keys) in exports and backups.
+- Private keys of uploaded certificates are stored encrypted at rest (ASP.NET Core Data Protection, keys protected with DPAPI on Windows) and are only included in a full backup when "Include secrets" is chosen; the AI API key will be handled the same way. The same applies today to the values of header conditions (such as API keys) in exports and backups.
 - Forwarded client-IP headers are trusted only from addresses on the trusted-proxy list.
 - Report vulnerabilities privately; see `SECURITY.md` once it exists.
 

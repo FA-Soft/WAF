@@ -60,7 +60,12 @@ internal static partial class GatewayApplication
             configurationStatus.SetNotice(bootstrap.Notice);
         }
 
-        builder.Services.AddSingleton<IServerCertificateSelector, NoServerCertificateSelector>();
+        builder.Services.AddSingleton<ICertificateProtector, DataProtectionCertificateProtector>();
+        builder.Services.AddSingleton(sp => CertificateStore.Create(storagePaths, sp.GetRequiredService<ICertificateProtector>(), TimeProvider.System));
+        builder.Services.AddSingleton<CertificateService>();
+        builder.Services.AddSingleton<IServerCertificateSelector>(sp => sp.GetRequiredService<CertificateService>());
+        builder.Services.AddSingleton<Waf.Web.ICertificateManager>(sp => sp.GetRequiredService<CertificateService>());
+        builder.Services.AddHostedService<CertificateRefresher>();
         builder.Services.AddSingleton<ListenerClassifier>();
         builder.Services.AddRazorComponents();
         builder.Services.AddAdminIdentity(storagePaths);

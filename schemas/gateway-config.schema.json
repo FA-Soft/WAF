@@ -352,7 +352,8 @@
           "Source": {
             "enum": [
               "LetsEncrypt",
-              "File"
+              "File",
+              "Uploaded"
             ]
           },
           "CertificatePath": {
@@ -362,6 +363,12 @@
             ]
           },
           "KeyPath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Thumbprint": {
             "type": [
               "string",
               "null"

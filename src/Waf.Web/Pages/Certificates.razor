@@ -1,0 +1,193 @@
+@page "/certificates"
+@using FASoft.Waf.Core.Tls
+@inject ICertificateManager Manager
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+@inject TimeProvider Time
+
+<PageTitle>Certificates · @ProductInfo.Name</PageTitle>
+
+<h1>
+    Certificates
+    <HelpTip Title="Certificates">
+        <p>HTTPS needs a certificate for every host name. The certificate is chosen per connection by the host name the browser asks for (SNI); a host name without a certificate gets no HTTPS connection at all.</p>
+        <p>Upload your own certificate as a PFX file (with its password) or as PEM files (certificate, with its chain, and private key). Private keys are stored encrypted. Then choose the host names it is used for; a wildcard certificate (*.example.com) can serve every host name one level below it.</p>
+        <p>Certificates that expire within 30 days, have expired or are missing are shown here and on the dashboard, and written to the service log once a day.</p>
+    </HelpTip>
+</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved</div>
+}
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<p class="actions"><a class="button" href="certificates/upload">Upload a certificate</a></p>
+
+<section class="section" aria-labelledby="hosts-heading">
+    <h2 id="hosts-heading">Host names</h2>
+    @if (_statuses.Count == 0)
+    {
+        <p class="muted">No host name has a certificate yet, so HTTPS connections are refused. Upload a certificate and choose its host names.</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th scope="col">Host name</th><th scope="col">Certificate</th><th scope="col">Valid until</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var status in _statuses)
+                    {
+                        var (badge, label) = CertificateEditing.StateBadge(status.State);
+                        var host = status.HostName;
+                        <tr>
+                            <td>@host</td>
+                            <td>
+                                @CertificateEditing.SourceLabel(status.Source)
+                                @if (status.Subject is not null)
+                                {
+                                    <div class="muted">@status.Subject</div>
+                                }
+                            </td>
+                            <td class="nowrap">
+                                @if (status.NotAfterUtc is { } end)
+                                {
+                                    @end.ToString("yyyy-MM-dd", Culture)
+                                    <div class="muted">@DaysText(status)</div>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @badge">@label</span>
+                                @if (status.Problem is not null && status.NeedsAttention)
+                                {
+                                    <div class="muted">@status.Problem</div>
+                                }
+                            </td>
+                            <td>
+                                <form method="post" @formname="@($"remove-{host}")" @onsubmit="() => RemoveAsync(host)" data-enhance>
+                                    <AntiforgeryToken />
+                                    <button type="submit" class="link-button" aria-label="@($"Remove the certificate of {host}")">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section class="section" aria-labelledby="stored-heading">
+    <h2 id="stored-heading">Uploaded certificates</h2>
+    @if (_stored.Count == 0)
+    {
+        <p class="muted">No certificates uploaded.</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th scope="col">Valid for</th><th scope="col">Valid until</th><th scope="col">Used for</th><th scope="col">Uploaded</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var certificate in _stored)
+                    {
+                        var thumbprint = certificate.Thumbprint;
+                        var used = _active is null ? [] : CertificateEditing.HostsOf(_active.Configuration, thumbprint);
+                        <tr>
+                            <td>
+                                @string.Join(", ", certificate.DnsNameList)
+                                <div class="muted" title="SHA-256 thumbprint">@thumbprint[..16]…</div>
+                            </td>
+                            <td class="nowrap">@certificate.NotAfterUtc.ToString("yyyy-MM-dd", Culture)</td>
+                            <td>@(used.Count == 0 ? "–" : string.Join(", ", used))</td>
+                            <td class="nowrap">@certificate.UploadedAtUtc.ToString("yyyy-MM-dd", Culture)<div class="muted">@certificate.UploadedBy</div></td>
+                            <td><div class="row-actions">
+                                <a href="@($"certificates/{thumbprint}")">Choose host names</a>
+                                @if (used.Count == 0)
+                                {
+                                    <form method="post" @formname="@($"delete-{thumbprint}")" @onsubmit="() => DeleteAsync(thumbprint)" data-enhance>
+                                        <AntiforgeryToken />
+                                        <button type="submit" class="link-button">Delete</button>
+                                    </form>
+                                }
+                            </div></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    private IReadOnlyList<CertificateStatus> _statuses = [];
+    private IReadOnlyList<StoredCertificate> _stored = [];
+    private StoredConfiguration? _active;
+    private IReadOnlyList<string> _errors = [];
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _statuses = [.. Manager.Statuses.OrderBy(s => s.HostName, StringComparer.OrdinalIgnoreCase)];
+        _stored = await Manager.GetStoredAsync(CancellationToken.None);
+    }
+
+    private string DaysText(CertificateStatus status)
+    {
+        var days = status.DaysLeft(Time.GetUtcNow().UtcDateTime) ?? 0;
+        return days < 0 ? $"expired {-days} day{(days == -1 ? "" : "s")} ago" : $"{days} day{(days == 1 ? "" : "s")} left";
+    }
+
+    private async Task RemoveAsync(string host)
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var result = await Configurations.ActivateIfCurrentAsync(
+            active!.Version, CertificateEditing.Without(active.Configuration, host), AdminActor.From(HttpContext),
+            $"Certificate of {host} removed.", CancellationToken.None);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo($"certificates?saved={Uri.EscapeDataString($"{host} has no certificate any more (version {result.Version!.Version}).")}");
+            return;
+        }
+
+        _errors = result.Errors;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(string thumbprint)
+    {
+        _errors = await Manager.DeleteAsync(thumbprint, AdminActor.From(HttpContext), CancellationToken.None);
+        if (_errors.Count == 0)
+        {
+            Navigation.NavigateTo($"certificates?saved={Uri.EscapeDataString("Certificate deleted.")}");
+            return;
+        }
+
+        await LoadAsync();
+    }
+}

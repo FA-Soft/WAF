@@ -87,6 +87,8 @@ public static class AuditActions
     public const string TwoFactorReset = "2fa.reset";
     public const string AdminIpAllowed = "admin-access.ip-allowed";
     public const string AdminUrlUnregistered = "admin-access.url-unregistered";
+    public const string CertificateUploaded = "certificate.uploaded";
+    public const string CertificateDeleted = "certificate.deleted";
 }
 
 /// <summary>Who did something, for the audit log.</summary>

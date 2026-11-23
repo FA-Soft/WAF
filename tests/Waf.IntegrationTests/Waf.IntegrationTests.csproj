@@ -19,4 +19,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="../Waf.UnitTests/Tls/TestCertificates.cs" Link="Tls/TestCertificates.cs" />
+  </ItemGroup>
+
 </Project>

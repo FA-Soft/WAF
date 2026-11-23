@@ -40,6 +40,8 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
 
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
+    public DbSet<StoredCertificate> StoredCertificates => Set<StoredCertificate>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -85,6 +87,19 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
             entity.Property(e => e.Details).HasMaxLength(AuditEntry.MaxDetailsLength);
             entity.HasIndex(e => e.TimestampUtc);
             entity.HasIndex(e => e.ConfigurationVersionId);
+        });
+
+        modelBuilder.Entity<StoredCertificate>(entity =>
+        {
+            entity.ToTable("StoredCertificates");
+            entity.HasKey(c => c.Thumbprint);
+            entity.Property(c => c.Thumbprint).HasMaxLength(64).IsFixedLength();
+            entity.Property(c => c.Subject).IsRequired().HasMaxLength(1000);
+            entity.Property(c => c.Issuer).IsRequired().HasMaxLength(1000);
+            entity.Property(c => c.DnsNames).IsRequired();
+            entity.Property(c => c.ProtectedPfx).IsRequired();
+            entity.Property(c => c.UploadedBy).IsRequired().HasMaxLength(256);
+            entity.Ignore(c => c.DnsNameList);
         });
     }
 }

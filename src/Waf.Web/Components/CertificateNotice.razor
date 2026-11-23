@@ -1,0 +1,34 @@
+@* A warning on the dashboard while a host name's certificate is expiring, expired, missing or wrong. *@
+@inject ICertificateManager Manager
+@inject TimeProvider Time
+
+@if (_problems.Count > 0)
+{
+    var danger = _problems.Any(p => p.State != CertificateState.ExpiresSoon);
+    <div class="alert @(danger ? "alert-danger" : "alert-warning")" role="status">
+        <strong>@(_problems.Count == 1 ? "A certificate needs attention." : $"{_problems.Count} certificates need attention.")</strong>
+        <ul>
+            @foreach (var problem in _problems)
+            {
+                <li>@problem.HostName: @Describe(problem)</li>
+            }
+        </ul>
+        <a href="certificates">Manage certificates</a>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<CertificateStatus> _problems = [];
+
+    protected override void OnInitialized() =>
+        _problems = [.. Manager.Statuses.Where(s => s.NeedsAttention).OrderBy(s => s.HostName, StringComparer.OrdinalIgnoreCase)];
+
+    private string Describe(CertificateStatus status) => status.State switch
+    {
+        CertificateState.ExpiresSoon => $"expires in {status.DaysLeft(Time.GetUtcNow().UtcDateTime)} day(s), on {status.NotAfterUtc:yyyy-MM-dd}.",
+        CertificateState.Expired => $"expired on {status.NotAfterUtc:yyyy-MM-dd}; browsers refuse it.",
+        CertificateState.Missing => "no certificate could be loaded; HTTPS connections for it are refused.",
+        CertificateState.WrongHost => "the certificate is for another host name; browsers refuse it.",
+        _ => status.Problem ?? status.State.ToString(),
+    };
+}
