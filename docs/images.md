@@ -8,6 +8,7 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 - [Routes](#routes)
 - [Rules](#rules)
 - [Rate limits](#rate-limits)
+- [Certificates](#certificates)
 - [Templates and presets](#templates-and-presets)
 - [Test a request](#test-a-request)
 - [Configuration history](#configuration-history)
@@ -94,6 +95,20 @@ The rate limits and what each one counts.
 Editing a rate limit: limit, window, what is counted, routes and conditions.
 
 ![Editing a rate limit](images/admin-rate-limit-edit.png)
+
+## Certificates
+
+The host names with their certificate, how long it is valid and its status, and the uploaded certificates.
+
+![Certificates](images/admin-certificates.png)
+
+Uploading a certificate: a PFX file with its password, or PEM certificate and key files.
+
+![Upload a certificate](images/admin-certificate-upload.png)
+
+After uploading: choose the host names that use the certificate.
+
+![Choose host names for a certificate](images/admin-certificate-hosts.png)
 
 ## Templates and presets
 

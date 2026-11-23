@@ -275,7 +275,9 @@ public class GatewayConfigurationValidatorTests
     [InlineData("", CertificateSource.File, "a.pfx", null, "a valid host name is required")]
     [InlineData("10.0.0.5", CertificateSource.File, "a.pfx", null, "a valid host name is required")]
     [InlineData("*.example.com", CertificateSource.LetsEncrypt, null, null, "cannot issue wildcard certificates")]
-    [InlineData("www.example.com", CertificateSource.LetsEncrypt, "a.pfx", null, "only used with Source 'File'")]
+    [InlineData("www.example.com", CertificateSource.LetsEncrypt, "a.pfx", null, "not used with Source 'LetsEncrypt'")]
+    [InlineData("www.example.com", CertificateSource.Uploaded, null, null, "Thumbprint (the SHA-256 hash")]
+    [InlineData("www.example.com", CertificateSource.Uploaded, "a.pfx", null, "only used with Source 'File'")]
     [InlineData("www.example.com", CertificateSource.File, null, null, "CertificatePath is required")]
     [InlineData("www.example.com", CertificateSource.File, "a.pfx", "a.key", "a PFX file contains the key")]
     public void Invalid_certificates_are_explained(string host, CertificateSource source, string? certificatePath, string? keyPath, string expected)
@@ -283,6 +285,19 @@ public class GatewayConfigurationValidatorTests
         var configuration = ConfigWithCertificate(new CertificateBinding { HostName = host, Source = source, CertificatePath = certificatePath, KeyPath = keyPath });
 
         Assert.Contains(GatewayConfigurationValidator.Validate(configuration), e => e.Contains(expected, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Uploaded_certificates_need_a_sha256_thumbprint_and_nothing_else()
+    {
+        var valid = ConfigWithCertificate(new CertificateBinding { HostName = "*.example.com", Source = CertificateSource.Uploaded, Thumbprint = new string('A', 64) });
+        Assert.Empty(GatewayConfigurationValidator.Validate(valid));
+
+        var shortHash = ConfigWithCertificate(new CertificateBinding { HostName = "www.example.com", Source = CertificateSource.Uploaded, Thumbprint = "ABCDEF" });
+        Assert.Contains(GatewayConfigurationValidator.Validate(shortHash), e => e.Contains("64 hex digits", StringComparison.Ordinal));
+
+        var fileWithThumbprint = ConfigWithCertificate(new CertificateBinding { HostName = "www.example.com", Source = CertificateSource.File, CertificatePath = "a.pfx", Thumbprint = new string('A', 64) });
+        Assert.Contains(GatewayConfigurationValidator.Validate(fileWithThumbprint), e => e.Contains("only used with Source 'Uploaded'", StringComparison.Ordinal));
     }
 
     [Fact]

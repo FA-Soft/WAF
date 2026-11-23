@@ -1,4 +1,4 @@
-using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace FASoft.Waf.Core.Tls;
 
@@ -8,8 +8,8 @@ namespace FASoft.Waf.Core.Tls;
 public interface IServerCertificateSelector
 {
     /// <summary>
-    /// Returns the certificate for <paramref name="hostName"/>, or <see langword="null"/> when no
-    /// certificate is configured, in which case the TLS handshake is rejected.
+    /// Returns the certificate (with the intermediates to send) for <paramref name="hostName"/>, or
+    /// <see langword="null"/> when no certificate is configured, in which case the TLS handshake is rejected.
     /// </summary>
-    X509Certificate2? SelectCertificate(string? hostName);
+    SslStreamCertificateContext? SelectCertificate(string? hostName);
 }

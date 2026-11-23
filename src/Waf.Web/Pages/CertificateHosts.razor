@@ -1,0 +1,138 @@
+@page "/certificates/{Thumbprint}"
+@inject ICertificateManager Certificates
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>Certificate host names · @ProductInfo.Name</PageTitle>
+
+<p><a href="certificates">← Certificates</a></p>
+
+@if (_certificate is null || _active is null)
+{
+    <h1>Certificate</h1>
+    <div class="alert alert-danger" role="alert">This certificate is not in the certificate store. <a href="certificates">Back to the certificates</a>.</div>
+}
+else
+{
+    <h1>Use the certificate for…</h1>
+
+    @if (Uploaded == "new")
+    {
+        <div class="alert alert-ok" role="status">The certificate was uploaded; its private key is stored encrypted. Now choose the host names that use it.</div>
+    }
+    else if (Uploaded == "known")
+    {
+        <div class="alert alert-ok" role="status">This certificate was already uploaded; nothing was stored twice.</div>
+    }
+
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>Nothing was changed.</strong>
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <dl class="details">
+        <dt>Valid for</dt>
+        <dd>@string.Join(", ", _certificate.DnsNameList)</dd>
+        <dt>Subject</dt>
+        <dd>@_certificate.Subject</dd>
+        <dt>Issuer</dt>
+        <dd>@_certificate.Issuer</dd>
+        <dt>Valid</dt>
+        <dd>@_certificate.NotBeforeUtc.ToString("yyyy-MM-dd", Culture) to @_certificate.NotAfterUtc.ToString("yyyy-MM-dd", Culture) (UTC)</dd>
+        <dt>SHA-256 thumbprint</dt>
+        <dd><code>@_certificate.Thumbprint</code></dd>
+    </dl>
+
+    <EditForm Model="Model" FormName="certificate-hosts" OnSubmit="SaveAsync" Enhance class="form">
+        <input type="hidden" name="Model.BaseVersion" value="@_active.Version" />
+        <fieldset>
+            <legend>Host names</legend>
+            <p class="field-help">The host names this certificate is valid for, and the route host names it covers. A host name that has another certificate now switches to this one.</p>
+            @foreach (var host in _candidates)
+            {
+                var id = $"host-{host.Replace("*", "wildcard", StringComparison.Ordinal).Replace('.', '-')}";
+                var other = _active.Configuration.Certificates.FirstOrDefault(c => string.Equals(c.HostName, host, StringComparison.OrdinalIgnoreCase)
+                    && !(c.Source == CertificateSource.Uploaded && string.Equals(c.Thumbprint, _certificate.Thumbprint, StringComparison.OrdinalIgnoreCase)));
+                <div class="checkbox-field">
+                    <input type="checkbox" id="@id" name="hosts" value="@host" checked="@_used.Contains(host)" />
+                    <label for="@id">@host</label>
+                    @if (other is not null)
+                    {
+                        <span class="muted">(now: @CertificateEditing.SourceLabel(other.Source))</span>
+                    }
+                </div>
+            }
+        </fieldset>
+        <button type="submit" class="button">Save</button>
+        <a class="button button-secondary" href="certificates">Cancel</a>
+        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+    </EditForm>
+}
+
+@code {
+    private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    private StoredCertificate? _certificate;
+    private StoredConfiguration? _active;
+    private IReadOnlyList<string> _candidates = [];
+    private HashSet<string> _used = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<string> _errors = [];
+
+    [Parameter]
+    public string Thumbprint { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery]
+    public string? Uploaded { get; set; }
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromForm(FormName = "certificate-hosts")]
+    private CertificateHostsFormModel? Model { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model ??= new CertificateHostsFormModel();
+        _certificate = (await Certificates.GetStoredAsync(CancellationToken.None))
+            .FirstOrDefault(c => string.Equals(c.Thumbprint, Thumbprint, StringComparison.OrdinalIgnoreCase));
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+        if (_certificate is not null && _active is not null)
+        {
+            _candidates = CertificateEditing.Candidates(_certificate.DnsNameList, _active.Configuration);
+            _used = new HashSet<string>(CertificateEditing.HostsOf(_active.Configuration, _certificate.Thumbprint), StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_certificate is null || _active is null)
+        {
+            return;
+        }
+
+        // Only host names offered on the page: the certificate must cover them.
+        var ticked = HttpContext?.Request.HasFormContentType == true ? HttpContext.Request.Form["hosts"].ToArray() : [];
+        var chosen = ticked.OfType<string>().Where(h => _candidates.Contains(h, StringComparer.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var configuration = CertificateEditing.UseFor(_active.Configuration, _certificate.Thumbprint, chosen);
+        var description = chosen.Count == 0
+            ? $"Certificate {_certificate.Thumbprint[..12]} no longer used."
+            : $"Certificate {_certificate.Thumbprint[..12]} used for {string.Join(", ", chosen)}.";
+        var result = await Configurations.ActivateIfCurrentAsync(Model!.BaseVersion, configuration, AdminActor.From(HttpContext), description, CancellationToken.None);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo($"certificates?saved={Uri.EscapeDataString($"{description} (version {result.Version!.Version})")}");
+            return;
+        }
+
+        _errors = result.Errors;
+        _used = new HashSet<string>(chosen, StringComparer.OrdinalIgnoreCase);
+    }
+}

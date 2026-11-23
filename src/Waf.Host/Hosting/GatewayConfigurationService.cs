@@ -1,4 +1,5 @@
 using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Tls;
 using FASoft.Waf.Data;
 using FASoft.Waf.Engine;
 using FASoft.Waf.Proxy;
@@ -17,6 +18,8 @@ namespace FASoft.Waf.Host.Hosting;
 internal sealed partial class GatewayConfigurationService(
     ConfigurationStore store,
     AuditLogStore audit,
+    CertificateService certificates,
+    CertificateStore certificateStore,
     WafEngineHolder engines,
     ProxyRouteUpdater routes,
     ConfigurationStatus status,
@@ -117,6 +120,7 @@ internal sealed partial class GatewayConfigurationService(
             var safetyCopy = SafetyCopyPath();
             await store.CopyDatabaseToAsync(safetyCopy, cancellationToken).ConfigureAwait(false);
             await store.ReplaceAllAsync(versions, backup.ActiveVersion, actor, cancellationToken).ConfigureAwait(false);
+            var certificateCount = await ImportCertificatesAsync(backup, actor, cancellationToken).ConfigureAwait(false);
             if (engines.Current?.ConfigTag != tag)
             {
                 engines.Activate(engine);
@@ -128,8 +132,9 @@ internal sealed partial class GatewayConfigurationService(
                 AuditActions.BackupRestored,
                 actor,
                 $"Backup restored: {versions.Count} version(s), version {backup.ActiveVersion} active.",
-                $"Backup created at {backup.CreatedAtUtc:u} by WAF Gateway {backup.ProductVersion}. The previous database was copied to {Path.GetFileName(safetyCopy)}.",
+                $"Backup created at {backup.CreatedAtUtc:u} by WAF Gateway {backup.ProductVersion}; {certificateCount} certificate(s) added to the certificate store. The previous database was copied to {Path.GetFileName(safetyCopy)}.",
                 cancellationToken).ConfigureAwait(false);
+            await certificates.ReloadAsync(cancellationToken).ConfigureAwait(false);
             LogRestored(logger, actor.UserName, versions.Count, backup.ActiveVersion, safetyCopy);
             return new RestoreResult(true, [], backup.ActiveVersion, safetyCopy);
         }
@@ -137,6 +142,22 @@ internal sealed partial class GatewayConfigurationService(
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>Stores the certificates of a backup that includes secrets (already stored ones are kept); returns how many were new.</summary>
+    private async Task<int> ImportCertificatesAsync(GatewayBackup backup, AuditActor actor, CancellationToken cancellationToken)
+    {
+        var added = 0;
+        foreach (var certificate in backup.Certificates)
+        {
+            using var loaded = CertificateFiles.LoadPfx(certificate.Pfx);
+            if ((await certificateStore.AddAsync(loaded, actor.UserName, cancellationToken).ConfigureAwait(false)).Added)
+            {
+                added++;
+            }
+        }
+
+        return added;
     }
 
     private string SafetyCopyPath()
@@ -240,6 +261,7 @@ internal sealed partial class GatewayConfigurationService(
             engines.Activate(engine);
             routes.Apply(prepared);
             _failedExternalTag = null;
+            await certificates.ReloadAsync(cancellationToken).ConfigureAwait(false);
             LogExternalApplied(logger, stored.Version, stored.Author);
             return true;
         }
@@ -335,6 +357,7 @@ internal sealed partial class GatewayConfigurationService(
         engines.Activate(engine);
         routes.Apply(prepared);
         await store.SetLastKnownGoodAsync(stored.Version, cancellationToken).ConfigureAwait(false);
+        await certificates.ReloadAsync(cancellationToken).ConfigureAwait(false);
 
         LogActivated(logger, stored.Version, actor.UserName);
         return new ActivationResult(true, [], stored);

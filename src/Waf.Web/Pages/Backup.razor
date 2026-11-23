@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Http
 @inject IGatewayConfigurationService Configurations
 @inject ConfigurationStore Store
+@inject ICertificateManager Certificates
 
 <PageTitle>Backup and import · @ProductInfo.Name</PageTitle>
 
@@ -11,6 +12,7 @@
         <p><strong>Export</strong> saves the active configuration as a JSON file, for example to copy it to another gateway. <strong>Import</strong> loads such a file; you see what changes before it is applied.</p>
         <p>A <strong>backup</strong> holds every configuration version. <strong>Restore</strong> replaces the whole history with the backup's, for example on a new server.</p>
         <p>Secret values, such as the API keys in header conditions, are left out unless you tick "Include secrets". When a file without secrets is imported, the gateway keeps the values it already has.</p>
+        <p>Uploaded certificates and their private keys are only in a full backup with "Include secrets"; restoring it adds them to this gateway's certificate store.</p>
     </HelpTip>
 </h1>
 
@@ -41,7 +43,7 @@ else
         <p>Downloads all @_versionCount configuration versions and which one is active, as a .zip file.</p>
         <form method="post" action="export/backup">
             <AntiforgeryToken />
-            <SecretsCheckbox Id="backup-secrets" Count="_secrets" />
+            <SecretsCheckbox Id="backup-secrets" Count="_secrets" Certificates="_certificates" />
             <button type="submit" class="button">Download backup (.zip)</button>
         </form>
     </section>
@@ -89,6 +91,7 @@ else
     private StoredConfiguration? _active;
     private int _secrets;
     private int _versionCount;
+    private int _certificates;
     private RestoreResult? _restored;
 
     [CascadingParameter]
@@ -108,6 +111,7 @@ else
         _active = await Configurations.GetActiveAsync(CancellationToken.None);
         _secrets = _active is null ? 0 : ConfigurationSecrets.Count(_active.Configuration);
         _versionCount = await Store.CountAsync(CancellationToken.None);
+        _certificates = (await Certificates.GetStoredAsync(CancellationToken.None)).Count;
     }
 
     private async Task RestoreAsync()

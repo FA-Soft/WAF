@@ -1,0 +1,100 @@
+@page "/certificates/upload"
+@inject ICertificateManager Certificates
+@inject NavigationManager Navigation
+
+<PageTitle>Upload a certificate · @ProductInfo.Name</PageTitle>
+
+<p><a href="certificates">← Certificates</a></p>
+<h1>
+    Upload a certificate
+    <HelpTip Title="Upload a certificate">
+        <p><strong>PFX</strong> (.pfx or .p12): one file with the certificate, its chain and the private key; enter its password if it has one.</p>
+        <p><strong>PEM</strong> (.pem, .crt, .cer): the certificate file (add the intermediate certificates after it, as most certificate authorities supply them) and the private key file. An encrypted key needs its password.</p>
+        <p>The private key is stored encrypted on this gateway and is never shown again. After uploading, you choose the host names that use it.</p>
+    </HelpTip>
+</h1>
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>The certificate was not uploaded.</strong>
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<EditForm Model="Model" FormName="upload-certificate" OnSubmit="UploadAsync" Enhance enctype="multipart/form-data" class="form">
+    <div class="field">
+        <label for="certificate-file">Certificate (PFX or PEM)</label>
+        <p class="field-help" id="certificate-file-help">At most @(CertificateFiles.MaxFileBytes / 1024) KB.</p>
+        <input type="file" id="certificate-file" name="certificateFile" accept=".pfx,.p12,.pem,.crt,.cer" aria-describedby="certificate-file-help" required />
+    </div>
+    <div class="field">
+        <label for="key-file">Private key (PEM only) <span class="optional">(optional)</span></label>
+        <p class="field-help" id="key-file-help">Not needed for a PFX file, or when the key is in the certificate file.</p>
+        <input type="file" id="key-file" name="keyFile" accept=".pem,.key" aria-describedby="key-file-help" />
+    </div>
+    <div class="field">
+        <label for="certificate-password">Password <span class="optional">(optional)</span></label>
+        <p class="field-help" id="certificate-password-help">Of the PFX file or the encrypted private key.</p>
+        <input type="password" id="certificate-password" name="Model.Password" autocomplete="off" aria-describedby="certificate-password-help" />
+    </div>
+    <button type="submit" class="button">Upload</button>
+    <a class="button button-secondary" href="certificates">Cancel</a>
+</EditForm>
+
+@code {
+    private IReadOnlyList<string> _errors = [];
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromForm(FormName = "upload-certificate")]
+    private CertificateUploadFormModel? Model { get; set; }
+
+    protected override void OnInitialized() => Model ??= new CertificateUploadFormModel();
+
+    private async Task UploadAsync()
+    {
+        var files = HttpContext?.Request.HasFormContentType == true ? HttpContext.Request.Form.Files : null;
+        var certificate = await ReadAsync(files?.GetFile("certificateFile"));
+        if (certificate is null)
+        {
+            _errors = ["Choose a certificate file."];
+            return;
+        }
+
+        var key = await ReadAsync(files?.GetFile("keyFile"));
+        var password = string.IsNullOrEmpty(Model!.Password) ? null : Model.Password;
+        var result = await Certificates.UploadAsync(certificate, password, key, AdminActor.From(HttpContext), CancellationToken.None);
+        Model.Password = null; // never shown again
+        if (result.Certificate is null)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"certificates/{result.Certificate.Thumbprint}?uploaded={(result.Added ? "new" : "known")}");
+    }
+
+    private static async Task<byte[]?> ReadAsync(IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return null;
+        }
+
+        if (file.Length > CertificateFiles.MaxFileBytes)
+        {
+            return new byte[CertificateFiles.MaxFileBytes + 1]; // reported as too large
+        }
+
+        using var buffer = new MemoryStream();
+        await file.CopyToAsync(buffer);
+        return buffer.ToArray();
+    }
+}

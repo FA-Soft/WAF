@@ -19,6 +19,9 @@ public sealed record BackupVersion(long Version, DateTime CreatedAtUtc, string A
 public sealed record GatewayBackup(
     DateTime CreatedAtUtc, string ProductVersion, long ActiveVersion, bool IncludesSecrets, IReadOnlyList<BackupVersion> Versions)
 {
+    /// <summary>Uploaded certificates with their private keys; only in a backup that includes secrets.</summary>
+    public IReadOnlyList<BackupCertificate> Certificates { get; init; } = [];
+
     /// <summary>The active version's entry.</summary>
     public BackupVersion Active => Versions.First(v => v.Version == ActiveVersion);
 }
@@ -28,8 +31,8 @@ public sealed record BackupReadResult(GatewayBackup? Backup, IReadOnlyList<strin
 
 /// <summary>
 /// Reads and writes backup files: a zip with <c>manifest.json</c> (format, versions, secrets flag) and
-/// <c>versions.json</c> (every configuration version with its metadata). Later additions (certificates, keys)
-/// become further entries.
+/// <c>versions.json</c> (every configuration version with its metadata), and <c>certificates.json</c> (uploaded
+/// certificates with their private keys as PFX) only when secrets are included.
 /// </summary>
 public static class BackupArchive
 {
@@ -44,6 +47,7 @@ public static class BackupArchive
 
     private const string ManifestEntry = "manifest.json";
     private const string VersionsEntry = "versions.json";
+    private const string CertificatesEntry = "certificates.json";
 
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
@@ -79,6 +83,22 @@ public static class BackupArchive
         using var zip = new ZipArchive(destination, ZipArchiveMode.Create, leaveOpen: true);
         WriteEntry(zip, ManifestEntry, manifest.ToJsonString(Indented));
         WriteEntry(zip, VersionsEntry, versions.ToJsonString(Indented));
+
+        // Private keys never go into a backup without secrets, whatever the caller passed.
+        if (backup.IncludesSecrets && backup.Certificates.Count > 0)
+        {
+            var certificates = new JsonArray();
+            foreach (var certificate in backup.Certificates)
+            {
+                certificates.Add(new JsonObject
+                {
+                    ["Thumbprint"] = certificate.Thumbprint,
+                    ["Pfx"] = Convert.ToBase64String(certificate.Pfx),
+                });
+            }
+
+            WriteEntry(zip, CertificatesEntry, certificates.ToJsonString(Indented));
+        }
     }
 
     /// <summary>Reads a backup. Configurations are parsed but not validated: a backup without secrets still has placeholders.</summary>
@@ -149,13 +169,22 @@ public static class BackupArchive
                 return new BackupReadResult(null, errors);
             }
 
+            var certificates = new List<BackupCertificate>();
+            foreach (var node in ReadEntry(zip, CertificatesEntry) is { } certificatesText ? JsonNode.Parse(certificatesText)?.AsArray() ?? [] : [])
+            {
+                certificates.Add(new BackupCertificate(Required(node, "Thumbprint"), Convert.FromBase64String(Required(node, "Pfx"))));
+            }
+
             return new BackupReadResult(
                 new GatewayBackup(
                     Utc(Required(manifest, "CreatedAtUtc")),
                     manifest["ProductVersion"]?.GetValue<string>() ?? "unknown",
                     active,
                     manifest["IncludesSecrets"]?.GetValue<bool>() ?? false,
-                    [.. versions.OrderBy(v => v.Version)]),
+                    [.. versions.OrderBy(v => v.Version)])
+                {
+                    Certificates = certificates,
+                },
                 []);
         }
         catch (Exception ex) when (ex is InvalidDataException or JsonException or InvalidOperationException or FormatException)
