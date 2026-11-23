@@ -4,6 +4,7 @@
 @inject FirstRunSetup Setup
 @inject UserManager<IdentityUser> Users
 @inject SignInManager<IdentityUser> SignIn
+@inject SignInHistory History
 @inject NavigationManager Navigation
 
 <PageTitle>Create the admin account · @ProductInfo.Name</PageTitle>
@@ -95,6 +96,7 @@
         }
 
         await SignIn.SignInAsync(user!, isPersistent: false);
+        await History.RecordAsync(HttpContext, SignInOutcome.Succeeded, user);
         Navigation.NavigateTo(string.Empty);
     }
 }

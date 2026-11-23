@@ -10,6 +10,7 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="11.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="11.0.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
+    <PackageVersion Include="QRCoder" Version="1.9.0" />
   </ItemGroup>
 
   <ItemGroup Label="Data">

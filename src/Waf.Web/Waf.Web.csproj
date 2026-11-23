@@ -9,6 +9,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- QR code of the authenticator key on the 2FA setup page. -->
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Waf.UnitTests" />
     <InternalsVisibleTo Include="Waf.IntegrationTests" />
   </ItemGroup>

@@ -97,8 +97,8 @@ public sealed class RequestLogTests
 
         // Nothing secret in the database: no query strings, authorization headers or cookie values.
         SqliteConnection.ClearAllPools();
-        var bytes = Encoding.UTF8.GetString(await File.ReadAllBytesAsync(Path.Combine(gateway.DataDirectory, "events.db"), Ct))
-            + (File.Exists(Path.Combine(gateway.DataDirectory, "events.db-wal")) ? Encoding.UTF8.GetString(await File.ReadAllBytesAsync(Path.Combine(gateway.DataDirectory, "events.db-wal"), Ct)) : string.Empty);
+        var bytes = await ReadSharedAsync(Path.Combine(gateway.DataDirectory, "events.db"))
+            + await ReadSharedAsync(Path.Combine(gateway.DataDirectory, "events.db-wal"));
         foreach (var secret in new[] { "query-secret", "auth-secret", "cookie-secret", "token=" })
         {
             Assert.DoesNotContain(secret, bytes, StringComparison.Ordinal);
@@ -108,6 +108,22 @@ public sealed class RequestLogTests
         await gateway.GetPageAsync("/");
         await Task.Delay(300, Ct);
         Assert.Equal(5, (await RowsAsync(gateway)).Count);
+    }
+
+    /// <summary>
+    /// A file's raw contents as text, while SQLite (the log writer, the retention job) may have it open for writing;
+    /// empty when it does not exist.
+    /// </summary>
+    private static async Task<string> ReadSharedAsync(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return string.Empty;
+        }
+
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        return await reader.ReadToEndAsync(Ct);
     }
 
     /// <summary>
