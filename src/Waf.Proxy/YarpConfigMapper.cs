@@ -1,9 +1,9 @@
 using System.Globalization;
-using Waf.Core.Net;
-using Waf.Core.Routing;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Core.Routing;
 using Yarp.ReverseProxy.Configuration;
 
-namespace Waf.Proxy;
+namespace FASoft.Waf.Proxy;
 
 /// <summary>
 /// Translates the gateway's route configuration into YARP routes and clusters (one cluster per route).

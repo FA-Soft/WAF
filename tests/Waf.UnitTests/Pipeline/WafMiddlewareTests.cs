@@ -2,13 +2,13 @@ using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
-using Waf.Core.Configuration;
-using Waf.Engine;
-using Waf.Proxy;
-using Waf.UnitTests.Engine;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Proxy;
+using FASoft.Waf.UnitTests.Engine;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Pipeline;
+namespace FASoft.Waf.UnitTests.Pipeline;
 
 internal sealed class CapturingSink : IWafEventSink
 {

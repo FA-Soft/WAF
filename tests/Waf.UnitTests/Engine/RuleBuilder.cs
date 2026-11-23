@@ -1,8 +1,8 @@
-using Waf.Core.Configuration;
-using Waf.Core.Routing;
-using Waf.Engine;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
+using FASoft.Waf.Engine;
 
-namespace Waf.UnitTests.Engine;
+namespace FASoft.Waf.UnitTests.Engine;
 
 /// <summary>Builds configurations for engine tests with little ceremony.</summary>
 internal static class RuleBuilder

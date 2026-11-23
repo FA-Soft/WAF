@@ -1,7 +1,7 @@
-using Waf.Engine;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Engine;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Engine;
+namespace FASoft.Waf.UnitTests.Engine;
 
 public class WafEngineHolderTests
 {

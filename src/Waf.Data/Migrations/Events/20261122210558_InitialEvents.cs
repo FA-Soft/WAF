@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Waf.Data.Migrations.Events;
+namespace FASoft.Waf.Data.Migrations.Events;
 
 /// <inheritdoc />
 public partial class _20261122210558_InitialEvents : Migration

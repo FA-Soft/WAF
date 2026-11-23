@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Waf.Engine;
+using FASoft.Waf.Engine;
 using Yarp.ReverseProxy.Model;
 
-namespace Waf.Proxy;
+namespace FASoft.Waf.Proxy;
 
 /// <summary>
 /// Per-request state of the request log: when the request started and the most important WAF event. The WAF

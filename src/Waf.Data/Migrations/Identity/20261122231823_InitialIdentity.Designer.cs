@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Waf.Data;
+using FASoft.Waf.Data;
 
 #nullable disable
 
-namespace Waf.Data.Migrations.Identity;
+namespace FASoft.Waf.Data.Migrations.Identity;
 
 [DbContext(typeof(AdminIdentityDbContext))]
 [Migration("20261122231823_InitialIdentity")]

@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Waf.Core.Hosting;
-using Waf.Data;
-using Waf.Web;
+using FASoft.Waf.Core.Hosting;
+using FASoft.Waf.Data;
+using FASoft.Waf.Web;
 
-namespace Waf.UnitTests.Web;
+namespace FASoft.Waf.UnitTests.Web;
 
 public sealed class AdminIdentityTests : IAsyncLifetime
 {

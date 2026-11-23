@@ -1,8 +1,8 @@
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.Web;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.Web;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Background cleanup of the request log: every <see cref="Interval"/>, entries beyond the active configuration's

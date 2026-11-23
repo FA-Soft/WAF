@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>Form model of the backup restore form (the file itself is read from the request).</summary>
 internal sealed class RestoreFormModel

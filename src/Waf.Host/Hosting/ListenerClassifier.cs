@@ -1,8 +1,8 @@
 using System.Net;
 using Microsoft.Extensions.Options;
-using Waf.Core.Hosting;
+using FASoft.Waf.Core.Hosting;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Decides whether a request arrived on the loopback admin listener or on a public listener.

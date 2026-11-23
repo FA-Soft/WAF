@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Waf.IntegrationTests.Proxy;
+namespace FASoft.Waf.IntegrationTests.Proxy;
 
 /// <summary>What a test backend saw of a proxied request.</summary>
 public sealed record BackendEcho(

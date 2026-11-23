@@ -1,8 +1,8 @@
 using System.Threading.Channels;
-using Waf.Data;
-using Waf.Engine;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>Request log settings, bound from <c>Gateway:EventLog</c> (host settings, not part of the configuration versions).</summary>
 public sealed class EventLogOptions

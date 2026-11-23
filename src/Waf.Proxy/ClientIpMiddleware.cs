@@ -2,10 +2,10 @@ using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Waf.Core.Net;
-using Waf.Engine;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Engine;
 
-namespace Waf.Proxy;
+namespace FASoft.Waf.Proxy;
 
 /// <summary>Client IP of the current request, as resolved by <see cref="ClientIpMiddleware"/>.</summary>
 public interface IClientIpFeature

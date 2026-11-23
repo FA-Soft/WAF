@@ -136,7 +136,7 @@ else
 
         _restored = read.Backup is null
             ? RestoreResult.Failed(read.Errors)
-            : await Configurations.RestoreBackupAsync(read.Backup, "admin UI (backup restore)", CancellationToken.None);
+            : await Configurations.RestoreBackupAsync(read.Backup, AdminActor.From(HttpContext), CancellationToken.None);
         Restore.Confirm = false;
         await LoadAsync();
     }

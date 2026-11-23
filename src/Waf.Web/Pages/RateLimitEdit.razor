@@ -104,6 +104,9 @@ else if (Model is not null)
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private IReadOnlyList<string> _errors = [];
     private bool _notFound;
 
@@ -185,7 +188,7 @@ else if (Model is not null)
         }
 
         var verb = model.IsNew ? "added" : "changed";
-        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, "admin UI", $"Rate limit '{limit.Name}' {verb}.", CancellationToken.None);
+        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, AdminActor.From(HttpContext), $"Rate limit '{limit.Name}' {verb}.", CancellationToken.None);
         if (!result.Succeeded)
         {
             _errors = result.Errors;

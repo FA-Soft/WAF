@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>Outcome of parsing a configuration document.</summary>
 /// <param name="Configuration">The parsed configuration, or null when the JSON itself could not be read.</param>

@@ -1,9 +1,9 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
-using Waf.Data;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>
 /// The log viewer's query string (filters, page size, position), parsed the same way for the page and the live

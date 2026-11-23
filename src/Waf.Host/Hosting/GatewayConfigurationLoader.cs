@@ -1,8 +1,8 @@
 using System.Collections;
 using Microsoft.Extensions.Options;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Loads the <see cref="GatewayConfiguration"/> from the <c>Gateway</c> configuration section

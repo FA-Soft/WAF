@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using Waf.Core.Configuration;
-using Waf.Core.Net;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Net;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>One condition row of the rule / rate-limit editor.</summary>
 public sealed class ConditionFormModel
@@ -170,7 +170,7 @@ internal sealed class RuleFormModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!string.IsNullOrWhiteSpace(Name) && !Waf.Core.Routing.ProxyRouteValidator.IsValidName(Name.Trim()))
+        if (!string.IsNullOrWhiteSpace(Name) && !FASoft.Waf.Core.Routing.ProxyRouteValidator.IsValidName(Name.Trim()))
         {
             yield return new ValidationResult("Use only letters, digits, '-', '_' and '.' in the name (no spaces).", [nameof(Name)]);
         }
@@ -295,7 +295,7 @@ internal sealed class RateLimitFormModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!string.IsNullOrWhiteSpace(Name) && !Waf.Core.Routing.ProxyRouteValidator.IsValidName(Name.Trim()))
+        if (!string.IsNullOrWhiteSpace(Name) && !FASoft.Waf.Core.Routing.ProxyRouteValidator.IsValidName(Name.Trim()))
         {
             yield return new ValidationResult("Use only letters, digits, '-', '_' and '.' in the name (no spaces).", [nameof(Name)]);
         }

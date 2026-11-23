@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 
-namespace Waf.IntegrationTests.Proxy;
+namespace FASoft.Waf.IntegrationTests.Proxy;
 
 /// <summary>
 /// Gateway that trusts 127.0.0.1 as a proxy (the test client connects from there) and proxies

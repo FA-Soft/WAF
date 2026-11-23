@@ -1,7 +1,7 @@
-using Waf.Core.Configuration;
-using Waf.Engine.Detection;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Engine.Detection;
 
-namespace Waf.UnitTests.Detection;
+namespace FASoft.Waf.UnitTests.Detection;
 
 /// <summary>
 /// Known attack payloads (including encoded and obfuscated variants) must be detected; ordinary values

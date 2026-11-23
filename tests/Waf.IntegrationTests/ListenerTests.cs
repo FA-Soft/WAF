@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Waf.IntegrationTests;
+namespace FASoft.Waf.IntegrationTests;
 
 public sealed class ListenerTests(GatewayFixture gateway) : IClassFixture<GatewayFixture>, IDisposable
 {

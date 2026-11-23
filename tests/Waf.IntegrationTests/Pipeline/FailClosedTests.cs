@@ -1,10 +1,10 @@
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Engine;
-using Waf.IntegrationTests.Proxy;
-using Waf.Proxy;
+using FASoft.Waf.Engine;
+using FASoft.Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>Gateway with a catch-all route; tests take the WAF engine out of service and back.</summary>
 public sealed class FailClosedFixture : GatewayFixture

@@ -1,7 +1,7 @@
-using Waf.Core.Routing;
+using FASoft.Waf.Core.Routing;
 using Yarp.ReverseProxy.Configuration;
 
-namespace Waf.Proxy;
+namespace FASoft.Waf.Proxy;
 
 /// <summary>Routes translated for YARP and checked by YARP's own validator, ready to apply.</summary>
 public sealed record PreparedRoutes(IReadOnlyList<RouteConfig> Routes, IReadOnlyList<ClusterConfig> Clusters);

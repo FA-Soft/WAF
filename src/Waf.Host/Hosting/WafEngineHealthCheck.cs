@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Waf.Engine;
+using FASoft.Waf.Engine;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Reports Degraded (still HTTP 200, so the admin endpoint itself stays reachable) while the WAF engine is

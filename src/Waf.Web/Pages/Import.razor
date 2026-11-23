@@ -141,7 +141,7 @@ else
             }
             else
             {
-                var result = await Configurations.ActivateIfCurrentAsync(active.Version, _preview.Candidate!, "admin UI", "Imported from a file.", CancellationToken.None);
+                var result = await Configurations.ActivateIfCurrentAsync(active.Version, _preview.Candidate!, AdminActor.From(HttpContext), "Imported from a file.", CancellationToken.None);
                 if (result.Succeeded)
                 {
                     Navigation.NavigateTo($"history?saved={Uri.EscapeDataString($"Configuration imported (version {result.Version!.Version}).")}");

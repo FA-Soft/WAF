@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
-namespace Waf.Proxy;
+namespace FASoft.Waf.Proxy;
 
 /// <summary>Pending ACME HTTP-01 challenge responses (token → key authorization).</summary>
 public interface IAcmeChallengeStore

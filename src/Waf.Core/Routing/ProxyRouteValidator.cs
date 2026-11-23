@@ -1,6 +1,6 @@
-using Waf.Core.Net;
+using FASoft.Waf.Core.Net;
 
-namespace Waf.Core.Routing;
+namespace FASoft.Waf.Core.Routing;
 
 /// <summary>
 /// Validates route configuration and returns plain-language errors.

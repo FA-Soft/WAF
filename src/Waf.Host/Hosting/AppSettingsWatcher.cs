@@ -1,9 +1,9 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Primitives;
-using Waf.Data;
-using Waf.Engine;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Watches appsettings (the built-in files and the administrator file in the config folder). The configuration

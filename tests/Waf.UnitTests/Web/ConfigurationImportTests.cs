@@ -1,9 +1,9 @@
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.UnitTests.Configuration;
-using Waf.Web;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.UnitTests.Configuration;
+using FASoft.Waf.Web;
 
-namespace Waf.UnitTests.Web;
+namespace FASoft.Waf.UnitTests.Web;
 
 public class ConfigurationImportTests
 {

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Waf.Data.Migrations;
+namespace FASoft.Waf.Data.Migrations;
 
 /// <inheritdoc />
 public partial class _20261122141223_InitialCreate : Migration

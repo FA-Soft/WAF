@@ -1,7 +1,7 @@
-using Waf.Core.Configuration;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Core.Configuration;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Configuration;
+namespace FASoft.Waf.UnitTests.Configuration;
 
 public class RateLimitValidationTests
 {

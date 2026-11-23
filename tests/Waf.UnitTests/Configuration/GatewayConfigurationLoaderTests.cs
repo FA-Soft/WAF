@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Waf.Core.Configuration;
-using Waf.Host.Hosting;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Host.Hosting;
 
-namespace Waf.UnitTests.Configuration;
+namespace FASoft.Waf.UnitTests.Configuration;
 
 public class GatewayConfigurationLoaderTests
 {

@@ -70,6 +70,9 @@
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private IReadOnlyList<string> _errors = [];
     private RequestEvent? _logEntry;
     private bool _logMissing;
@@ -108,7 +111,7 @@
         configuration.Settings.AttackDetection.Exclusions.Add(exclusion);
 
         var result = await Configurations.ActivateIfCurrentAsync(
-            model.BaseVersion, configuration, "admin UI", $"Detection exclusion for {exclusion.PathPrefix} added.", CancellationToken.None);
+            model.BaseVersion, configuration, AdminActor.From(HttpContext), $"Detection exclusion for {exclusion.PathPrefix} added.", CancellationToken.None);
         if (!result.Succeeded)
         {
             _errors = result.Errors;

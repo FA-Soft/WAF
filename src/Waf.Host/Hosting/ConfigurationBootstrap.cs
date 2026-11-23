@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Options;
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.Engine;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>Which configuration the gateway starts with.</summary>
 /// <param name="Configuration">The configuration to run.</param>
@@ -26,8 +26,8 @@ internal sealed record BootstrapResult(GatewayConfiguration Configuration, Store
 /// </remarks>
 internal static class ConfigurationBootstrap
 {
-    /// <summary>Author recorded for versions imported from appsettings.</summary>
-    public const string ImportAuthor = "appsettings import";
+    /// <summary>Who is recorded for versions imported from appsettings at startup.</summary>
+    public static readonly AuditActor ImportActor = AuditActor.System("appsettings import");
 
     /// <exception cref="StorageInitializationException">The data folder or database cannot be used.</exception>
     /// <exception cref="OptionsValidationException">Fresh install and the appsettings configuration is invalid.</exception>
@@ -46,7 +46,7 @@ internal static class ConfigurationBootstrap
                 throw new OptionsValidationException(GatewayConfigurationLoader.SectionName, typeof(GatewayConfiguration), errors);
             }
 
-            var (stored, _) = store.SaveIfChangedAsync(candidate, ImportAuthor, "Imported from appsettings at startup.", CancellationToken.None)
+            var (stored, _) = store.SaveIfChangedAsync(candidate, ImportActor, "Imported from appsettings at startup.", CancellationToken.None)
                 .GetAwaiter().GetResult();
             store.SetLastKnownGoodAsync(stored.Version, CancellationToken.None).GetAwaiter().GetResult();
             store.SetAppSettingsFingerprintAsync(fingerprint, CancellationToken.None).GetAwaiter().GetResult();

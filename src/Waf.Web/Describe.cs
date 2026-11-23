@@ -1,8 +1,8 @@
 using System.Globalization;
-using Waf.Core.Configuration;
-using Waf.Core.Routing;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>Plain-language descriptions of configuration items for the admin UI.</summary>
 internal static class Describe

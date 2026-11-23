@@ -4,10 +4,10 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Data;
-using Waf.Web;
+using FASoft.Waf.Data;
+using FASoft.Waf.Web;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>Lockout, brute-force protection, two-factor sign-in, the login history and session security.</summary>
 public sealed partial class AdminSecurityTests

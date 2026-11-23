@@ -1,7 +1,7 @@
 using System.Net;
-using Waf.Core.Net;
+using FASoft.Waf.Core.Net;
 
-namespace Waf.UnitTests.Net;
+namespace FASoft.Waf.UnitTests.Net;
 
 public class ClientIpResolverTests
 {

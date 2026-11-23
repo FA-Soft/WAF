@@ -1,11 +1,11 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Engine;
-using Waf.Web.Components;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Web.Components;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Web;
+namespace FASoft.Waf.UnitTests.Web;
 
 public sealed class ComponentTests : BunitContext
 {

@@ -4,7 +4,6 @@
     <Description>wafctl: local recovery tool.</Description>
     <OutputType>Exe</OutputType>
     <AssemblyName>wafctl</AssemblyName>
-    <RootNamespace>Waf.Cli</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

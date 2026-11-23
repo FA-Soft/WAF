@@ -2,6 +2,7 @@
 @inject UserManager<IdentityUser> Users
 @inject SignInManager<IdentityUser> SignIn
 @inject NavigationManager Navigation
+@inject AuditLogStore Audit
 
 <PageTitle>Two-factor sign-in · @ProductInfo.Name</PageTitle>
 
@@ -162,6 +163,7 @@ else
         await Users.SetTwoFactorEnabledAsync(_user, true);
         _newCodes = [.. (await Users.GenerateNewTwoFactorRecoveryCodesAsync(_user, AdminIdentity.RecoveryCodeCount))!];
         _codesTitle = "Two-factor sign-in is on.";
+        await Audit.RecordAsync(AuditCategory.Security, AuditActions.TwoFactorEnabled, AdminActor.From(HttpContext), "Two-factor sign-in turned on; new recovery codes made.");
         await SignIn.RefreshSignInAsync(_user);
         await LoadAsync();
     }
@@ -176,6 +178,7 @@ else
 
         _newCodes = [.. (await Users.GenerateNewTwoFactorRecoveryCodesAsync(_user, AdminIdentity.RecoveryCodeCount))!];
         _codesTitle = "New recovery codes made; the old ones no longer work.";
+        await Audit.RecordAsync(AuditCategory.Security, AuditActions.RecoveryCodesGenerated, AdminActor.From(HttpContext), "New recovery codes made; the old ones no longer work.");
         await LoadAsync();
     }
 
@@ -191,6 +194,7 @@ else
         await Users.ResetAuthenticatorKeyAsync(_user); // a new setup gets a new key
         await Users.GenerateNewTwoFactorRecoveryCodesAsync(_user, 0); // the old recovery codes stop working
         await SignIn.RefreshSignInAsync(_user);
+        await Audit.RecordAsync(AuditCategory.Security, AuditActions.TwoFactorDisabled, AdminActor.From(HttpContext), "Two-factor sign-in turned off.");
         Navigation.NavigateTo("account?twoFactorOff=true");
     }
 }

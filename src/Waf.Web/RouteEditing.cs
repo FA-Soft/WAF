@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using Waf.Core.Configuration;
-using Waf.Core.Net;
-using Waf.Core.Routing;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Core.Routing;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>Form model of the route editor: plain fields that map to <see cref="ProxyRouteOptions"/>.</summary>
 internal sealed class RouteFormModel : IValidatableObject

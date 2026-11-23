@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
-using Waf.Proxy;
+using FASoft.Waf.Proxy;
 
-namespace Waf.UnitTests.Pipeline;
+namespace FASoft.Waf.UnitTests.Pipeline;
 
 public class AcmeChallengeMiddlewareTests
 {

@@ -1,7 +1,7 @@
 using System.Net;
-using Waf.Engine;
+using FASoft.Waf.Engine;
 
-namespace Waf.UnitTests.Engine;
+namespace FASoft.Waf.UnitTests.Engine;
 
 /// <summary>Simple in-memory request for engine tests.</summary>
 internal sealed record FakeRequest : IWafRequest

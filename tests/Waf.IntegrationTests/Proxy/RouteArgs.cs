@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Waf.IntegrationTests.Proxy;
+namespace FASoft.Waf.IntegrationTests.Proxy;
 
 /// <summary>
 /// Builds <c>--Gateway:Routes:N:...</c> command-line arguments. All destinations are on 127.0.0.1.

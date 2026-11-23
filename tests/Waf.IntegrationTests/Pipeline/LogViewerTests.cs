@@ -1,13 +1,13 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.Engine;
-using Waf.IntegrationTests.Proxy;
-using Waf.Web;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
+using FASoft.Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Web;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>The log viewer pages and the live view endpoint, against a running gateway.</summary>
 public sealed class LogViewerTests
@@ -30,7 +30,7 @@ public sealed class LogViewerTests
             Name = "no-admin",
             Conditions = { new RuleCondition { Field = ConditionField.Path, Operator = ConditionOperator.StartsWith, Values = { "/admin" } } },
         });
-        Assert.True((await gateway.App.Services.GetRequiredService<IGatewayConfigurationService>().ActivateAsync(configuration, "test", null, Ct)).Succeeded);
+        Assert.True((await gateway.App.Services.GetRequiredService<IGatewayConfigurationService>().ActivateAsync(configuration, AuditActor.System("test"), null, Ct)).Succeeded);
 
         Assert.Equal(HttpStatusCode.OK, await gateway.SendAsync("/products/42"));
         Assert.Equal(HttpStatusCode.Forbidden, await gateway.SendAsync("/admin/users"));

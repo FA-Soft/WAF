@@ -56,8 +56,8 @@ else if (Model is not null)
             </FormField>
 
             <div class="field-row">
-                <FormField Id="action" Label="Then" Help="What happens when all conditions match." For="() => Model.Action">
-                    <InputSelect id="action" aria-describedby="action-help" @bind-Value="Model.Action">
+                <FormField Id="rule-action" Label="Then" Help="What happens when all conditions match." For="() => Model.Action">
+                    <InputSelect id="rule-action" aria-describedby="rule-action-help" @bind-Value="Model.Action">
                         @foreach (var (value, label) in ConditionLabels.Actions)
                         {
                             <option value="@value">@label</option>
@@ -96,6 +96,9 @@ else if (Model is not null)
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private IReadOnlyList<string> _errors = [];
     private bool _notFound;
 
@@ -204,7 +207,7 @@ else if (Model is not null)
         }
 
         var verb = model.IsNew ? "added" : "changed";
-        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, "admin UI", $"Rule '{rule.Name}' {verb}.", CancellationToken.None);
+        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, AdminActor.From(HttpContext), $"Rule '{rule.Name}' {verb}.", CancellationToken.None);
         if (!result.Succeeded)
         {
             _errors = result.Errors;

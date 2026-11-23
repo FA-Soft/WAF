@@ -1,6 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 
-namespace Waf.Core.Tls;
+namespace FASoft.Waf.Core.Tls;
 
 /// <summary>
 /// Selects the TLS server certificate for an incoming connection based on the SNI host name.

@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Engine.Detection;
+namespace FASoft.Waf.Engine.Detection;
 
 /// <summary>A named pattern that indicates an attack.</summary>
 public sealed record AttackSignature(string Id, AttackCategory Category, string Pattern, string Description);

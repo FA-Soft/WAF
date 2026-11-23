@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 
+    <!-- Every namespace starts with "FASoft." (checked by NamespaceConventionTests): new files and Razor components get it by default. -->
+    <RootNamespace>FASoft.$(MSBuildProjectName)</RootNamespace>
+
     <!-- Quality gates -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-recommended</AnalysisLevel>

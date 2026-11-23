@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Waf.Data;
+using FASoft.Waf.Data;
 
 #nullable disable
 
-namespace Waf.Data.Migrations.Identity;
+namespace FASoft.Waf.Data.Migrations.Identity;
 
 [DbContext(typeof(AdminIdentityDbContext))]
 [Migration("20261123061508_AddSignInHistory")]
@@ -212,7 +212,7 @@ partial class _20261123061508_AddSignInHistory
                 b.ToTable("AspNetUserTokens");
             });
 
-        modelBuilder.Entity("Waf.Data.SignInEvent", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.SignInEvent", b =>
             {
                 b.Property<long>("Id")
                     .ValueGeneratedOnAdd()

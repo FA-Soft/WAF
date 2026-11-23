@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Waf.Data;
+using FASoft.Waf.Data;
 
 #nullable disable
 
-namespace Waf.Data.Migrations;
+namespace FASoft.Waf.Data.Migrations;
 
 [DbContext(typeof(ConfigDbContext))]
 [Migration("20261122155302_AddAppSettingsFingerprint")]
@@ -20,7 +20,7 @@ partial class _20261122155302_AddAppSettingsFingerprint
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "11.0.0");
 
-        modelBuilder.Entity("Waf.Data.ConfigurationState", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.ConfigurationState", b =>
             {
                 b.Property<int>("Id")
                     .HasColumnType("INTEGER");
@@ -42,7 +42,7 @@ partial class _20261122155302_AddAppSettingsFingerprint
                 b.ToTable("ConfigurationState");
             });
 
-        modelBuilder.Entity("Waf.Data.ConfigurationVersion", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.ConfigurationVersion", b =>
             {
                 b.Property<long>("Id")
                     .ValueGeneratedOnAdd()
@@ -80,9 +80,9 @@ partial class _20261122155302_AddAppSettingsFingerprint
                 b.ToTable("ConfigurationVersions");
             });
 
-        modelBuilder.Entity("Waf.Data.ConfigurationState", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.ConfigurationState", b =>
             {
-                b.HasOne("Waf.Data.ConfigurationVersion", null)
+                b.HasOne("FASoft.Waf.Data.ConfigurationVersion", null)
                     .WithMany()
                     .HasForeignKey("LastKnownGoodVersionId")
                     .OnDelete(DeleteBehavior.Restrict);

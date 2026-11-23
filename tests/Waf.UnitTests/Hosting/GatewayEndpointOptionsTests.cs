@@ -1,6 +1,6 @@
-using Waf.Core.Hosting;
+using FASoft.Waf.Core.Hosting;
 
-namespace Waf.UnitTests.Hosting;
+namespace FASoft.Waf.UnitTests.Hosting;
 
 public class GatewayEndpointOptionsTests
 {

@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
-using Waf.Core.Configuration;
-using Waf.Web;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Web;
 
-namespace Waf.UnitTests.Web;
+namespace FASoft.Waf.UnitTests.Web;
 
 public class PresetTests
 {

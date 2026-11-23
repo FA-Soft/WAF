@@ -3,11 +3,11 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Waf.Data;
+using FASoft.Waf.Data;
 
 #nullable disable
 
-namespace Waf.Data.Migrations;
+namespace FASoft.Waf.Data.Migrations;
 
 [DbContext(typeof(ConfigDbContext))]
 partial class ConfigDbContextModelSnapshot : ModelSnapshot
@@ -15,14 +15,68 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261122155302_AddAppSettingsFingerprint";
+    public override string LastMigrationId => "20261123155111_AddAuditLog";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "11.0.0");
 
-        modelBuilder.Entity("Waf.Data.ConfigurationState", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.AuditEntry", b =>
+            {
+                b.Property<long>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Action")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Category")
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("ClientIp")
+                    .HasMaxLength(64)
+                    .HasColumnType("TEXT");
+
+                b.Property<long?>("ConfigurationVersionId")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Details")
+                    .HasMaxLength(4000)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Source")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Summary")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("TimestampUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("UserName")
+                    .IsRequired()
+                    .HasMaxLength(256)
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.HasIndex("ConfigurationVersionId");
+
+                b.HasIndex("TimestampUtc");
+
+                b.ToTable("AuditEntries");
+            });
+
+        modelBuilder.Entity("FASoft.Waf.Data.ConfigurationState", b =>
             {
                 b.Property<int>("Id")
                     .HasColumnType("INTEGER");
@@ -44,7 +98,7 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("ConfigurationState");
             });
 
-        modelBuilder.Entity("Waf.Data.ConfigurationVersion", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.ConfigurationVersion", b =>
             {
                 b.Property<long>("Id")
                     .ValueGeneratedOnAdd()
@@ -82,9 +136,9 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("ConfigurationVersions");
             });
 
-        modelBuilder.Entity("Waf.Data.ConfigurationState", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.ConfigurationState", b =>
             {
-                b.HasOne("Waf.Data.ConfigurationVersion", null)
+                b.HasOne("FASoft.Waf.Data.ConfigurationVersion", null)
                     .WithMany()
                     .HasForeignKey("LastKnownGoodVersionId")
                     .OnDelete(DeleteBehavior.Restrict);

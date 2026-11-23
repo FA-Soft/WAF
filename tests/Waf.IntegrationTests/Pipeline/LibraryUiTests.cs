@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text.RegularExpressions;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>
 /// Template library and one-click presets, driven through real form posts against a running gateway.

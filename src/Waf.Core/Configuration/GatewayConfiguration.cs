@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using Waf.Core.Routing;
+using FASoft.Waf.Core.Routing;
 
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>
 /// The complete gateway configuration: settings, routes, WAF rules and certificates.

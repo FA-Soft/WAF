@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Net;
 
-namespace Waf.Core.Net;
+namespace FASoft.Waf.Core.Net;
 
 /// <summary>Result of resolving the client IP of a request.</summary>
 /// <param name="ClientIp">The client IP to use for rules, rate limiting and logging.</param>

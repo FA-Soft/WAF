@@ -1,6 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 
-namespace Waf.IntegrationTests.Proxy;
+namespace FASoft.Waf.IntegrationTests.Proxy;
 
 /// <summary>
 /// Gateway with routes to two HTTP backends (A, B), one HTTPS backend with a self-signed

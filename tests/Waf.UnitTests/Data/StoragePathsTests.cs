@@ -1,6 +1,6 @@
-using Waf.Data;
+using FASoft.Waf.Data;
 
-namespace Waf.UnitTests.Data;
+namespace FASoft.Waf.UnitTests.Data;
 
 public class StoragePathsTests
 {

@@ -1,7 +1,7 @@
-using Waf.Core.Configuration;
-using Waf.Core.Routing;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
 
-namespace Waf.UnitTests.Configuration;
+namespace FASoft.Waf.UnitTests.Configuration;
 
 public class ConfigurationSecretsTests
 {

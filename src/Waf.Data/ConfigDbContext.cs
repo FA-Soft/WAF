@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>
 /// A stored version of the complete gateway configuration. Versions are never changed after they are
@@ -38,6 +38,8 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
 
     public DbSet<ConfigurationState> ConfigurationState => Set<ConfigurationState>();
 
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -65,6 +67,24 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
                 .WithMany()
                 .HasForeignKey(s => s.LastKnownGoodVersionId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // No foreign key to the version: versions are replaced by a backup restore, the audit log is not.
+        modelBuilder.Entity<AuditEntry>(entity =>
+        {
+            entity.ToTable("AuditEntries");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.TimestampUtc).IsRequired();
+            entity.Property(e => e.Category).IsRequired().HasConversion<string>().HasMaxLength(32);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(AuditEntry.MaxActionLength);
+            entity.Property(e => e.UserName).IsRequired().HasMaxLength(AuditEntry.MaxUserNameLength);
+            entity.Property(e => e.ClientIp).HasMaxLength(AuditEntry.MaxClientIpLength);
+            entity.Property(e => e.Source).IsRequired().HasMaxLength(AuditEntry.MaxSourceLength);
+            entity.Property(e => e.Summary).IsRequired().HasMaxLength(AuditEntry.MaxSummaryLength);
+            entity.Property(e => e.Details).HasMaxLength(AuditEntry.MaxDetailsLength);
+            entity.HasIndex(e => e.TimestampUtc);
+            entity.HasIndex(e => e.ConfigurationVersionId);
         });
     }
 }

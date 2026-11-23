@@ -1,10 +1,10 @@
 using System.IO.Compression;
 using System.Text;
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.UnitTests.Configuration;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.UnitTests.Configuration;
 
-namespace Waf.UnitTests.Data;
+namespace FASoft.Waf.UnitTests.Data;
 
 public class BackupArchiveTests
 {

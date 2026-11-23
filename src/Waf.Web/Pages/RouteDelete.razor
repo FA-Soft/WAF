@@ -57,6 +57,9 @@ else
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private ProxyRouteOptions? _route;
     private IReadOnlyList<string> _references = [];
     private IReadOnlyList<string> _errors = [];
@@ -88,7 +91,7 @@ else
         }
 
         configuration.Routes.Remove(route);
-        var result = await Configurations.ActivateIfCurrentAsync(BaseVersion ?? active.Version, configuration, "admin UI", $"Route '{route.Name}' deleted.", CancellationToken.None);
+        var result = await Configurations.ActivateIfCurrentAsync(BaseVersion ?? active.Version, configuration, AdminActor.From(HttpContext), $"Route '{route.Name}' deleted.", CancellationToken.None);
         if (!result.Succeeded)
         {
             _errors = result.Errors;

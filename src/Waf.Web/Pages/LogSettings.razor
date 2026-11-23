@@ -4,6 +4,7 @@
 @inject RequestLogMaintenance Maintenance
 @inject ILogRetention Retention
 @inject NavigationManager Navigation
+@inject AuditLogStore Audit
 
 <PageTitle>Log retention · @ProductInfo.Name</PageTitle>
 
@@ -120,6 +121,9 @@
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
 
     private static readonly string SizeHelp =
@@ -164,6 +168,12 @@
     private async Task CleanUpAsync()
     {
         _cleaned = await Retention.CleanUpNowAsync(CancellationToken.None);
+        await Audit.RecordAsync(
+            AuditCategory.Maintenance,
+            AuditActions.LogsCleaned,
+            AdminActor.From(HttpContext),
+            _cleaned.Error is null ? $"Request log cleaned up now: {_cleaned.Deleted:N0} entries deleted." : "Request log cleanup started now; it failed.",
+            _cleaned.Error);
         await LoadInfoAsync();
     }
 
@@ -175,7 +185,7 @@
         configuration.Settings.LogRetention.MaxAgeDays = model.MaxAgeDays;
         configuration.Settings.LogRetention.MaxDatabaseSizeMb = model.MaxDatabaseSizeMb;
 
-        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, "admin UI", "Log retention changed.", CancellationToken.None);
+        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, AdminActor.From(HttpContext), "Log retention changed.", CancellationToken.None);
         if (!result.Succeeded)
         {
             _errors = result.Errors;

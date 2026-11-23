@@ -1,12 +1,12 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.UnitTests.Engine;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.UnitTests.Engine;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Data;
+namespace FASoft.Waf.UnitTests.Data;
 
 /// <summary>Runs against a real SQLite database file in a temporary folder.</summary>
 public sealed class ConfigurationStoreTests : IDisposable
@@ -94,7 +94,7 @@ public sealed class ConfigurationStoreTests : IDisposable
         await Store.InitializeAsync(Ct);
         var configuration = Config(Rule("block-admin", RuleAction.Block, 10, When(ConditionField.Path, ConditionOperator.StartsWith, "/admin")));
 
-        var saved = await Store.SaveAsync(configuration, "frank", "first version", Ct);
+        var saved = await Store.SaveAsync(configuration, AuditActor.System("frank"), "first version", Ct);
         var latest = await Store.GetLatestAsync(Ct);
 
         Assert.NotNull(latest);
@@ -112,9 +112,9 @@ public sealed class ConfigurationStoreTests : IDisposable
     {
         await Store.InitializeAsync(Ct);
 
-        var first = await Store.SaveAsync(Config(), "a", null, Ct);
+        var first = await Store.SaveAsync(Config(), AuditActor.System("a"), null, Ct);
         _time.Advance(TimeSpan.FromMinutes(1));
-        var second = await Store.SaveAsync(Config(Rule("r", RuleAction.LogOnly, 1)), "b", null, Ct);
+        var second = await Store.SaveAsync(Config(Rule("r", RuleAction.LogOnly, 1)), AuditActor.System("b"), null, Ct);
 
         Assert.True(second.Version > first.Version);
         Assert.Equal(2, await Store.CountAsync(Ct));
@@ -127,7 +127,7 @@ public sealed class ConfigurationStoreTests : IDisposable
         await Store.InitializeAsync(Ct);
         var invalid = Config(new WafRule { Name = "no-conditions" });
 
-        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Store.SaveAsync(invalid, "a", null, Ct));
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Store.SaveAsync(invalid, AuditActor.System("a"), null, Ct));
 
         Assert.Contains("at least one condition", ex.Message, StringComparison.Ordinal);
         Assert.Equal(0, await Store.CountAsync(Ct));
@@ -138,9 +138,9 @@ public sealed class ConfigurationStoreTests : IDisposable
     {
         await Store.InitializeAsync(Ct);
 
-        var (first, created1) = await Store.SaveIfChangedAsync(Config(), "import", null, Ct);
-        var (second, created2) = await Store.SaveIfChangedAsync(Config(), "import", null, Ct);
-        var (third, created3) = await Store.SaveIfChangedAsync(Config(Rule("r", RuleAction.LogOnly, 1)), "import", null, Ct);
+        var (first, created1) = await Store.SaveIfChangedAsync(Config(), AuditActor.System("import"), null, Ct);
+        var (second, created2) = await Store.SaveIfChangedAsync(Config(), AuditActor.System("import"), null, Ct);
+        var (third, created3) = await Store.SaveIfChangedAsync(Config(Rule("r", RuleAction.LogOnly, 1)), AuditActor.System("import"), null, Ct);
 
         Assert.Equal((true, false, true), (created1, created2, created3));
         Assert.Equal(first.Version, second.Version);
@@ -155,8 +155,8 @@ public sealed class ConfigurationStoreTests : IDisposable
         var withHint = Config();
         withHint.Schema = "./gateway-config.schema.json";
 
-        await Store.SaveIfChangedAsync(Config(), "import", null, Ct);
-        var (_, created) = await Store.SaveIfChangedAsync(withHint, "import", null, Ct);
+        await Store.SaveIfChangedAsync(Config(), AuditActor.System("import"), null, Ct);
+        var (_, created) = await Store.SaveIfChangedAsync(withHint, AuditActor.System("import"), null, Ct);
 
         Assert.False(created);
         Assert.Equal("./gateway-config.schema.json", withHint.Schema); // caller's object is left as it was
@@ -166,8 +166,8 @@ public sealed class ConfigurationStoreTests : IDisposable
     public async Task Last_known_good_is_empty_until_set_and_follows_the_latest_activation()
     {
         await Store.InitializeAsync(Ct);
-        var first = await Store.SaveAsync(Config(), "a", null, Ct);
-        var second = await Store.SaveAsync(Config(Rule("r", RuleAction.LogOnly, 1)), "a", null, Ct);
+        var first = await Store.SaveAsync(Config(), AuditActor.System("a"), null, Ct);
+        var second = await Store.SaveAsync(Config(Rule("r", RuleAction.LogOnly, 1)), AuditActor.System("a"), null, Ct);
 
         Assert.Null(await Store.GetLastKnownGoodAsync(Ct));
 
@@ -193,7 +193,7 @@ public sealed class ConfigurationStoreTests : IDisposable
         await Store.InitializeAsync(Ct);
         for (var i = 1; i <= 5; i++)
         {
-            await Store.SaveAsync(Config(Rule($"r{i}", RuleAction.LogOnly, i)), "a", $"change {i}", Ct);
+            await Store.SaveAsync(Config(Rule($"r{i}", RuleAction.LogOnly, i)), AuditActor.System("a"), $"change {i}", Ct);
         }
 
         var history = await Store.GetHistoryAsync(3, Ct);

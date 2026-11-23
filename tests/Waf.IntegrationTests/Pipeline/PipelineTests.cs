@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>
 /// Gateway with the full pipeline: a catch-all route, a Block rule for /blocked, an Allow rule for

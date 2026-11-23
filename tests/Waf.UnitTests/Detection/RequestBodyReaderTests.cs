@@ -1,8 +1,8 @@
 using System.Text;
 using Microsoft.AspNetCore.Http;
-using Waf.Proxy;
+using FASoft.Waf.Proxy;
 
-namespace Waf.UnitTests.Detection;
+namespace FASoft.Waf.UnitTests.Detection;
 
 public class RequestBodyReaderTests
 {

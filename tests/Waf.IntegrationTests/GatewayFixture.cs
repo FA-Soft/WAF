@@ -2,9 +2,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Builder;
-using Waf.Host.Hosting;
+using FASoft.Waf.Host.Hosting;
 
-namespace Waf.IntegrationTests;
+namespace FASoft.Waf.IntegrationTests;
 
 /// <summary>
 /// Starts the real gateway (Kestrel, not TestServer) on free loopback ports.

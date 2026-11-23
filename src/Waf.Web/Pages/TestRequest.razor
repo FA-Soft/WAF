@@ -15,8 +15,8 @@
     <DataAnnotationsValidator />
 
     <div class="field-row">
-        <FormField Id="method" Label="Method" Help="GET to read a page, POST to send a form." For="() => Model!.Method">
-            <InputSelect id="method" aria-describedby="method-help" @bind-Value="Model!.Method">
+        <FormField Id="request-method" Label="Method" Help="GET to read a page, POST to send a form." For="() => Model!.Method">
+            <InputSelect id="request-method" aria-describedby="request-method-help" @bind-Value="Model!.Method">
                 @foreach (var method in Methods)
                 {
                     <option value="@method">@method</option>

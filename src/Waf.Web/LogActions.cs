@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text;
-using Waf.Core.Configuration;
-using Waf.Core.Net;
-using Waf.Data;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>What to do with a log entry; each opens a pre-filled editor (nothing is saved until the user saves).</summary>
 internal enum LogAction

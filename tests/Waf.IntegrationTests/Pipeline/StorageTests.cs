@@ -1,10 +1,10 @@
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Data;
-using Waf.Host.Hosting;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Data;
+using FASoft.Waf.Host.Hosting;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 public sealed class StorageTests
 {
@@ -24,7 +24,7 @@ public sealed class StorageTests
         var stored = await LatestAsync(gateway);
         Assert.NotNull(stored);
         Assert.Equal(1, stored.Version);
-        Assert.Equal(ConfigurationBootstrap.ImportAuthor, stored.Author);
+        Assert.Equal(ConfigurationBootstrap.ImportActor.UserName, stored.Author);
         Assert.Equal("first", Assert.Single(stored.Configuration.Routes).Name);
 
         using var http = new HttpClient();

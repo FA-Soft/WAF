@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using Waf.Core.Configuration;
-using Waf.Core.Routing;
-using Waf.Data;
-using Waf.Web;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
+using FASoft.Waf.Data;
+using FASoft.Waf.Web;
 
-namespace Waf.UnitTests.Web;
+namespace FASoft.Waf.UnitTests.Web;
 
 public class LogActionsTests
 {

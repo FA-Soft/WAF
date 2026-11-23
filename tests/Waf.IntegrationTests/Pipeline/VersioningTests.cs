@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Core.Configuration;
-using Waf.Core.Routing;
-using Waf.Data;
-using Waf.Engine;
-using Waf.Host.Hosting;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Host.Hosting;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>
 /// Activation, rejection and rollback of configurations on a running gateway. Every test uses its own
@@ -128,7 +128,7 @@ public sealed class VersioningTests
         var change = await gateway.ActiveCopyAsync();
         change.Rules.Add(BlockPath("no-secret", "/secret"));
 
-        var result = await gateway.Configurations.ActivateAsync(change, "frank", "Block /secret", Ct);
+        var result = await gateway.Configurations.ActivateAsync(change, AuditActor.System("frank"), "Block /secret", Ct);
 
         Assert.True(result.Succeeded, string.Join(" ", result.Errors));
         Assert.Equal(2, result.Version!.Version);
@@ -148,7 +148,7 @@ public sealed class VersioningTests
         change.Rules.Add(BlockPath("no-secret", "/secret"));
         change.Rules.Add(new WafRule { Name = "broken" }); // no conditions: invalid
 
-        var result = await gateway.Configurations.ActivateAsync(change, "frank", null, Ct);
+        var result = await gateway.Configurations.ActivateAsync(change, AuditActor.System("frank"), null, Ct);
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Version);
@@ -171,7 +171,7 @@ public sealed class VersioningTests
         toB.Destinations.Add(new ProxyDestinationOptions { Address = "127.0.0.1", Port = gateway.B.Port });
         change.Routes.Add(toB);
 
-        Assert.True((await gateway.Configurations.ActivateAsync(change, "frank", "Add b.test", Ct)).Succeeded);
+        Assert.True((await gateway.Configurations.ActivateAsync(change, AuditActor.System("frank"), "Add b.test", Ct)).Succeeded);
 
         using var response = await gateway.GetAsync("/", host: "b.test");
         Assert.Equal("B", (await response.Content.ReadFromJsonAsync<BackendEcho>(Ct))!.Backend);
@@ -189,7 +189,7 @@ public sealed class VersioningTests
 
         var change = await gateway.ActiveCopyAsync();
         change.Settings.TrustedProxies.Add("127.0.0.1");
-        Assert.True((await gateway.Configurations.ActivateAsync(change, "frank", null, Ct)).Succeeded);
+        Assert.True((await gateway.Configurations.ActivateAsync(change, AuditActor.System("frank"), null, Ct)).Succeeded);
 
         using var after = await gateway.GetAsync("/", forwardedFor: "203.0.113.7");
         Assert.Equal("203.0.113.7", (await after.Content.ReadFromJsonAsync<BackendEcho>(Ct))!.XForwardedFor);
@@ -202,13 +202,13 @@ public sealed class VersioningTests
         await gateway.InitializeAsync();
         var change = await gateway.ActiveCopyAsync();
         change.Rules.Add(BlockPath("no-secret", "/secret"));
-        await gateway.Configurations.ActivateAsync(change, "frank", "Block /secret", Ct);
+        await gateway.Configurations.ActivateAsync(change, AuditActor.System("frank"), "Block /secret", Ct);
         using (var blocked = await gateway.GetAsync("/secret"))
         {
             Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
         }
 
-        var result = await gateway.Configurations.RollbackAsync(1, "frank", Ct);
+        var result = await gateway.Configurations.RollbackAsync(1, AuditActor.System("frank"), Ct);
 
         Assert.True(result.Succeeded, string.Join(" ", result.Errors));
         Assert.Equal(3, result.Version!.Version);
@@ -226,7 +226,7 @@ public sealed class VersioningTests
         await using var gateway = new Gateway();
         await gateway.InitializeAsync();
 
-        var result = await gateway.Configurations.RollbackAsync(99, "frank", Ct);
+        var result = await gateway.Configurations.RollbackAsync(99, AuditActor.System("frank"), Ct);
 
         Assert.False(result.Succeeded);
         Assert.Equal(["Configuration version 99 does not exist."], result.Errors);
@@ -243,7 +243,7 @@ public sealed class VersioningTests
             await first.InitializeAsync();
             var change = await first.ActiveCopyAsync();
             change.Rules.Add(BlockPath("no-secret", "/secret"));
-            await first.Configurations.ActivateAsync(change, "frank", "Block /secret", Ct);
+            await first.Configurations.ActivateAsync(change, AuditActor.System("frank"), "Block /secret", Ct);
             await first.StopKeepingDataAsync(keepBackends: true);
 
             // Restart with a broken route in appsettings: the last-known-good (version 2) must run.

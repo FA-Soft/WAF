@@ -1,4 +1,4 @@
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>
 /// Brute-force protection per client address. Account lockout stops guessing one account's password, but not

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>What happened to a configuration item.</summary>
 public enum ChangeKind

@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Data.Sqlite;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>Size and contents of <c>events.db</c>.</summary>
 /// <param name="FileBytes">Size on disk: the database file plus its write-ahead log.</param>

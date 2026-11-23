@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Waf.Core.Net;
+namespace FASoft.Waf.Core.Net;
 
 /// <summary>
 /// Strict parsing of an IP address range in CIDR notation (<c>10.0.0.0/8</c>, <c>fd00::/8</c>) or a

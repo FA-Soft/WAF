@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Waf.Data.Migrations.Identity;
+namespace FASoft.Waf.Data.Migrations.Identity;
 
 /// <inheritdoc />
 public partial class _20261123061508_AddSignInHistory : Migration

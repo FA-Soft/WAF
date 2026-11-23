@@ -1,8 +1,8 @@
 using System.Buffers;
 using Microsoft.AspNetCore.Http;
-using Waf.Engine.Detection;
+using FASoft.Waf.Engine.Detection;
 
-namespace Waf.Proxy;
+namespace FASoft.Waf.Proxy;
 
 /// <summary>
 /// Reads at most a fixed number of bytes of a request body for inspection, without consuming it: the

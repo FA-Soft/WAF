@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Microsoft.Data.Sqlite;
-using Waf.Data;
-using Waf.Engine;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
 
-namespace Waf.UnitTests.Logging;
+namespace FASoft.Waf.UnitTests.Logging;
 
 public sealed class RequestLogReaderTests : IAsyncLifetime
 {

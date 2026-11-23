@@ -1,4 +1,4 @@
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>
 /// A WAF rule: when all its conditions match a request, its action is applied.

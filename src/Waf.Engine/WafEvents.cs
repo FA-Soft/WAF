@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>Kind of security event.</summary>
 public enum WafEventKind

@@ -1,4 +1,4 @@
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>
 /// Storage locations, bound from <c>Gateway:Storage</c>. Empty values use the platform defaults.
