@@ -1,9 +1,9 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>What an audit entry is about.</summary>
 public enum AuditCategory

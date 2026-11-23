@@ -4,9 +4,9 @@ using System.Text;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>A configuration version read from the database.</summary>
 public sealed record StoredConfiguration(
@@ -254,7 +254,7 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
 
         return new GatewayBackup(
             time.GetUtcNow().UtcDateTime,
-            Waf.Core.ProductInfo.Version,
+            FASoft.Waf.Core.ProductInfo.Version,
             active.Version,
             includeSecrets,
             [.. versions.Select(v =>

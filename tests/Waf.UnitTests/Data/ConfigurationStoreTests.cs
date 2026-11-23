@@ -1,12 +1,12 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.UnitTests.Engine;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.UnitTests.Engine;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Data;
+namespace FASoft.Waf.UnitTests.Data;
 
 /// <summary>Runs against a real SQLite database file in a temporary folder.</summary>
 public sealed class ConfigurationStoreTests : IDisposable

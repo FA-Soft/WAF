@@ -1,8 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Waf.Engine;
+using FASoft.Waf.Engine;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>Stores batches of request log entries.</summary>
 public interface IRequestLogStore

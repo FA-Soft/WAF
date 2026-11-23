@@ -319,6 +319,8 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds a
 
 The project is at an early stage. Issues and ideas are welcome. Please open an issue before starting larger changes.
 
+**Namespaces start with `FASoft.`** Every class, record, struct, interface, enum and Razor component lives in a namespace that starts with `FASoft.`, e.g. `FASoft.Waf.Data` for `src/Waf.Data`. Project and assembly names stay `Waf.*`. `Directory.Build.props` sets the root namespace to `FASoft.<project name>`, so new files and Razor components get the right namespace by default. `NamespaceConventionTests` fails the build for any namespace, or file without a namespace, that does not follow the rule.
+
 ## License
 
 To be decided. Add a `LICENSE` file before publishing.

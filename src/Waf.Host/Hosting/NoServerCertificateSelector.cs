@@ -1,7 +1,7 @@
 using System.Security.Cryptography.X509Certificates;
-using Waf.Core.Tls;
+using FASoft.Waf.Core.Tls;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Placeholder selector used until certificate management exists: rejects every TLS handshake.

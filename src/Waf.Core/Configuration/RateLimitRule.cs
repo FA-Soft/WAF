@@ -1,4 +1,4 @@
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>
 /// A rate limit: at most <see cref="PermitLimit"/> requests per <see cref="WindowSeconds"/> for each

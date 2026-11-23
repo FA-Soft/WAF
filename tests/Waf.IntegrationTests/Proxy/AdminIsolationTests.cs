@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 
-namespace Waf.IntegrationTests.Proxy;
+namespace FASoft.Waf.IntegrationTests.Proxy;
 
 /// <summary>Gateway with a catch-all route: every host and path on the public listener is proxied.</summary>
 public sealed class CatchAllFixture : GatewayFixture

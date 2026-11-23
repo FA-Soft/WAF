@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>
 /// The parts of an HTTP request the rule engine looks at. Implemented by an adapter over the real

@@ -1,6 +1,6 @@
-using Waf.Proxy;
+using FASoft.Waf.Proxy;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Request pipeline for public traffic on the HTTP/HTTPS listeners. The admin listener is branched off

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Waf.Data;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>Where a sign-in attempt ended.</summary>
 public enum SignInStep

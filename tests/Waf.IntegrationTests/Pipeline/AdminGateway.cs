@@ -1,10 +1,10 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Data;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Data;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>
 /// A gateway with backends A and B and helpers to drive the admin UI through real form posts (with the page's

@@ -1,4 +1,4 @@
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>What the gateway did with a request.</summary>
 public enum RequestAction

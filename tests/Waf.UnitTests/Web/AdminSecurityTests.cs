@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
-using Waf.Web;
+using FASoft.Waf.Web;
 
-namespace Waf.UnitTests.Web;
+namespace FASoft.Waf.UnitTests.Web;
 
 public sealed class AdminSecurityTests
 {

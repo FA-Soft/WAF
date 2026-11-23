@@ -1,8 +1,8 @@
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Connections;
-using Waf.Host.Hosting;
+using FASoft.Waf.Host.Hosting;
 
-namespace Waf.UnitTests.Hosting;
+namespace FASoft.Waf.UnitTests.Hosting;
 
 public class StartupErrorReporterTests
 {

@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text.RegularExpressions;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>Gateway with one route and one rule, for admin UI tests.</summary>
 public sealed class AdminUiFixture : GatewayFixture
@@ -92,7 +92,7 @@ public sealed partial class AdminUiTests(AdminUiFixture gateway) : IClassFixture
     {
         using var response = await _http.GetAsync(Admin("/"), Ct);
 
-        Assert.Equal(Waf.Host.Hosting.AdminPipeline.ContentSecurityPolicy, response.Headers.GetValues("Content-Security-Policy").Single());
+        Assert.Equal(FASoft.Waf.Host.Hosting.AdminPipeline.ContentSecurityPolicy, response.Headers.GetValues("Content-Security-Policy").Single());
         Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());

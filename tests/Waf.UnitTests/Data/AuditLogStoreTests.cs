@@ -3,12 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.UnitTests.Engine;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.UnitTests.Engine;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Data;
+namespace FASoft.Waf.UnitTests.Data;
 
 /// <summary>The audit log in <c>config.db</c>, against a real SQLite database file in a temporary folder.</summary>
 public sealed class AuditLogStoreTests : IDisposable

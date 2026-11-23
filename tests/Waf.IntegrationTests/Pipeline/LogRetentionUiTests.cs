@@ -1,11 +1,11 @@
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Data;
-using Waf.Engine;
-using Waf.IntegrationTests.Proxy;
-using Waf.Web;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
+using FASoft.Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Web;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>The log retention settings page and the cleanup job, against a running gateway.</summary>
 public sealed class LogRetentionUiTests

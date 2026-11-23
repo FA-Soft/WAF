@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using Waf.Core.Configuration;
-using Waf.Engine;
-using Waf.Web;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Web;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Web;
+namespace FASoft.Waf.UnitTests.Web;
 
 public class RequestTesterTests
 {

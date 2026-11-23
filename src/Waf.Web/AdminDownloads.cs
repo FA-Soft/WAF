@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Waf.Core.Configuration;
-using Waf.Data;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>
 /// File downloads of the admin UI: the configuration as JSON and the full backup. Both are POST forms with an

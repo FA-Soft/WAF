@@ -2,7 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>Registration of the data layer.</summary>
 public static class DataServiceCollectionExtensions

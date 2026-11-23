@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Connections;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Turns listener bind failures into actionable messages (port in use, permission denied).

@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Waf.Data;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>Last successful sign-in before the current one, and the failed attempts since.</summary>
 public sealed record SignInSummary(SignInEvent? PreviousSignIn, int FailedSince);

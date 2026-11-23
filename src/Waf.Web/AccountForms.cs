@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>Form model of the sign-in page.</summary>
 internal sealed class LoginFormModel

@@ -1,13 +1,13 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.Engine;
-using Waf.IntegrationTests.Proxy;
-using Waf.Web;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
+using FASoft.Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Web;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>
 /// From a request log entry to configuration: every action opens a pre-filled form, which is saved unchanged (as a

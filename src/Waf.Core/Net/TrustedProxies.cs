@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Waf.Core.Net;
+namespace FASoft.Waf.Core.Net;
 
 /// <summary>
 /// The set of proxies (IP addresses or CIDR ranges) allowed to report the client IP via X-Forwarded-For.

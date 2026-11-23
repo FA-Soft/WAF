@@ -1,9 +1,9 @@
 using System.Text;
-using Waf.Core.Configuration;
-using Waf.Engine.Detection;
-using Waf.UnitTests.Engine;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Engine.Detection;
+using FASoft.Waf.UnitTests.Engine;
 
-namespace Waf.UnitTests.Detection;
+namespace FASoft.Waf.UnitTests.Detection;
 
 public class AttackDetectorTests
 {

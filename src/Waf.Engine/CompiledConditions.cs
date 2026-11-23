@@ -1,10 +1,10 @@
 using System.Buffers;
 using System.Net;
 using System.Text.RegularExpressions;
-using Waf.Core.Configuration;
-using Waf.Core.Net;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Net;
 
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>A condition prepared for fast evaluation.</summary>
 internal abstract class CompiledCondition(bool negate)

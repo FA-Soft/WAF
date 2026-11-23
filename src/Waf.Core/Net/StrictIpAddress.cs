@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Waf.Core.Net;
+namespace FASoft.Waf.Core.Net;
 
 /// <summary>
 /// Strict IP address parsing for configuration input.

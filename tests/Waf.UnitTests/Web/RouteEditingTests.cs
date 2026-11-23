@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
-using Waf.Core.Configuration;
-using Waf.Core.Routing;
-using Waf.Proxy;
-using Waf.Web;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
+using FASoft.Waf.Proxy;
+using FASoft.Waf.Web;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Web;
+namespace FASoft.Waf.UnitTests.Web;
 
 public class RouteEditingTests
 {
@@ -55,8 +55,8 @@ public class RouteEditingTests
         Assert.False(form.IsNew);
         Assert.Equal("https://[fd00::10]:8443" + Environment.NewLine + "http://10.0.0.6:8080", form.Destinations);
         Assert.Equal(
-            Waf.Core.Configuration.GatewayConfigurationJson.Serialize(WithRoute(route)),
-            Waf.Core.Configuration.GatewayConfigurationJson.Serialize(WithRoute(back)));
+            FASoft.Waf.Core.Configuration.GatewayConfigurationJson.Serialize(WithRoute(route)),
+            FASoft.Waf.Core.Configuration.GatewayConfigurationJson.Serialize(WithRoute(back)));
     }
 
     [Fact]

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 
-namespace Waf.Engine.Detection;
+namespace FASoft.Waf.Engine.Detection;
 
 /// <summary>
 /// Turns a raw request value into a canonical form for attack matching, undoing the encodings attackers

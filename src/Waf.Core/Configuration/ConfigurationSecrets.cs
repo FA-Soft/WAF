@@ -1,4 +1,4 @@
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>
 /// Secret values in a configuration and their removal from exports and backups.

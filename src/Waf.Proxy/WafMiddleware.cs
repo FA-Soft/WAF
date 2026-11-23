@@ -2,12 +2,12 @@ using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Waf.Core.Configuration;
-using Waf.Engine;
-using Waf.Engine.Detection;
-using Waf.Engine.RateLimiting;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Engine.Detection;
+using FASoft.Waf.Engine.RateLimiting;
 
-namespace Waf.Proxy;
+namespace FASoft.Waf.Proxy;
 
 /// <summary>
 /// Judges every public request with the active <see cref="WafEngine"/>, in this order:

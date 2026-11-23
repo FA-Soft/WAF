@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>
 /// ASP.NET Core Identity store of the admin accounts, in <c>identity.db</c> in the data folder. Kept apart from

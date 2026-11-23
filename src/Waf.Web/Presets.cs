@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using Waf.Core.Configuration;
-using Waf.Core.Net;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Net;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>The inputs a preset asks for.</summary>
 [Flags]

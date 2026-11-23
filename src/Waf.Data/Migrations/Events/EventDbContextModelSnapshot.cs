@@ -2,11 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Waf.Data;
+using FASoft.Waf.Data;
 
 #nullable disable
 
-namespace Waf.Data.Migrations.Events;
+namespace FASoft.Waf.Data.Migrations.Events;
 
 [DbContext(typeof(EventDbContext))]
 partial class EventDbContextModelSnapshot : ModelSnapshot
@@ -21,7 +21,7 @@ partial class EventDbContextModelSnapshot : ModelSnapshot
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "11.0.0");
 
-        modelBuilder.Entity("Waf.Data.RequestEvent", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.RequestEvent", b =>
             {
                 b.Property<long>("Id")
                     .ValueGeneratedOnAdd()

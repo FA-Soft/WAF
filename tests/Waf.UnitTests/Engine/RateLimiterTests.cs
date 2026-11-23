@@ -1,9 +1,9 @@
 using System.Net;
-using Waf.Core.Configuration;
-using Waf.Engine.RateLimiting;
-using static Waf.UnitTests.Engine.RuleBuilder;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Engine.RateLimiting;
+using static FASoft.Waf.UnitTests.Engine.RuleBuilder;
 
-namespace Waf.UnitTests.Engine;
+namespace FASoft.Waf.UnitTests.Engine;
 
 /// <summary>A clock tests can move by hand.</summary>
 internal sealed class ManualTimeProvider : TimeProvider

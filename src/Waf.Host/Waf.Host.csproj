@@ -3,7 +3,6 @@
   <PropertyGroup>
     <Description>Gateway host: startup, Kestrel and service hosting.</Description>
     <AssemblyName>WafGateway</AssemblyName>
-    <RootNamespace>Waf.Host</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,9 +1,9 @@
-using Waf.Core.Configuration;
-using Waf.Core.Net;
-using Waf.Engine.Detection;
-using Waf.Engine.RateLimiting;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Engine.Detection;
+using FASoft.Waf.Engine.RateLimiting;
 
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>
 /// Everything the WAF needs to judge a request, built from one configuration: trusted proxies, rules,

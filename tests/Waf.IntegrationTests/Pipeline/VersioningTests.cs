@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Core.Configuration;
-using Waf.Core.Routing;
-using Waf.Data;
-using Waf.Engine;
-using Waf.Host.Hosting;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Host.Hosting;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>
 /// Activation, rejection and rollback of configurations on a running gateway. Every test uses its own

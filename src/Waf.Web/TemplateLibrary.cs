@@ -1,6 +1,6 @@
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>
 /// A starting point for a new route, rule or rate limit: it pre-fills the editor, which the user then reviews,

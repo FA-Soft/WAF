@@ -1,9 +1,9 @@
 using System.Net;
 using Microsoft.AspNetCore.Http;
-using Waf.Engine;
+using FASoft.Waf.Engine;
 using Yarp.ReverseProxy.Model;
 
-namespace Waf.Proxy;
+namespace FASoft.Waf.Proxy;
 
 /// <summary>
 /// <see cref="IWafRequest"/> over an <see cref="HttpContext"/>, without copying. Use after client-IP

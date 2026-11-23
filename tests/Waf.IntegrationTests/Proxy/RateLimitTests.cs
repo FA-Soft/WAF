@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Waf.IntegrationTests.Proxy;
+namespace FASoft.Waf.IntegrationTests.Proxy;
 
 /// <summary>
 /// Gateway with a per-client limit of 3 requests per minute. 127.0.0.1 is a trusted proxy, so each test

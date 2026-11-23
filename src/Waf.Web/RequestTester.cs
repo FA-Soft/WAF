@@ -1,12 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Text;
-using Waf.Core.Configuration;
-using Waf.Core.Net;
-using Waf.Engine;
-using Waf.Engine.Detection;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Engine.Detection;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>Form model of the "Test a request" page.</summary>
 internal sealed class TestRequestModel : IValidatableObject

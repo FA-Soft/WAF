@@ -1,4 +1,4 @@
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>
 /// Built-in detection of common attack payloads (SQL injection, XSS, path traversal, command injection,

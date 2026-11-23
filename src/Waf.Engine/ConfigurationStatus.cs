@@ -1,6 +1,6 @@
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>
 /// The configuration in appsettings was edited since it was last imported or dismissed. The configuration

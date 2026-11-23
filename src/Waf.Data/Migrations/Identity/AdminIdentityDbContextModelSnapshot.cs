@@ -3,11 +3,11 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Waf.Data;
+using FASoft.Waf.Data;
 
 #nullable disable
 
-namespace Waf.Data.Migrations.Identity;
+namespace FASoft.Waf.Data.Migrations.Identity;
 
 [DbContext(typeof(AdminIdentityDbContext))]
 partial class AdminIdentityDbContextModelSnapshot : ModelSnapshot
@@ -214,7 +214,7 @@ partial class AdminIdentityDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("AspNetUserTokens");
             });
 
-        modelBuilder.Entity("Waf.Data.SignInEvent", b =>
+        modelBuilder.Entity("FASoft.Waf.Data.SignInEvent", b =>
             {
                 b.Property<long>("Id")
                     .ValueGeneratedOnAdd()

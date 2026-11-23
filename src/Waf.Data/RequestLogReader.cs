@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Data.Sqlite;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>Which requests the log viewer shows, in plain language.</summary>
 public enum LogView

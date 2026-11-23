@@ -1,9 +1,9 @@
 using System.Net;
-using Waf.Data;
-using Waf.IntegrationTests.Proxy;
-using Waf.Web;
+using FASoft.Waf.Data;
+using FASoft.Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Web;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>The audit log: who changed what and when, against a running gateway.</summary>
 public sealed class AuditLogTests

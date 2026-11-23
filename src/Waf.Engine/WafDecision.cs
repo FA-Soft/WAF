@@ -1,6 +1,6 @@
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>The final verdict for a request.</summary>
 public enum WafVerdict

@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Waf.Core;
+namespace FASoft.Waf.Core;
 
 /// <summary>
 /// Product-wide constants shared by every WAF Gateway component.

@@ -1,11 +1,11 @@
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
-using Waf.Core.Net;
-using Waf.Engine;
-using Waf.Proxy;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Proxy;
 
-namespace Waf.UnitTests.Net;
+namespace FASoft.Waf.UnitTests.Net;
 
 public class ClientIpMiddlewareTests
 {
@@ -18,7 +18,7 @@ public class ClientIpMiddlewareTests
             context.Request.Headers[ClientIpResolver.ForwardedForHeader] = forwardedFor;
         }
 
-        var configuration = Waf.UnitTests.Engine.RuleBuilder.Config();
+        var configuration = FASoft.Waf.UnitTests.Engine.RuleBuilder.Config();
         foreach (var proxy in trusted)
         {
             configuration.Settings.TrustedProxies.Add(proxy);

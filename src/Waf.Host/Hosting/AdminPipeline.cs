@@ -1,6 +1,6 @@
-using Waf.Web;
+using FASoft.Waf.Web;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Request pipeline for the localhost admin listener: the Blazor admin UI (server-side rendered, enhanced

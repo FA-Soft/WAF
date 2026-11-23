@@ -1,6 +1,6 @@
-using Waf.Engine.Detection;
+using FASoft.Waf.Engine.Detection;
 
-namespace Waf.UnitTests.Detection;
+namespace FASoft.Waf.UnitTests.Detection;
 
 public class InputNormalizerTests
 {

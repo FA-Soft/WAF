@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Engine.Detection;
+namespace FASoft.Waf.Engine.Detection;
 
 /// <summary>Where in the request a value was found.</summary>
 public enum RequestLocation

@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
-using Waf.Core.Net;
-using Waf.Core.Routing;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Core.Routing;
 
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>
 /// Validates a complete <see cref="GatewayConfiguration"/> and returns plain-language errors.

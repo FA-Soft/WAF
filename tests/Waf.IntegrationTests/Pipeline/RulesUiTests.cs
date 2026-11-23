@@ -1,8 +1,8 @@
 using System.Net;
-using Waf.Core.Configuration;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>
 /// Rules and rate-limit pages of the admin UI, driven through real form posts against a running gateway.

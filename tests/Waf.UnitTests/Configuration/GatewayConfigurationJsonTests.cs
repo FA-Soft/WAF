@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.UnitTests.Configuration;
+namespace FASoft.Waf.UnitTests.Configuration;
 
 public class GatewayConfigurationJsonTests
 {

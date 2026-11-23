@@ -1,11 +1,11 @@
 using System.Net;
 using System.Text;
 using BenchmarkDotNet.Attributes;
-using Waf.Core.Configuration;
-using Waf.Engine;
-using Waf.Engine.Detection;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Engine.Detection;
 
-namespace Waf.Benchmarks;
+namespace FASoft.Waf.Benchmarks;
 
 /// <summary>
 /// Cost of attack detection per request.

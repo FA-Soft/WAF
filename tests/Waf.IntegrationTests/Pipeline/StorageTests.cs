@@ -1,10 +1,10 @@
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Data;
-using Waf.Host.Hosting;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Data;
+using FASoft.Waf.Host.Hosting;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 public sealed class StorageTests
 {

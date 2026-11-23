@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
-/// <summary>One request in <c>events.db</c> (see <c>Waf.Engine.RequestLogEntry</c>).</summary>
+/// <summary>One request in <c>events.db</c> (see <c>FASoft.Waf.Engine.RequestLogEntry</c>).</summary>
 public sealed class RequestEvent
 {
     public long Id { get; set; }

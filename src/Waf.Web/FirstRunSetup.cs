@@ -8,10 +8,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Waf.Core.Hosting;
-using Waf.Data;
+using FASoft.Waf.Core.Hosting;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>
 /// Creating the first admin account. As long as no account exists, the setup page accepts one, but only from

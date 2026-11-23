@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
-using Waf.Data;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>The signed-in admin as recorded in configuration versions and the audit log.</summary>
 public static class AdminActor

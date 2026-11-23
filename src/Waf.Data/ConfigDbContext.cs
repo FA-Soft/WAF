@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>
 /// A stored version of the complete gateway configuration. Versions are never changed after they are

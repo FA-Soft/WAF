@@ -1,10 +1,10 @@
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using Waf.Core.Hosting;
-using Waf.Host.Hosting;
+using FASoft.Waf.Core.Hosting;
+using FASoft.Waf.Host.Hosting;
 
-namespace Waf.UnitTests.Hosting;
+namespace FASoft.Waf.UnitTests.Hosting;
 
 public class ListenerClassifierTests
 {

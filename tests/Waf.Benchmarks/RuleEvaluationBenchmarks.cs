@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Net;
 using BenchmarkDotNet.Attributes;
-using Waf.Core.Configuration;
-using Waf.Core.Routing;
-using Waf.Engine;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
+using FASoft.Waf.Engine;
 
-namespace Waf.Benchmarks;
+namespace FASoft.Waf.Benchmarks;
 
 /// <summary>
 /// Cost of evaluating one request against rule sets of different sizes.

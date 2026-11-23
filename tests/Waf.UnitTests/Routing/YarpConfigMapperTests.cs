@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Core.Routing;
-using Waf.Proxy;
+using FASoft.Waf.Core.Routing;
+using FASoft.Waf.Proxy;
 using Yarp.ReverseProxy.Configuration;
 
-namespace Waf.UnitTests.Routing;
+namespace FASoft.Waf.UnitTests.Routing;
 
 public class YarpConfigMapperTests
 {
@@ -138,7 +138,7 @@ public class YarpConfigMapperTests
             ["Gateway:Routes:0:HealthCheck:Path"] = "/health",
         }).Build();
 
-        var route = Assert.Single(Waf.Host.Hosting.GatewayConfigurationLoader.Load(configuration).Routes);
+        var route = Assert.Single(FASoft.Waf.Host.Hosting.GatewayConfigurationLoader.Load(configuration).Routes);
 
         Assert.Equal("api", route.Name);
         Assert.Equal(["a.example.com", "b.example.com"], route.Match.Hosts);

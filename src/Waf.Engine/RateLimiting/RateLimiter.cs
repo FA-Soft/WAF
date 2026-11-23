@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using Waf.Core.Configuration;
-using Waf.Core.Net;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Net;
 
-namespace Waf.Engine.RateLimiting;
+namespace FASoft.Waf.Engine.RateLimiting;
 
 /// <summary>Outcome of a rate-limit check.</summary>
 public enum RateLimitOutcome

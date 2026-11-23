@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
-using Waf.Host.Hosting;
+using FASoft.Waf.Host.Hosting;
 
-namespace Waf.IntegrationTests;
+namespace FASoft.Waf.IntegrationTests;
 
 public class StartupFailureTests
 {

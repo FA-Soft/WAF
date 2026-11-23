@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text;
 
-namespace Waf.IntegrationTests.Proxy;
+namespace FASoft.Waf.IntegrationTests.Proxy;
 
 public sealed class ProxyRoutingTests(ProxyFixture gateway) : IClassFixture<ProxyFixture>, IDisposable
 {

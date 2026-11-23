@@ -1,4 +1,4 @@
-namespace Waf.Core.Configuration;
+namespace FASoft.Waf.Core.Configuration;
 
 /// <summary>Which TLS certificate to use for a host name.</summary>
 public sealed class CertificateBinding

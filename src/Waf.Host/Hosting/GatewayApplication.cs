@@ -1,18 +1,18 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Options;
-using Waf.Core;
-using Waf.Core.Hosting;
-using Waf.Core.Net;
-using Waf.Core.Tls;
-using Waf.Engine;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core;
+using FASoft.Waf.Core.Hosting;
+using FASoft.Waf.Core.Net;
+using FASoft.Waf.Core.Tls;
+using FASoft.Waf.Engine;
+using FASoft.Waf.Core.Configuration;
 using Microsoft.Extensions.Configuration.Json;
-using Waf.Data;
-using Waf.Proxy;
-using Waf.Web;
+using FASoft.Waf.Data;
+using FASoft.Waf.Proxy;
+using FASoft.Waf.Web;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Builds and runs the gateway: Kestrel listeners, service hosting and the admin/public pipelines.
@@ -71,7 +71,7 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton(AuditLogStore.Create(storagePaths, TimeProvider.System));
         builder.Services.AddSingleton(configurationStatus);
         builder.Services.AddSingleton<GatewayConfigurationService>();
-        builder.Services.AddSingleton<Waf.Web.IGatewayConfigurationService>(sp => sp.GetRequiredService<GatewayConfigurationService>());
+        builder.Services.AddSingleton<FASoft.Waf.Web.IGatewayConfigurationService>(sp => sp.GetRequiredService<GatewayConfigurationService>());
         builder.Services.AddHostedService<AppSettingsWatcher>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<WafEngineHolder>();
@@ -176,7 +176,7 @@ internal static partial class GatewayApplication
         // Retention runs whether or not new requests are logged, so an existing events.db stays within its limits.
         builder.Services.AddSingleton(new RequestLogMaintenance(paths));
         builder.Services.AddSingleton<LogRetentionService>();
-        builder.Services.AddSingleton<Waf.Web.ILogRetention>(sp => sp.GetRequiredService<LogRetentionService>());
+        builder.Services.AddSingleton<FASoft.Waf.Web.ILogRetention>(sp => sp.GetRequiredService<LogRetentionService>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<LogRetentionService>());
 
         var options = builder.Configuration.GetSection(EventLogOptions.SectionName).Get<EventLogOptions>() ?? new EventLogOptions();

@@ -2,10 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
-using Waf.Data;
-using Waf.IntegrationTests.Proxy;
+using FASoft.Waf.Data;
+using FASoft.Waf.IntegrationTests.Proxy;
 
-namespace Waf.IntegrationTests.Pipeline;
+namespace FASoft.Waf.IntegrationTests.Pipeline;
 
 /// <summary>
 /// The routes pages of the admin UI, driven through real form posts (with antiforgery tokens) against a
@@ -248,12 +248,12 @@ public sealed partial class RoutesUiTests
 
         // Simulate an edited appsettings: the watcher reads the configuration, which now has an extra route.
         var configuration = (await gateway.Store.GetLastKnownGoodAsync(Ct))!.Configuration;
-        var status = gateway.App.Services.GetRequiredService<Waf.Engine.ConfigurationStatus>();
-        var extra = new Waf.Core.Routing.ProxyRouteOptions { Name = "imported" };
+        var status = gateway.App.Services.GetRequiredService<FASoft.Waf.Engine.ConfigurationStatus>();
+        var extra = new FASoft.Waf.Core.Routing.ProxyRouteOptions { Name = "imported" };
         extra.Match.Hosts.Add("imported.example.com");
-        extra.Destinations.Add(new Waf.Core.Routing.ProxyDestinationOptions { Address = "127.0.0.1", Port = gateway.B.Port });
+        extra.Destinations.Add(new FASoft.Waf.Core.Routing.ProxyDestinationOptions { Address = "127.0.0.1", Port = gateway.B.Port });
         configuration.Routes.Add(extra);
-        status.SetNotice(new Waf.Engine.AppSettingsNotice("edited-fingerprint", configuration, [], DateTimeOffset.UtcNow));
+        status.SetNotice(new FASoft.Waf.Engine.AppSettingsNotice("edited-fingerprint", configuration, [], DateTimeOffset.UtcNow));
 
         var dashboard = await gateway.GetPageAsync("/");
         Assert.Contains("The configuration in appsettings was changed, but it is not used.", dashboard, StringComparison.Ordinal);

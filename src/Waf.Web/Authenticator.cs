@@ -1,7 +1,7 @@
 using System.Text;
 using QRCoder;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>What the 2FA setup page shows to add the account to an authenticator app.</summary>
 public static class Authenticator

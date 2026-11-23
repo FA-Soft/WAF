@@ -1,7 +1,7 @@
-using Waf.Core.Configuration;
-using Waf.Data;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>What importing a configuration file would do to the running configuration.</summary>
 /// <param name="Candidate">The configuration that would become active; null when the file cannot be used.</param>

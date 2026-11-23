@@ -1,6 +1,6 @@
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>
 /// An immutable, pre-compiled set of WAF rules. Create one with <see cref="Compile"/>; swap it in with

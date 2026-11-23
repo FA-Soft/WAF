@@ -1,10 +1,10 @@
 using System.Net;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Waf.Core.Hosting;
-using Waf.Core.Tls;
+using FASoft.Waf.Core.Hosting;
+using FASoft.Waf.Core.Tls;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
 /// Configures the Kestrel listeners: public HTTP/HTTPS and the loopback-only admin listener.

@@ -1,6 +1,6 @@
-using Waf.Core.Routing;
+using FASoft.Waf.Core.Routing;
 
-namespace Waf.UnitTests.Routing;
+namespace FASoft.Waf.UnitTests.Routing;
 
 public class ProxyRouteValidatorTests
 {

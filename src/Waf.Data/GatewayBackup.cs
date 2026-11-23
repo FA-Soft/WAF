@@ -3,9 +3,9 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Waf.Core.Configuration;
+using FASoft.Waf.Core.Configuration;
 
-namespace Waf.Data;
+namespace FASoft.Waf.Data;
 
 /// <summary>One configuration version in a backup.</summary>
 public sealed record BackupVersion(long Version, DateTime CreatedAtUtc, string Author, string? Comment, GatewayConfiguration Configuration);

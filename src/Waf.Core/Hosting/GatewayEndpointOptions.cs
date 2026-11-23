@@ -1,4 +1,4 @@
-namespace Waf.Core.Hosting;
+namespace FASoft.Waf.Core.Hosting;
 
 /// <summary>
 /// Listener configuration for the gateway, bound from the <c>Gateway:Endpoints</c> configuration section.

@@ -1,7 +1,7 @@
-using Waf.Core.Configuration;
-using Waf.Data;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
 
-namespace Waf.Web;
+namespace FASoft.Waf.Web;
 
 /// <summary>Outcome of an activation (save, rollback or import).</summary>
 /// <param name="Succeeded">True when the configuration is now active.</param>

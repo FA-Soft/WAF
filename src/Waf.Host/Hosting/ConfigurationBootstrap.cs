@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Options;
-using Waf.Core.Configuration;
-using Waf.Data;
-using Waf.Engine;
+using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Data;
+using FASoft.Waf.Engine;
 
-namespace Waf.Host.Hosting;
+namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>Which configuration the gateway starts with.</summary>
 /// <param name="Configuration">The configuration to run.</param>

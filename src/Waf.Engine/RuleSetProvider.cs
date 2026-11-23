@@ -1,4 +1,4 @@
-namespace Waf.Engine;
+namespace FASoft.Waf.Engine;
 
 /// <summary>
 /// Holds the active <see cref="CompiledRuleSet"/> and swaps it atomically. Readers take one snapshot per
