@@ -22,7 +22,7 @@ public interface ICertificateManager
     /// <summary>The certificate state of every host name of the running configuration.</summary>
     IReadOnlyList<CertificateStatus> Statuses { get; }
 
-    /// <summary>Uploaded certificates (metadata only), newest first.</summary>
+    /// <summary>Uploaded certificates (metadata only), newest first; not the ones obtained from Let's Encrypt.</summary>
     Task<IReadOnlyList<StoredCertificate>> GetStoredAsync(CancellationToken cancellationToken);
 
     /// <summary>
@@ -33,6 +33,9 @@ public interface ICertificateManager
 
     /// <summary>Deletes an uploaded certificate that no host name uses; returns why not otherwise.</summary>
     Task<IReadOnlyList<string>> DeleteAsync(string thumbprint, AuditActor actor, CancellationToken cancellationToken);
+
+    /// <summary>Asks for Let's Encrypt certificates now, also for host names that failed recently.</summary>
+    void RequestLetsEncryptNow();
 
     /// <summary>Reloads the certificates (after an upload or a configuration change).</summary>
     Task ReloadAsync(CancellationToken cancellationToken);

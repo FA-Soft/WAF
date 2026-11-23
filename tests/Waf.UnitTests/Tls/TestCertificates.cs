@@ -24,13 +24,13 @@ internal static class TestCertificates
         var rootRequest = new CertificateRequest("CN=Test Root CA", rootKey, HashAlgorithmName.SHA256);
         rootRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
         rootRequest.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.CrlSign, true));
-        var root = rootRequest.CreateSelfSigned(now.AddDays(-2), now.AddYears(5));
+        var root = rootRequest.CreateSelfSigned(now.AddYears(-1), now.AddYears(5)); // valid long enough to issue backdated certificates
 
         using var intermediateKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var intermediateRequest = new CertificateRequest("CN=Test Intermediate CA", intermediateKey, HashAlgorithmName.SHA256);
         intermediateRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
         intermediateRequest.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.CrlSign, true));
-        using var intermediatePublic = intermediateRequest.Create(root, now.AddDays(-1), now.AddYears(4), [1, 2, 3, 4]);
+        using var intermediatePublic = intermediateRequest.Create(root, now.AddDays(-364), now.AddYears(4), [1, 2, 3, 4]);
         var intermediate = intermediatePublic.CopyWithPrivateKey(intermediateKey);
 
         using var leafKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);

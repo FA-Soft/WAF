@@ -148,9 +148,35 @@ HTTPS on port 443 picks the certificate per connection by the host name the brow
 
 - **Upload your own** on the **Certificates** page: a PFX file (with its password) or PEM files (the certificate followed by its intermediate certificates, and the private key, optionally encrypted). The gateway checks that the key belongs to the certificate and that it has not expired, then stores it in `config.db` with the private key **encrypted** (ASP.NET Core Data Protection; the keys are in the data folder and protected with DPAPI on Windows). Then choose the host names it is used for; only names the certificate is valid for are offered. Intermediate certificates are sent with it.
 - **Files on disk** (`Source: "File"` in the configuration): a PFX without password, or a PEM certificate and key; useful when another tool renews them. They are reloaded every 5 minutes.
-- **Let's Encrypt** (`Source: "LetsEncrypt"`) follows in the next step.
+- **Let's Encrypt** (`Source: "LetsEncrypt"`): see below.
 - **Warnings:** a certificate that expires within 30 days, has expired, is missing or does not name its host is shown on the Certificates page and the dashboard, and written to the service log once a day.
+- **Per host name** you choose: your own certificate (uploaded or a file) or Let's Encrypt. Switching is one configuration change and can be rolled back.
 - **Backups:** which certificate a host name uses is part of the configuration (by SHA-256 thumbprint), so it is versioned and can be rolled back. The certificates themselves are not part of configuration versions or JSON exports; a full backup contains them, with their private keys, only with "Include secrets", and restoring it adds them to the certificate store. Uploads and deletions are recorded in the audit log.
+
+#### Let's Encrypt
+
+![Let's Encrypt settings on the Certificates page](docs/images/admin-letsencrypt.png)
+
+On the **Certificates** page, enter a contact e-mail, accept the Let's Encrypt subscriber agreement and choose **Use Let's Encrypt** for a host name. The gateway then:
+
+1. creates a Let's Encrypt account (its key is stored encrypted, like certificate keys);
+2. orders a certificate for the host name and proves control with **HTTP-01**: Let's Encrypt fetches `http://<host>/.well-known/acme-challenge/<token>`, which the gateway answers on port 80 before anything else (even while the WAF is fail-closed). The host name must point to the gateway and port 80 must be reachable from the internet;
+3. stores the certificate (private key encrypted) and serves it over HTTPS at once;
+4. **renews** it automatically when a third of its lifetime is left, at most 30 days before it expires (checked every hour and after every configuration change). A failed attempt is retried after 10 minutes, 1 hour, 6 hours, then daily (Let's Encrypt limits failed validations); **Request certificates now** retries at once after you fixed the cause.
+
+The **staging** switch (`Settings.Acme.UseStaging`) uses the Let's Encrypt staging environment: untrusted test certificates with much higher rate limits, for trying things out. Production and staging use separate accounts and certificates; switching gets a certificate from the other environment. Wildcard host names (`*.example.com`) need DNS validation, which Let's Encrypt does not offer over HTTP: use your own certificate for those. Pending, failed and expiring certificates show on the Certificates page and the dashboard; issuance and renewal are recorded in the audit log.
+
+Host settings in `appsettings.json` (not part of the configuration; normally left out):
+
+```json
+"Gateway": {
+  "Acme": {
+    "DirectoryUrl": null,                // another ACME server instead of Let's Encrypt, e.g. a test server
+    "TrustedRootCertificatePath": null,  // PEM root to trust for that server (a test server's own CA)
+    "CheckIntervalMinutes": 60
+  }
+}
+```
 
 ### Client IP and trusted proxies
 
@@ -310,6 +336,14 @@ dotnet test --solution WafGateway.sln
 Run it locally with `dotnet run --project src/Waf.Host`. In the Development environment the public listeners use `127.0.0.1:5080` (HTTP) and `127.0.0.1:5443` (HTTPS) so they don't need ports 80/443; the admin UI is at `http://127.0.0.1:8900`. Listener settings are under `Gateway:Endpoints` in `appsettings.json` (`HttpPort`, `HttpsPort`, `AdminPort`, `PublicBindAddress`). The admin listener always binds to `127.0.0.1` and `::1` only.
 
 Shared build settings live in `Directory.Build.props` (nullable, analyzers, warnings as errors) and NuGet versions in `Directory.Packages.props` (central package management). Tests use xUnit v3 on Microsoft.Testing.Platform.
+
+**Let's Encrypt tests.** The regular tests run the whole ACME flow (account, HTTP-01 through the gateway's port 80 listener, issuance, renewal) against a small in-process ACME server. One more test runs it against [Pebble](https://github.com/letsencrypt/pebble), Let's Encrypt's own test CA, in Docker (Linux or Windows containers); it is skipped unless `WAF_PEBBLE=1` is set:
+
+```bash
+WAF_PEBBLE=1 dotnet test --project tests/Waf.IntegrationTests --filter-class "*PebbleTests"
+```
+
+Pebble validates HTTP-01 by connecting from the container to the gateway's HTTP port on this machine. On Windows the firewall blocks that by default; allow inbound TCP from the Docker NAT network, for example (elevated): `New-NetFirewallRule -DisplayName "WAF Gateway tests - inbound from Docker NAT" -Direction Inbound -Action Allow -Protocol TCP -InterfaceAlias "vEthernet (nat)" -RemoteAddress LocalSubnet`.
 
 Database migrations use the repository-local `dotnet-ef` tool (`dotnet tool restore`, then e.g. `dotnet dotnet-ef migrations add <Name> --project src/Waf.Data --startup-project src/Waf.Data`). A unit test fails when the EF model changes without a migration.
 

@@ -89,6 +89,8 @@ public static class AuditActions
     public const string AdminUrlUnregistered = "admin-access.url-unregistered";
     public const string CertificateUploaded = "certificate.uploaded";
     public const string CertificateDeleted = "certificate.deleted";
+    public const string CertificateIssued = "certificate.issued";
+    public const string CertificateRenewed = "certificate.renewed";
 }
 
 /// <summary>Who did something, for the audit log.</summary>

@@ -110,6 +110,10 @@ After uploading: choose the host names that use the certificate.
 
 ![Choose host names for a certificate](images/admin-certificate-hosts.png)
 
+Let's Encrypt: the account settings, the staging switch, and choosing Let's Encrypt for a host name.
+
+![Let's Encrypt](images/admin-letsencrypt.png)
+
 ## Templates and presets
 
 The library of one-click presets and templates for routes, rules and rate limits.
