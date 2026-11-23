@@ -38,10 +38,10 @@ public static class AdminIdentity
     public static readonly TimeSpan MaxSessionLifetime = TimeSpan.FromHours(8);
 
     /// <summary>Wrong passwords or codes in a row after which an account is locked.</summary>
-    public const int MaxFailedAttempts = 5;
+    public const int MaxFailedAttempts = AdminAccountPolicy.MaxFailedAttempts;
 
     /// <summary>How long a locked account stays locked.</summary>
-    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+    public static readonly TimeSpan LockoutDuration = AdminAccountPolicy.LockoutDuration;
 
     /// <summary>Number of recovery codes handed out when 2FA is turned on.</summary>
     public const int RecoveryCodeCount = 10;
@@ -53,7 +53,7 @@ public static class AdminIdentity
     private const string SignedInAtKey = "waf.signedInAt";
 
     /// <summary>Minimum password length. Length matters more than character classes, so no other rules apply.</summary>
-    public const int MinPasswordLength = 12;
+    public const int MinPasswordLength = AdminAccountPolicy.MinPasswordLength;
 
     /// <summary>Help text of password fields.</summary>
     public static readonly string PasswordHelp =
@@ -66,19 +66,7 @@ public static class AdminIdentity
         services.AddDbContext<AdminIdentityDbContext>(options => options.UseSqlite(AdminIdentityDbContext.ConnectionString(paths)));
         services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
         services
-            .AddIdentityCore<IdentityUser>(options =>
-            {
-                options.Password.RequiredLength = MinPasswordLength;
-                options.Password.RequiredUniqueChars = 5;
-                options.Password.RequireDigit = false;
-                options.Password.RequireLowercase = false;
-                options.Password.RequireUppercase = false;
-                options.Password.RequireNonAlphanumeric = false;
-                options.User.RequireUniqueEmail = false;
-                options.Lockout.AllowedForNewUsers = true;
-                options.Lockout.MaxFailedAccessAttempts = MaxFailedAttempts;
-                options.Lockout.DefaultLockoutTimeSpan = LockoutDuration;
-            })
+            .AddIdentityCore<IdentityUser>(AdminAccountPolicy.Apply)
             .AddEntityFrameworkStores<AdminIdentityDbContext>()
             .AddSignInManager()
             .AddTokenProvider<AuthenticatorTokenProvider<IdentityUser>>(TokenOptions.DefaultAuthenticatorProvider);

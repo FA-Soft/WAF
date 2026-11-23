@@ -44,6 +44,23 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
         return id is null ? null : await GetAsync(id.Value, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// The number and hash of the last-known-good version, without reading the configuration itself: a cheap check
+    /// whether another process (wafctl) activated a different version. Null if none was activated yet.
+    /// </summary>
+    public async Task<(long Version, string Sha256)?> GetLastKnownGoodHeadAsync(CancellationToken cancellationToken)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var head = await (
+                from s in db.ConfigurationState.AsNoTracking()
+                where s.Id == ConfigurationState.SingletonId && s.LastKnownGoodVersionId != null
+                join v in db.ConfigurationVersions.AsNoTracking() on s.LastKnownGoodVersionId equals v.Id
+                select new { v.Id, v.Sha256 })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return head is null ? null : (head.Id, head.Sha256);
+    }
+
     /// <summary>Records <paramref name="version"/> as the last-known-good (active) version.</summary>
     /// <exception cref="ArgumentException">The version does not exist.</exception>
     public async Task SetLastKnownGoodAsync(long version, CancellationToken cancellationToken)

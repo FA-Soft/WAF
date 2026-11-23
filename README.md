@@ -247,17 +247,28 @@ On a Raspberry Pi, store the data folder on an SSD where possible to reduce SD-c
 
 ## Recovery tool
 
-`wafctl` works locally on Windows and Linux, even when the service is down or you are locked out:
+`wafctl` repairs the gateway locally on Windows and Linux, even when the service is down or you are locked out of the admin UI:
 
 ```text
-wafctl rules disable-all           # disable all rules
-wafctl mode detection-only         # log instead of block
-wafctl config restore-last-good    # restore the last known good configuration
-wafctl admin reset-password        # reset the admin password
-wafctl admin reset-2fa             # reset two-factor authentication
-wafctl admin allow-ip <cidr>       # add an address range to the admin allowlist
-wafctl admin unregister-url        # turn remote admin access off
+wafctl rules disable-all                     # disable all rules
+wafctl mode detection-only                   # log instead of block (rules, rate limits and attack detection)
+wafctl mode enforce                          # block again
+wafctl config restore-last-good              # activate the configuration that was active before the current one
+wafctl config restore-last-good --version 7  # activate version 7 again
+wafctl config history                        # list the newest configuration versions
+wafctl admin reset-password                  # new password; also unlocks the account and ends all sessions
+wafctl admin reset-2fa                       # turn two-factor sign-in off
+wafctl admin allow-ip <address-or-cidr>      # add an address range to the remote admin allowlist
+wafctl admin unregister-url                  # turn remote admin access off
+wafctl status                                # data folder, active configuration, admin accounts, remote access
 ```
+
+- **Local privileges only.** `wafctl` needs no network and no sign-in: it works directly on the data folder (`config.db`, `identity.db`). Run it as Administrator on Windows. On Linux, run it as the service account (for example `sudo -u wafgateway wafctl status`), so files it writes stay readable for the service. It finds the data folder the same way the service does (the same appsettings and environment variables); `--data-dir <path>` points it elsewhere.
+- **Configuration changes are normal versions.** `rules disable-all`, `mode …` and `config restore-last-good` check the result like the admin UI does, store it as a new configuration version and make it the active one. A running gateway applies it within about two seconds; a stopped one uses it at the next start. Nothing is changed when there is nothing to do.
+- **Accounts.** `admin reset-password` asks for the new password twice without showing it (or reads one line with `--password-stdin` for scripts); the same rules as in the admin UI apply. With several admin accounts, choose one with `--user <name>`.
+- **Remote admin access** settings (registered URL and allowlist) are stored on this machine only, next to the admin account, and are never part of configuration exports or backups.
+- **Audited.** Every change is recorded in the audit log, with the operating-system user and source `wafctl`.
+- Exit codes: 0 done (or nothing to do), 1 failed, 2 wrong usage.
 
 ## Repository layout (planned)
 
