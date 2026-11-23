@@ -61,6 +61,12 @@ internal static partial class GatewayApplication
         }
 
         builder.Services.AddSingleton<ICertificateProtector, DataProtectionCertificateProtector>();
+
+        // AI assistant: off until an API key is saved (encrypted in config.db).
+        builder.Services.AddSingleton<IApiKeyProtector, DataProtectionApiKeyProtector>();
+        builder.Services.AddSingleton(sp => AiSettingsStore.Create(storagePaths, sp.GetRequiredService<IApiKeyProtector>(), TimeProvider.System));
+        builder.Services.AddSingleton<Waf.Web.IAiProviderFactory, Waf.Web.AiProviderFactory>();
+        builder.Services.AddSingleton<Waf.Web.AiAssistant>();
         builder.Services.AddSingleton(sp => CertificateStore.Create(storagePaths, sp.GetRequiredService<ICertificateProtector>(), TimeProvider.System));
         builder.Services.AddOptions<AcmeHostOptions>().Bind(builder.Configuration.GetSection(AcmeHostOptions.SectionName));
         builder.Services.AddSingleton<AcmeState>();

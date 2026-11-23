@@ -1,0 +1,135 @@
+@page "/ai"
+@inject AiAssistant Assistant
+@inject NavigationManager Navigation
+
+<PageTitle>AI assistant · @ProductInfo.Name</PageTitle>
+
+<h1>
+    AI assistant
+    <HelpTip Title="AI assistant">
+        <p>Optional: with an API key from Anthropic, a Claude model can help you change the configuration. It only proposes changes; nothing is applied without your review.</p>
+        <p>Without a key, everything AI-related is off and the gateway sends nothing anywhere.</p>
+    </HelpTip>
+</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved</div>
+}
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<section class="card section" aria-labelledby="ai-status-heading">
+    <h2 id="ai-status-heading">Status</h2>
+    @if (_status is null)
+    {
+        <p><span class="badge badge-muted">Off</span> No API key: the AI features are off and nothing is sent.</p>
+    }
+    else
+    {
+        <p>
+            <span class="badge badge-ok">On</span>
+            Anthropic Claude (<code>@AnthropicAiProvider.DefaultModel</code>), key ending in <code>…@_status.KeyHint</code>,
+            saved @_status.UpdatedAtUtc.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) by @_status.UpdatedBy.
+        </p>
+        <div class="actions">
+            <form method="post" @formname="ai-check" @onsubmit="CheckAsync" data-enhance>
+                <AntiforgeryToken />
+                <button type="submit" class="button button-secondary">Check the key</button>
+            </form>
+            <form method="post" @formname="ai-remove" @onsubmit="RemoveAsync" data-enhance>
+                <AntiforgeryToken />
+                <button type="submit" class="button button-danger">Remove the key</button>
+            </form>
+        </div>
+    }
+</section>
+
+<section class="card section" aria-labelledby="ai-key-heading">
+    <h2 id="ai-key-heading">@(_status is null ? "Turn the AI assistant on" : "Replace the API key")</h2>
+    <p>Create an API key in the Anthropic Console (console.anthropic.com). Usage is billed by Anthropic to that account.</p>
+    <EditForm Model="Key" FormName="ai-key" OnSubmit="SaveAsync" Enhance class="form">
+        <FormField Id="ai-key" Label="Anthropic API key" Help="Stored encrypted on this machine; never shown again, never exported or included in backups." For="() => Key!.ApiKey">
+            <input id="ai-key" type="password" name="Key.ApiKey" autocomplete="off" aria-describedby="ai-key-help" />
+        </FormField>
+        <button type="submit" class="button">Save the key</button>
+    </EditForm>
+</section>
+
+<section class="section" aria-labelledby="ai-sent-heading">
+    <h2 id="ai-sent-heading">What is sent</h2>
+    <p>Only your request and this summary of the configuration. Secret values (such as API keys in header conditions) are replaced, and the Let's Encrypt e-mail, certificate files, the request log, accounts and remote access settings are left out. Request bodies, cookies and log content are never sent.</p>
+    <details>
+        <summary>Show the summary of the current configuration</summary>
+        <pre class="code-block">@_summary</pre>
+    </details>
+</section>
+
+@code {
+    private AiSettingsInfo? _status;
+    private string _summary = string.Empty;
+    private IReadOnlyList<string> _errors = [];
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
+    [SupplyParameterFromForm(FormName = "ai-key")]
+    private AiKeyFormModel? Key { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Key ??= new AiKeyFormModel();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _status = await Assistant.GetStatusAsync(CancellationToken.None);
+        _summary = await Assistant.ConfigurationSummaryAsync(CancellationToken.None);
+    }
+
+    private async Task SaveAsync()
+    {
+        _errors = await Assistant.SaveKeyAsync(Key!.ApiKey, AdminActor.From(HttpContext), CancellationToken.None);
+        Key.ApiKey = null; // never echoed back
+        if (_errors.Count == 0)
+        {
+            Navigation.NavigateTo($"ai?saved={Uri.EscapeDataString("The API key is saved; the AI assistant is on. Use \"Check the key\" to test it.")}");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task CheckAsync()
+    {
+        var problem = await Assistant.CheckKeyAsync(CancellationToken.None);
+        if (problem is null)
+        {
+            Navigation.NavigateTo($"ai?saved={Uri.EscapeDataString("The key works: Anthropic accepted it.")}");
+            return;
+        }
+
+        _errors = [problem];
+        await LoadAsync();
+    }
+
+    private async Task RemoveAsync()
+    {
+        await Assistant.RemoveKeyAsync(AdminActor.From(HttpContext), CancellationToken.None);
+        Navigation.NavigateTo($"ai?saved={Uri.EscapeDataString("The API key is removed; the AI features are off.")}");
+    }
+}

@@ -246,12 +246,18 @@ Configuration is read strictly: misspelled setting names, invalid values (e.g. `
 
 Optional and disabled unless you provide an API key (default provider: Anthropic Claude, behind a pluggable interface).
 
+![AI assistant page](docs/images/admin-ai.png)
+
+**Turning it on.** Create an API key in the [Anthropic Console](https://console.anthropic.com) and paste it on the **AI assistant** page; usage is billed by Anthropic to that account. The key is encrypted at rest (ASP.NET Core Data Protection, as for certificate keys) in `config.db`, is never shown again (only its last four characters), and is never part of configuration versions, exports or backups, not even a backup with secrets: it belongs to this machine and survives a backup restore. **Check the key** asks Anthropic whether the key works without running the model (free). **Remove the key** turns every AI feature off again. Saving and removing the key are recorded in the audit log. Without a key, nothing AI-related runs and the gateway sends nothing anywhere.
+
+The assistant uses Claude Opus 5.5 (`claude-opus-5-5`) with high effort, through the official Anthropic SDK for .NET. If the model declines a request, Anthropic can answer it with a fallback model (server-side fallback); a refusal that remains is reported as such.
+
 1. Describe what you want, for example: *"Block everything except my office IP on /admin and forward api.example.com to 10.0.0.5:8080."*
 2. The assistant returns a structured proposal that is validated against a strict schema.
 3. You review a human-readable diff and approve it. Nothing is ever applied automatically.
 4. Undo restores the previous configuration in one click.
 
-Only your prompt and a sanitized summary of the current configuration are sent. Request bodies, cookies, secrets and log content are never sent.
+Only your prompt and a sanitized summary of the current configuration are sent. Request bodies, cookies, secrets and log content are never sent. The summary is built from an allowlist: routes, rules, rate limits, and the settings for detection mode, trusted proxies, attack detection, log retention and HSTS, with secret values (such as API keys in header conditions) replaced by a placeholder; certificates appear only as host name and source, and the Let's Encrypt e-mail, certificate files, the request log, accounts and remote access settings are left out. The page shows exactly what would be sent. Tests check the HTTP request the SDK builds: only these fields, and none of the secrets.
 
 ## Logging
 
@@ -399,7 +405,7 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds a
 
 - Fail-closed by design; there is no fail-open mode.
 - Secrets, authorization headers and full request bodies are not logged by default.
-- Private keys of uploaded certificates are stored encrypted at rest (ASP.NET Core Data Protection, keys protected with DPAPI on Windows) and are only included in a full backup when "Include secrets" is chosen; the AI API key will be handled the same way. The same applies today to the values of header conditions (such as API keys) in exports and backups.
+- Private keys of uploaded certificates are stored encrypted at rest (ASP.NET Core Data Protection, keys protected with DPAPI on Windows) and are only included in a full backup when "Include secrets" is chosen; the AI API key is encrypted the same way, but never leaves the machine, not even in a backup with secrets. The same applies today to the values of header conditions (such as API keys) in exports and backups.
 - Forwarded client-IP headers are trusted only from addresses on the trusted-proxy list.
 - Report vulnerabilities privately; see `SECURITY.md` once it exists.
 

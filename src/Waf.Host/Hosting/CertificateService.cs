@@ -16,6 +16,16 @@ internal sealed class DataProtectionCertificateProtector(IDataProtectionProvider
     public byte[] Unprotect(byte[] protectedData) => _protector.Unprotect(protectedData);
 }
 
+/// <summary>Encrypts AI provider API keys with ASP.NET Core Data Protection (a purpose of its own).</summary>
+internal sealed class DataProtectionApiKeyProtector(IDataProtectionProvider provider) : IApiKeyProtector
+{
+    private readonly IDataProtector _protector = provider.CreateProtector("FASoft.Waf.AiApiKey.v1");
+
+    public byte[] Protect(byte[] plaintext) => _protector.Protect(plaintext);
+
+    public byte[] Unprotect(byte[] protectedData) => _protector.Unprotect(protectedData);
+}
+
 /// <summary>
 /// The TLS certificates of the active configuration: picks the certificate for each handshake by SNI host name and
 /// reports per host name whether its certificate is fine, expiring, expired or missing.

@@ -8,4 +8,8 @@
     <ProjectReference Include="../Waf.Core/Waf.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Anthropic" />
+  </ItemGroup>
+
 </Project>

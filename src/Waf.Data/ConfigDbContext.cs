@@ -44,6 +44,8 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
 
     public DbSet<AcmeAccount> AcmeAccounts => Set<AcmeAccount>();
 
+    public DbSet<AiSettings> AiSettings => Set<AiSettings>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -106,6 +108,17 @@ public sealed class ConfigDbContext(DbContextOptions<ConfigDbContext> options) :
             entity.HasIndex(c => c.AcmeHostName);
             entity.Ignore(c => c.DnsNameList);
             entity.Ignore(c => c.IsAcme);
+        });
+
+        modelBuilder.Entity<AiSettings>(entity =>
+        {
+            entity.ToTable("AiSettings");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Id).ValueGeneratedNever();
+            entity.Property(s => s.Provider).IsRequired().HasMaxLength(50);
+            entity.Property(s => s.ProtectedApiKey).IsRequired();
+            entity.Property(s => s.KeyHint).IsRequired().HasMaxLength(8);
+            entity.Property(s => s.UpdatedBy).IsRequired().HasMaxLength(256);
         });
 
         modelBuilder.Entity<AcmeAccount>(entity =>

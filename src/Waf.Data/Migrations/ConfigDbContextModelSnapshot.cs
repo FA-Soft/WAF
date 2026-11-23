@@ -15,7 +15,7 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261123182948_AddAcme";
+    public override string LastMigrationId => "20261123203844_AddAiSettings";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -48,6 +48,38 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
                 b.HasKey("DirectoryUrl");
 
                 b.ToTable("AcmeAccounts");
+            });
+
+        modelBuilder.Entity("FASoft.Waf.Data.AiSettings", b =>
+            {
+                b.Property<int>("Id")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("KeyHint")
+                    .IsRequired()
+                    .HasMaxLength(8)
+                    .HasColumnType("TEXT");
+
+                b.Property<byte[]>("ProtectedApiKey")
+                    .IsRequired()
+                    .HasColumnType("BLOB");
+
+                b.Property<string>("Provider")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("UpdatedAtUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("UpdatedBy")
+                    .IsRequired()
+                    .HasMaxLength(256)
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.ToTable("AiSettings");
             });
 
         modelBuilder.Entity("FASoft.Waf.Data.AuditEntry", b =>
