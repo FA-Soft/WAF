@@ -140,6 +140,19 @@ internal sealed class AcmeFormModel
     public bool UseStaging { get; set; }
 }
 
+/// <summary>The HSTS settings form.</summary>
+internal sealed class HstsFormModel
+{
+    public long BaseVersion { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Range(0, 730, ErrorMessage = "Enter 0 to 730 days.")]
+    public int MaxAgeDays { get; set; }
+
+    public bool IncludeSubDomains { get; set; }
+
+    public bool Preload { get; set; }
+}
+
 /// <summary>The "use Let's Encrypt for a host name" form.</summary>
 internal sealed class LetsEncryptHostFormModel
 {

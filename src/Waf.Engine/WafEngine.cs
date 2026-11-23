@@ -12,8 +12,9 @@ namespace FASoft.Waf.Engine;
 /// </summary>
 public sealed class WafEngine
 {
-    private WafEngine(string configTag, CompiledRuleSet rules, RateLimiter rateLimiter, AttackDetector detector, TrustedProxies trustedProxies, bool detectionOnly)
+    private WafEngine(string configTag, CompiledRuleSet rules, RateLimiter rateLimiter, AttackDetector detector, TrustedProxies trustedProxies, bool detectionOnly, string hstsHeader)
     {
+        HstsHeader = hstsHeader;
         ConfigTag = configTag;
         Rules = rules;
         TrustedProxies = trustedProxies;
@@ -40,6 +41,9 @@ public sealed class WafEngine
     /// <summary>Global detection-only mode: blocks are logged, not enforced.</summary>
     public bool DetectionOnly { get; }
 
+    /// <summary>The Strict-Transport-Security value for routes that enable HSTS (from <c>Settings.Hsts</c>).</summary>
+    public string HstsHeader { get; }
+
     /// <exception cref="ArgumentException">The configuration is not valid.</exception>
     public static WafEngine Build(GatewayConfiguration configuration, TimeProvider? timeProvider = null, string configTag = "")
     {
@@ -52,7 +56,8 @@ public sealed class WafEngine
             new RateLimiter(configuration, timeProvider),
             new AttackDetector(configuration.Settings.AttackDetection),
             TrustedProxies.Parse(configuration.Settings.TrustedProxies),
-            configuration.Settings.DetectionOnly);
+            configuration.Settings.DetectionOnly,
+            configuration.Settings.Hsts.HeaderValue());
     }
 }
 

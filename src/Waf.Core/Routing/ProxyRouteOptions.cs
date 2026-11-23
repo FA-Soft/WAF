@@ -35,6 +35,25 @@ public sealed class ProxyRouteOptions
 
     /// <summary>Active health check settings. Passive health checks are always on.</summary>
     public RouteHealthCheckOptions HealthCheck { get; set; } = new();
+
+    /// <summary>HTTPS enforcement: redirect plain HTTP and send HSTS. Both off by default (plain HTTP routes work).</summary>
+    public RouteHttpsOptions Https { get; set; } = new();
+}
+
+/// <summary>How a route enforces HTTPS.</summary>
+public sealed class RouteHttpsOptions
+{
+    /// <summary>
+    /// Answer plain HTTP requests (port 80) with a permanent redirect (308) to the same URL over HTTPS. Needs a
+    /// certificate for every host name of the route. Let's Encrypt challenges on port 80 still work.
+    /// </summary>
+    public bool RedirectHttp { get; set; }
+
+    /// <summary>
+    /// Send the Strict-Transport-Security header on HTTPS responses, so browsers use HTTPS only for the host name
+    /// (see <c>Settings.Hsts</c> for how long). Browsers remember it: only enable it when HTTPS works for good.
+    /// </summary>
+    public bool Hsts { get; set; }
 }
 
 /// <summary>Request matching. All given conditions must match; omitted conditions match anything.</summary>

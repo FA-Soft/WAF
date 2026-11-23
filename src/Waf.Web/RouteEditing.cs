@@ -47,6 +47,10 @@ internal sealed class RouteFormModel : IValidatableObject
 
     public bool AllowInvalidBackendCertificate { get; set; }
 
+    public bool RedirectHttp { get; set; }
+
+    public bool Hsts { get; set; }
+
     public string? HealthCheckPath { get; set; }
 
     [Range(1, 3600, ErrorMessage = "Use a value between 1 and 3600 seconds.")]
@@ -123,6 +127,8 @@ internal sealed class RouteFormModel : IValidatableObject
             Destinations = string.Join(Environment.NewLine, route.Destinations.Select(FormatDestination)),
             PreserveHost = route.PreserveHost,
             AllowInvalidBackendCertificate = route.AllowInvalidBackendCertificate,
+            RedirectHttp = route.Https.RedirectHttp,
+            Hsts = route.Https.Hsts,
             HealthCheckPath = route.HealthCheck.Path,
             HealthCheckIntervalSeconds = route.HealthCheck.IntervalSeconds,
             HealthCheckTimeoutSeconds = route.HealthCheck.TimeoutSeconds,
@@ -138,6 +144,7 @@ internal sealed class RouteFormModel : IValidatableObject
             Enabled = Enabled,
             PreserveHost = PreserveHost,
             AllowInvalidBackendCertificate = AllowInvalidBackendCertificate,
+            Https = new RouteHttpsOptions { RedirectHttp = RedirectHttp, Hsts = Hsts },
             HealthCheck = new RouteHealthCheckOptions
             {
                 Path = string.IsNullOrWhiteSpace(HealthCheckPath) ? null : HealthCheckPath.Trim(),

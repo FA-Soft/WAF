@@ -16,6 +16,12 @@ public static class YarpConfigMapper
     /// <summary>Route metadata key holding the configuration tag (see <c>WafEngine.ConfigTag</c>).</summary>
     public const string ConfigTagMetadataKey = "WafConfigTag";
 
+    /// <summary>Route metadata key: "true" when plain HTTP is redirected to HTTPS.</summary>
+    public const string RedirectHttpMetadataKey = "WafRedirectHttp";
+
+    /// <summary>Route metadata key: "true" when HTTPS responses carry the HSTS header.</summary>
+    public const string HstsMetadataKey = "WafHsts";
+
     /// <param name="routes">The routes to translate; disabled routes are left out.</param>
     /// <param name="configTag">Tag of the configuration the routes belong to; stored in each route's metadata.</param>
     public static (IReadOnlyList<RouteConfig> Routes, IReadOnlyList<ClusterConfig> Clusters) Map(
@@ -28,10 +34,18 @@ public static class YarpConfigMapper
 
         foreach (var route in routes.Where(r => r.Enabled))
         {
-            yarpRoutes.Add(MapRoute(route) with
+            var metadata = new Dictionary<string, string> { [ConfigTagMetadataKey] = configTag };
+            if (route.Https?.RedirectHttp == true)
             {
-                Metadata = new Dictionary<string, string> { [ConfigTagMetadataKey] = configTag },
-            });
+                metadata[RedirectHttpMetadataKey] = "true";
+            }
+
+            if (route.Https?.Hsts == true)
+            {
+                metadata[HstsMetadataKey] = "true";
+            }
+
+            yarpRoutes.Add(MapRoute(route) with { Metadata = metadata });
             clusters.Add(MapCluster(route));
         }
 

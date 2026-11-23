@@ -156,6 +156,7 @@ internal static class LogFormat
             "FailClosed" => ("Refused (WAF unavailable)", "badge-danger"),
             "NoRoute" => ("No route", "badge-muted"),
             "BackendUnavailable" => ("Backend unavailable", "badge-warning"),
+            "Redirected" => ("Redirected to HTTPS", "badge-muted"),
             _ => ("Answered by the gateway", "badge-muted"),
         };
     }

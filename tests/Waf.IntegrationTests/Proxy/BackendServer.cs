@@ -65,6 +65,11 @@ public sealed class BackendServer : IAsyncDisposable
             await Task.Delay(ms, context.RequestAborted);
             return Results.Json(new BackendEcho(id, "GET", "/slow", context.Request.Host.Value ?? string.Empty, null, null, null, null));
         });
+        app.MapGet("/sets-hsts", (HttpContext context) =>
+        {
+            context.Response.Headers.StrictTransportSecurity = "max-age=5"; // a backend with its own (short) HSTS
+            return Results.Text(id);
+        });
         app.Map("/{**path}", async (HttpContext context) =>
         {
             var headers = context.Request.Headers;

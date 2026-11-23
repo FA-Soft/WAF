@@ -47,7 +47,13 @@ else if (_active is not null)
                 var name = route.Name;
                 <tr class="@(route.Enabled ? null : "disabled")">
                     <td>@name</td>
-                    <td>@Describe.Match(route.Match)</td>
+                    <td>
+                        @Describe.Match(route.Match)
+                        @if (route.Https.RedirectHttp || route.Https.Hsts)
+                        {
+                            <div class="muted">@(route.Https.RedirectHttp && route.Https.Hsts ? "HTTPS only, with HSTS" : route.Https.RedirectHttp ? "HTTPS only" : "HSTS on HTTPS")</div>
+                        }
+                    </td>
                     <td>@Describe.Destinations(route.Destinations)</td>
                     <td>
                         @if (route.Enabled)

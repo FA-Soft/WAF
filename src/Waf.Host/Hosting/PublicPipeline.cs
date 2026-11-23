@@ -34,7 +34,8 @@ internal static class PublicPipeline
         // 4. WAF: rules (403), rate limits (429), attack detection (403); 503 on any evaluation failure.
         app.UseWaf();
 
-        // 5. HTTPS redirect / HSTS: added with TLS support (issue #67).
+        // 5. HTTPS per route: plain HTTP redirected (308) where configured, HSTS on HTTPS responses.
+        app.UseHttpsEnforcement();
 
         // 6. Reverse proxy. Requests that match no route fall through to the default 404.
         app.MapWafProxy();

@@ -115,6 +115,34 @@ else if (Model is not null)
 
         <fieldset>
             <legend>
+                HTTPS
+                <HelpTip Title="HTTPS">
+                    <p><strong>Redirect</strong>: visitors who use http:// are sent to the same address with https://. Each host name of the route needs a certificate (Certificates page). Let's Encrypt can still check its challenges over http://.</p>
+                    <p><strong>HSTS</strong> tells browsers to use only HTTPS for the host name, for the time set on the Certificates page, even when someone types http://. Browsers remember it, so only switch it on when HTTPS works for good.</p>
+                    <p>With both off, the route also works over plain http://.</p>
+                </HelpTip>
+            </legend>
+
+            @if (_hostsWithoutCertificate.Count > 0)
+            {
+                <p class="field-help">No certificate yet for @string.Join(", ", _hostsWithoutCertificate): add one on the <a href="certificates">Certificates</a> page before redirecting to HTTPS.</p>
+            }
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="redirect-http" @bind-Value="Model.RedirectHttp" aria-describedby="redirect-http-help" />
+                <label for="redirect-http">Redirect http:// to https://</label>
+                <p class="field-help" id="redirect-http-help">A permanent redirect (308) to the same address over HTTPS.</p>
+            </div>
+
+            <div class="field checkbox-field">
+                <InputCheckbox id="hsts" @bind-Value="Model.Hsts" aria-describedby="hsts-help" />
+                <label for="hsts">Tell browsers to use HTTPS only (HSTS)</label>
+                <p class="field-help" id="hsts-help">Sends the Strict-Transport-Security header on HTTPS responses.</p>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>
                 Health check
                 <HelpTip Title="Health check">
                     <p>With a path, the gateway regularly requests it on each backend and stops sending traffic to a backend that does not answer. Backends that fail real requests are always skipped for a while.</p>
@@ -149,6 +177,16 @@ else if (Model is not null)
 
     private IReadOnlyList<string> _errors = [];
     private bool _notFound;
+    private IReadOnlyList<string> _certificateHosts = [];
+
+    /// <summary>Host names of the form that no certificate covers (a redirect to HTTPS would fail for them).</summary>
+    private IReadOnlyList<string> _hostsWithoutCertificate => Model?.Hosts is not { } hosts
+        ? []
+        : [.. hosts.Split(['\n', '\r', ',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(host => !_certificateHosts.Any(c => string.Equals(c, host, StringComparison.OrdinalIgnoreCase) || CertificateNames.Matches(c, host)))];
+
+    protected override async Task OnParametersSetAsync() =>
+        _certificateHosts = [.. (await Configurations.GetActiveAsync(CancellationToken.None))?.Configuration.Certificates.Select(c => c.HostName) ?? []];
 
     /// <summary>The route being edited; null when adding a route.</summary>
     [Parameter]

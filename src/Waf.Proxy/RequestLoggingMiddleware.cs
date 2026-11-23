@@ -95,6 +95,7 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
             WafEventKind.RuleBlocked or WafEventKind.AttackBlocked => RequestAction.Blocked,
             WafEventKind.RateLimited => RequestAction.RateLimited,
             WafEventKind.FailClosed => RequestAction.FailClosed,
+            _ when context.Items.ContainsKey(HttpsEnforcementMiddleware.RedirectedItemKey) => RequestAction.Redirected,
             _ when destination is not null => RequestAction.Forwarded,
             _ when route is not null => RequestAction.BackendUnavailable,
             _ when status == StatusCodes.Status404NotFound => RequestAction.NoRoute,

@@ -33,6 +33,7 @@ public static class GatewayConfigurationValidator
         ValidateAttackDetection(configuration.Settings?.AttackDetection, routeNames, errors);
         ValidateLogRetention(configuration.Settings?.LogRetention, errors);
         ValidateCertificates(configuration.Certificates, configuration.Settings, errors);
+        ValidateHttps(configuration, errors);
 
         return errors;
     }
@@ -367,6 +368,41 @@ public static class GatewayConfigurationValidator
     // RFC 9110 token characters.
     private static bool IsHeaderNameChar(char c) =>
         char.IsAsciiLetterOrDigit(c) || "!#$%&'*+-.^_`|~".Contains(c, StringComparison.Ordinal);
+
+    private static void ValidateHttps(GatewayConfiguration configuration, List<string> errors)
+    {
+        if (configuration.Settings?.Hsts is { } hsts)
+        {
+            if (hsts.MaxAgeSeconds is < 0 or > HstsSettings.MaxMaxAgeSeconds)
+            {
+                errors.Add($"Settings.Hsts.MaxAgeSeconds must be between 0 and {HstsSettings.MaxMaxAgeSeconds} (two years).");
+            }
+
+            if (hsts.Preload && (!hsts.IncludeSubDomains || hsts.MaxAgeSeconds < HstsSettings.DefaultMaxAgeSeconds))
+            {
+                errors.Add("Settings.Hsts.Preload needs IncludeSubDomains and a MaxAgeSeconds of at least 31536000 (one year).");
+            }
+        }
+
+        // Redirecting to HTTPS without a certificate would send visitors to a failing connection.
+        foreach (var route in configuration.Routes.Where(r => r.Enabled && r.Https?.RedirectHttp == true))
+        {
+            if (route.Match.Hosts.Count == 0)
+            {
+                errors.Add($"Route '{route.Name}': redirecting to HTTPS needs host names, each with a certificate.");
+                continue;
+            }
+
+            var missing = route.Match.Hosts
+                .Where(host => !configuration.Certificates.Any(c => Tls.CertificateNames.Matches(c.HostName, host)
+                    || string.Equals(c.HostName, host, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+            if (missing.Count > 0)
+            {
+                errors.Add($"Route '{route.Name}': redirecting to HTTPS needs a certificate for {string.Join(", ", missing)}. Add one on the Certificates page first.");
+            }
+        }
+    }
 
     private static bool IsThumbprint(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
 
