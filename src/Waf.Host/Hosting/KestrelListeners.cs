@@ -13,14 +13,30 @@ namespace FASoft.Waf.Host.Hosting;
 /// </summary>
 internal static class KestrelListeners
 {
-    public static void Configure(KestrelServerOptions kestrel, GatewayEndpointOptions endpoints)
+    /// <param name="dedicatedAdminPort">Port of a remote admin URL with its own port: an extra HTTPS listener on all interfaces.</param>
+    public static void Configure(KestrelServerOptions kestrel, GatewayEndpointOptions endpoints, int? dedicatedAdminPort = null)
     {
         // The real server header gives attackers free fingerprinting.
         kestrel.AddServerHeader = false;
 
         ListenPublic(kestrel, endpoints.PublicBindAddress, endpoints.HttpPort, _ => { });
 
-        ListenPublic(kestrel, endpoints.PublicBindAddress, endpoints.HttpsPort, listen =>
+        ListenPublic(kestrel, endpoints.PublicBindAddress, endpoints.HttpsPort, UseCertificates);
+        if (dedicatedAdminPort is { } port)
+        {
+            // Only serves remote admin requests (everything else gets 404); HTTPS with the same certificates.
+            ListenPublic(kestrel, endpoints.PublicBindAddress, port, UseCertificates);
+        }
+
+        // Admin UI: loopback only, never all interfaces. Not configurable on purpose.
+        kestrel.Listen(IPAddress.Loopback, endpoints.AdminPort);
+        if (System.Net.Sockets.Socket.OSSupportsIPv6)
+        {
+            kestrel.Listen(IPAddress.IPv6Loopback, endpoints.AdminPort);
+        }
+    }
+
+    private static void UseCertificates(ListenOptions listen) =>
             listen.UseHttps(new TlsHandshakeCallbackOptions
             {
                 // Certificates are resolved per SNI host name at handshake time, with their intermediate certificates.
@@ -37,15 +53,7 @@ internal static class KestrelListeners
                         ApplicationProtocols = [SslApplicationProtocol.Http2, SslApplicationProtocol.Http11],
                     });
                 },
-            }));
-
-        // Admin UI: loopback only, never all interfaces. Not configurable on purpose.
-        kestrel.Listen(IPAddress.Loopback, endpoints.AdminPort);
-        if (System.Net.Sockets.Socket.OSSupportsIPv6)
-        {
-            kestrel.Listen(IPAddress.IPv6Loopback, endpoints.AdminPort);
-        }
-    }
+            });
 
     private static void ListenPublic(
         KestrelServerOptions kestrel, string bindAddress, int port, Action<ListenOptions> configure)

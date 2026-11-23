@@ -103,7 +103,15 @@ internal static partial class GatewayApplication
                 GatewayEndpointOptions.SectionName, typeof(GatewayEndpointOptions), errors);
         }
 
-        builder.WebHost.ConfigureKestrel(kestrel => KestrelListeners.Configure(kestrel, endpoints));
+        // A remote admin URL with its own port: that port is opened at startup (a later change needs a restart).
+        var dedicatedPort = DedicatedAdminPort(AdminAccessStore.ReadAtStartup(storagePaths), endpoints);
+        builder.Services.AddSingleton(sp => new RemoteAdminAccess(
+            sp.GetRequiredService<IServiceScopeFactory>(), storagePaths, sp.GetRequiredService<IOptions<GatewayEndpointOptions>>(),
+            sp.GetRequiredService<ILogger<RemoteAdminAccess>>()) { DedicatedPort = dedicatedPort });
+        builder.Services.AddSingleton<IRemoteAdminAccess>(sp => sp.GetRequiredService<RemoteAdminAccess>());
+        builder.Services.AddHostedService<RemoteAdminRefresher>();
+
+        builder.WebHost.ConfigureKestrel(kestrel => KestrelListeners.Configure(kestrel, endpoints, dedicatedPort));
 
         var app = builder.Build();
 
@@ -111,11 +119,28 @@ internal static partial class GatewayApplication
         ActivateWafEngine(app, gatewayConfiguration, configTag);
 
         var classifier = app.Services.GetRequiredService<ListenerClassifier>();
-        app.MapWhen(classifier.IsAdminListener, AdminPipeline.Configure);
+        var remote = app.Services.GetRequiredService<RemoteAdminAccess>();
+
+        // The registered admin host name over plain HTTP: HTTPS only, so "not found", except Let's Encrypt challenges
+        // (its certificate may come from Let's Encrypt).
+        app.MapWhen(remote.IsPlainHttpToAdminHost, branch =>
+        {
+            branch.UseAcmeChallenges();
+            GenericNotFound.Run(branch);
+        });
+        app.MapWhen(context => classifier.IsAdminListener(context) || remote.IsRemoteAdmin(context), AdminPipeline.Configure);
+        app.MapWhen(remote.IsOtherOnDedicatedPort, GenericNotFound.Run);
         PublicPipeline.Configure(app);
 
         return app;
     }
+
+    /// <summary>The port of the registered remote admin URL when it needs a listener of its own; null otherwise.</summary>
+    private static int? DedicatedAdminPort(AdminAccess? access, GatewayEndpointOptions endpoints) =>
+        access?.RemoteUrl is { } text && RemoteAdminUrl.TryParse(text, out var url, out _) && url!.Port is { } port
+            && port != endpoints.HttpsPort && port != endpoints.HttpPort && port != endpoints.AdminPort
+            ? port
+            : null;
 
     public static async Task<int> RunAsync(string[] args)
     {

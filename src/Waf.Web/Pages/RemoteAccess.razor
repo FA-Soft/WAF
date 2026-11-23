@@ -1,0 +1,170 @@
+@page "/remote-access"
+@inject AdminAccessStore AccessStore
+@inject IRemoteAdminAccess Remote
+@inject ICertificateManager Certificates
+@inject IGatewayConfigurationService Configurations
+@inject UserManager<IdentityUser> Users
+@inject AuditLogStore Audit
+@inject NavigationManager Navigation
+
+<PageTitle>Remote access · @ProductInfo.Name</PageTitle>
+
+<h1>
+    Remote access
+    <HelpTip Title="Remote access">
+        <p>The admin UI is always available on this machine at http://127.0.0.1:@(Remote.ReservedPorts.Last()). Remote access makes it reachable from elsewhere on an address of its own, such as https://admin.example.com.</p>
+        <p>It is HTTPS only, always needs two-factor sign-in, and before signing in every address except the sign-in page answers "not found". An allowlist can limit it to your own networks. Turn it off here, or on the gateway's machine with <code>wafctl admin unregister-url</code>.</p>
+    </HelpTip>
+</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved</div>
+}
+
+@if (_errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Nothing was changed.</strong>
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<section class="card section" aria-labelledby="status-heading">
+    <h2 id="status-heading">Status</h2>
+    @if (_url is null)
+    {
+        <p><span class="badge badge-muted">Off</span> The admin UI is only available on this machine.</p>
+    }
+    else
+    {
+        <p><span class="badge badge-ok">On</span> <strong>@_url</strong></p>
+        <p>Sign in at <code>@_url/account/login</code>. Until you sign in, every other address there answers "not found".</p>
+        @if (_url.Port is { } port && !Remote.IsListening(port))
+        {
+            <div class="alert alert-warning" role="status">The gateway does not listen on port @port yet: restart the service to open it.</div>
+        }
+
+        <form method="post" @formname="remote-off" @onsubmit="TurnOffAsync" data-enhance>
+            <AntiforgeryToken />
+            <button type="submit" class="button button-danger">Turn remote access off</button>
+        </form>
+    }
+</section>
+
+<section class="card section" aria-labelledby="register-heading">
+    <h2 id="register-heading">@(_url is null ? "Turn remote access on" : "Change the address")</h2>
+    <p>Before an address can be registered:</p>
+    <ul class="checklist">
+        <li>@Check(_twoFactor) Two-factor sign-in is on for your account (<a href="account/two-factor">set it up</a>).</li>
+        <li>@Check(null) The host name has a valid certificate (<a href="certificates">Certificates</a>) and points to this gateway.</li>
+        <li>@Check(null) No route uses the host name.</li>
+    </ul>
+    <EditForm Model="UrlForm" FormName="remote-register" OnSubmit="RegisterAsync" Enhance class="form">
+        <FormField Id="remote-url" Label="Admin address" Help="https:// and a host name, optionally with a port of its own, e.g. https://admin.example.com or https://admin.example.com:8443." For="() => UrlForm!.Url">
+            <InputText id="remote-url" aria-describedby="remote-url-help" @bind-Value="UrlForm!.Url" autocomplete="off" placeholder="https://admin.example.com" />
+        </FormField>
+        <button type="submit" class="button">@(_url is null ? "Turn remote access on" : "Save address")</button>
+    </EditForm>
+</section>
+
+<section class="card section" aria-labelledby="allowlist-heading">
+    <h2 id="allowlist-heading">Allowed addresses</h2>
+    <EditForm Model="Allowlist" FormName="remote-allowlist" OnSubmit="SaveAllowlistAsync" Enhance class="form">
+        <FormField Id="allowlist" Label="Only from these addresses (optional)" Help="One address or range per line, e.g. 203.0.113.0/24. Empty: any address. Others get &quot;not found&quot;." For="() => Allowlist!.Networks">
+            <InputTextArea id="allowlist" aria-describedby="allowlist-help" @bind-Value="Allowlist!.Networks" rows="4" />
+        </FormField>
+        <button type="submit" class="button button-secondary">Save allowed addresses</button>
+    </EditForm>
+</section>
+
+@code {
+    private RemoteAdminUrl? _url;
+    private bool _twoFactor;
+    private IReadOnlyList<string> _errors = [];
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
+    [SupplyParameterFromForm(FormName = "remote-register")]
+    private RemoteUrlFormModel? UrlForm { get; set; }
+
+    [SupplyParameterFromForm(FormName = "remote-allowlist")]
+    private AllowlistFormModel? Allowlist { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var access = await AccessStore.GetAsync();
+        _url = access.RemoteUrl is { } text && RemoteAdminUrl.TryParse(text, out var url, out _) ? url : null;
+        _twoFactor = HttpContext?.User is { } principal && await Users.GetUserAsync(principal) is { } user && await Users.GetTwoFactorEnabledAsync(user);
+        UrlForm ??= new RemoteUrlFormModel { Url = _url?.ToString() };
+        Allowlist ??= new AllowlistFormModel { Networks = string.Join(Environment.NewLine, access.AllowedNetworkList) };
+    }
+
+    private static MarkupString Check(bool? done) => new(done switch
+    {
+        true => "<span class=\"badge badge-ok\">Done</span>",
+        false => "<span class=\"badge badge-warning\">Not yet</span>",
+        _ => string.Empty,
+    });
+
+    private async Task RegisterAsync()
+    {
+        if (!RemoteAdminUrl.TryParse(UrlForm!.Url, out var url, out var error))
+        {
+            _errors = [error];
+            return;
+        }
+
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _errors = RemoteAccessRules.Check(url!, _twoFactor, active!.Configuration, Certificates.Statuses, Remote.ReservedPorts);
+        if (_errors.Count > 0)
+        {
+            return;
+        }
+
+        await AccessStore.RegisterUrlAsync(url!);
+        await Audit.RecordAsync(AuditCategory.Security, AuditActions.AdminUrlRegistered, AdminActor.From(HttpContext),
+            $"Remote admin access turned on at {url}.");
+        await Remote.RefreshAsync(CancellationToken.None);
+        var restart = url!.Port is { } port && !Remote.IsListening(port) ? $" Restart the service to open port {port}." : string.Empty;
+        Navigation.NavigateTo($"remote-access?saved={Uri.EscapeDataString($"Remote access is on at {url}.{restart}")}");
+    }
+
+    private async Task SaveAllowlistAsync()
+    {
+        var lines = (Allowlist!.Networks ?? string.Empty).Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var (entries, errors) = await AccessStore.SetAllowedNetworksAsync(lines);
+        if (errors.Count > 0)
+        {
+            _errors = errors;
+            return;
+        }
+
+        await Audit.RecordAsync(AuditCategory.Security, AuditActions.AdminAllowlistChanged, AdminActor.From(HttpContext),
+            entries.Count == 0 ? "Remote admin allowlist cleared: any address." : $"Remote admin allowlist: {string.Join(", ", entries)}.");
+        await Remote.RefreshAsync(CancellationToken.None);
+        Navigation.NavigateTo($"remote-access?saved={Uri.EscapeDataString("Allowed addresses saved.")}");
+    }
+
+    private async Task TurnOffAsync()
+    {
+        var previous = await AccessStore.UnregisterUrlAsync();
+        if (previous is not null)
+        {
+            await Audit.RecordAsync(AuditCategory.Security, AuditActions.AdminUrlUnregistered, AdminActor.From(HttpContext),
+                $"Remote admin URL {previous} unregistered; remote admin access is off.");
+        }
+
+        await Remote.RefreshAsync(CancellationToken.None);
+        Navigation.NavigateTo($"remote-access?saved={Uri.EscapeDataString("Remote access is off.")}");
+    }
+}

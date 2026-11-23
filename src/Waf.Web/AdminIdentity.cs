@@ -151,6 +151,7 @@ public static class AdminIdentity
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<SignInThrottle>();
         services.AddScoped<SignInHistory>();
+        services.AddScoped<AdminAccessStore>();
         services.AddScoped<AdminSignIn>();
         services.AddSingleton<FirstRunSetup>();
         services.AddHostedService(sp => sp.GetRequiredService<FirstRunSetup>());

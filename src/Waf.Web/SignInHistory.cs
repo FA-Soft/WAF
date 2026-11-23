@@ -22,6 +22,7 @@ public sealed class SignInHistory(AdminIdentityDbContext db, AuditLogStore audit
     public static readonly IReadOnlySet<SignInOutcome> Failures = new HashSet<SignInOutcome>
     {
         SignInOutcome.WrongPassword, SignInOutcome.UnknownUser, SignInOutcome.LockedOut, SignInOutcome.Throttled, SignInOutcome.TwoFactorFailed,
+        SignInOutcome.RemoteNeedsTwoFactor,
     };
 
     public async Task RecordAsync(HttpContext context, SignInOutcome result, IdentityUser? user, CancellationToken cancellationToken = default)
@@ -112,6 +113,7 @@ public sealed class SignInHistory(AdminIdentityDbContext db, AuditLogStore audit
         SignInOutcome.RecoveryCodeUsed => "Signed in with a recovery code",
         SignInOutcome.SignedOut => "Signed out",
         SignInOutcome.SessionsEnded => "Other sessions signed out",
+        SignInOutcome.RemoteNeedsTwoFactor => "Refused: remote sign-in needs two-factor sign-in",
         _ => result.ToString(),
     };
 }

@@ -14,6 +14,7 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 - [Configuration history](#configuration-history)
 - [Audit log](#audit-log)
 - [Backup and import](#backup-and-import)
+- [Remote access](#remote-access)
 - [Your account](#your-account)
 
 ## Signing in
@@ -171,6 +172,12 @@ Export the configuration, import a file, download a full backup or restore one.
 The preview of an import: the file was exported without secrets, so the running values are kept.
 
 ![Import preview](images/admin-import-preview.png)
+
+## Remote access
+
+Remote access: off by default; the requirements, the admin address and the optional allowlist.
+
+![Remote access](images/admin-remote-access.png)
 
 ## Your account
 
