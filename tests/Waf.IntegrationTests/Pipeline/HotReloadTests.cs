@@ -108,7 +108,7 @@ public sealed class HotReloadTests
         Assert.Equal(HttpStatusCode.OK, await StatusAsync(gateway, "/secret")); // not applied: the database is the truth
         Assert.Equal(1, await gateway.Store.CountAsync(Ct));
 
-        var result = await gateway.Configurations.ImportAppSettingsAsync("test", Ct);
+        var result = await gateway.Configurations.ImportAppSettingsAsync(AuditActor.System("test"), Ct);
 
         Assert.True(result.Succeeded, string.Join(" ", result.Errors));
         Assert.Equal((2, "Imported from appsettings."), (result.Version!.Version, result.Version.Comment));
@@ -131,7 +131,7 @@ public sealed class HotReloadTests
         var notice = gateway.Status.AppSettingsNotice!;
         Assert.False(notice.CanImport);
         Assert.Contains(notice.Errors, e => e.Contains("'10' is not a valid IP address", StringComparison.Ordinal));
-        Assert.False((await gateway.Configurations.ImportAppSettingsAsync("test", Ct)).Succeeded);
+        Assert.False((await gateway.Configurations.ImportAppSettingsAsync(AuditActor.System("test"), Ct)).Succeeded);
         Assert.Equal(HttpStatusCode.OK, await StatusAsync(gateway, "/"));
 
         await gateway.Configurations.DismissAppSettingsAsync(Ct);
@@ -167,7 +167,7 @@ public sealed class HotReloadTests
 
         var change = (await gateway.Configurations.GetActiveAsync(Ct))!.Configuration;
         change.Routes[0].Destinations[0].Port = gateway.B.Port;
-        Assert.True((await gateway.Configurations.ActivateAsync(change, "test", "Move to B", Ct)).Succeeded);
+        Assert.True((await gateway.Configurations.ActivateAsync(change, AuditActor.System("test"), "Move to B", Ct)).Succeeded);
 
         using (var inFlight = await slow)
         {
@@ -242,7 +242,7 @@ public sealed class HotReloadTests
         for (var swap = 0; swap < 40; swap++)
         {
             var next = swap % 2 == 0 ? guarded : baseline;
-            var result = await gateway.Configurations.ActivateAsync(next, "load-test", $"swap {swap}", Ct);
+            var result = await gateway.Configurations.ActivateAsync(next, AuditActor.System("load-test"), $"swap {swap}", Ct);
             Assert.True(result.Succeeded, string.Join(" ", result.Errors));
             await Task.Delay(25, Ct);
         }

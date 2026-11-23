@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Data.Sqlite;
@@ -156,12 +157,16 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
         return await db.ConfigurationVersions.CountAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Stores <paramref name="configuration"/> as a new version.</summary>
+    /// <summary>
+    /// Stores <paramref name="configuration"/> as a new version, together with its audit entry (who stored it and
+    /// what changed compared to the previous version), in one transaction.
+    /// </summary>
     /// <exception cref="ArgumentException">The configuration is not valid; nothing is stored.</exception>
-    public async Task<StoredConfiguration> SaveAsync(GatewayConfiguration configuration, string author, string? comment, CancellationToken cancellationToken)
+    public async Task<StoredConfiguration> SaveAsync(GatewayConfiguration configuration, AuditActor actor, string? comment, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(configuration);
-        ArgumentException.ThrowIfNullOrWhiteSpace(author);
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentException.ThrowIfNullOrWhiteSpace(actor.UserName);
 
         var errors = GatewayConfigurationValidator.Validate(configuration);
         if (errors.Count > 0)
@@ -173,7 +178,7 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
         var entity = new ConfigurationVersion
         {
             CreatedAtUtc = time.GetUtcNow().UtcDateTime,
-            Author = author,
+            Author = actor.UserName,
             Comment = comment,
             SchemaVersion = configuration.SchemaVersion,
             Json = json,
@@ -181,8 +186,28 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
         };
 
         await using var db = await contexts.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        var previousJson = await db.ConfigurationVersions.AsNoTracking()
+            .OrderByDescending(v => v.Id)
+            .Select(v => v.Json)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var previous = previousJson is null ? null : GatewayConfigurationJson.Parse(previousJson).Configuration;
+
         db.ConfigurationVersions.Add(entity);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        db.AuditEntries.Add(AuditLogStore.Create(
+            time,
+            AuditCategory.Configuration,
+            AuditActions.ConfigSaved,
+            actor,
+            $"Version {entity.Id}: {(string.IsNullOrWhiteSpace(comment) ? "configuration changed." : comment)}",
+            AuditLogStore.DescribeChanges(previous, configuration),
+            entity.Id));
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return ToStored(entity);
     }
 
@@ -191,7 +216,7 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
     /// version that now matches it.
     /// </summary>
     public async Task<(StoredConfiguration Stored, bool Created)> SaveIfChangedAsync(
-        GatewayConfiguration configuration, string author, string? comment, CancellationToken cancellationToken)
+        GatewayConfiguration configuration, AuditActor actor, string? comment, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
@@ -201,7 +226,7 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
             return (latest, false);
         }
 
-        return (await SaveAsync(configuration, author, comment, cancellationToken).ConfigureAwait(false), true);
+        return (await SaveAsync(configuration, actor, comment, cancellationToken).ConfigureAwait(false), true);
     }
 
     /// <summary>Every stored version, oldest first.</summary>
@@ -248,8 +273,9 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
     /// Replaces every stored version with <paramref name="versions"/> (keeping their numbers) and makes
     /// <paramref name="activeVersion"/> the last-known-good, in one transaction: on any failure nothing changes.
     /// </summary>
+    /// <remarks>The audit log is kept; restored versions without an entry get one recorded for <paramref name="restoredBy"/>.</remarks>
     /// <exception cref="ArgumentException">A configuration is not valid, or <paramref name="activeVersion"/> is not among them.</exception>
-    public async Task ReplaceAllAsync(IReadOnlyList<BackupVersion> versions, long activeVersion, CancellationToken cancellationToken)
+    public async Task ReplaceAllAsync(IReadOnlyList<BackupVersion> versions, long activeVersion, AuditActor restoredBy, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(versions);
 
@@ -277,6 +303,12 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
             db.ConfigurationState.Add(state);
         }
 
+        // Versions that stay exactly the same keep their audit entry; the others get a new one below.
+        var unchanged = await db.ConfigurationVersions.AsNoTracking()
+            .Select(v => new { v.Id, v.Sha256 })
+            .ToDictionaryAsync(v => v.Id, v => v.Sha256, cancellationToken)
+            .ConfigureAwait(false);
+
         state.LastKnownGoodVersionId = null;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await db.ConfigurationVersions.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
@@ -294,6 +326,36 @@ public sealed class ConfigurationStore(IDbContextFactory<ConfigDbContext> contex
                 Json = json,
                 Sha256 = Hash(json),
             });
+        }
+
+        // The audit log itself is kept. A restored version keeps the entry it already has only when it is the same
+        // version as before (same number, same content); every other one gets an entry now, so every version links
+        // to an audit entry that describes it.
+        var restoredIds = versions.Select(v => v.Version).ToList();
+        var audited = (await db.AuditEntries.AsNoTracking()
+            .Where(e => e.ConfigurationVersionId != null && restoredIds.Contains(e.ConfigurationVersionId.Value))
+            .Select(e => e.ConfigurationVersionId!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false)).ToHashSet();
+        foreach (var version in versions.OrderBy(v => v.Version))
+        {
+            if (audited.Contains(version.Version)
+                && unchanged.TryGetValue(version.Version, out var hash)
+                && hash == Hash(Canonical(version.Configuration)))
+            {
+                continue;
+            }
+
+            db.AuditEntries.Add(AuditLogStore.Create(
+                time,
+                AuditCategory.Configuration,
+                AuditActions.ConfigRestored,
+                restoredBy,
+                $"Version {version.Version}: restored from a backup.",
+                string.Create(CultureInfo.InvariantCulture, $"Originally stored by {version.Author} at {version.CreatedAtUtc:yyyy-MM-dd HH:mm:ss} UTC")
+                    + (string.IsNullOrWhiteSpace(version.Comment) ? "." : $": {version.Comment}"),
+                version.Version));
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

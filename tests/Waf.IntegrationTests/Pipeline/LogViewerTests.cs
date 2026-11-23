@@ -30,7 +30,7 @@ public sealed class LogViewerTests
             Name = "no-admin",
             Conditions = { new RuleCondition { Field = ConditionField.Path, Operator = ConditionOperator.StartsWith, Values = { "/admin" } } },
         });
-        Assert.True((await gateway.App.Services.GetRequiredService<IGatewayConfigurationService>().ActivateAsync(configuration, "test", null, Ct)).Succeeded);
+        Assert.True((await gateway.App.Services.GetRequiredService<IGatewayConfigurationService>().ActivateAsync(configuration, AuditActor.System("test"), null, Ct)).Succeeded);
 
         Assert.Equal(HttpStatusCode.OK, await gateway.SendAsync("/products/42"));
         Assert.Equal(HttpStatusCode.Forbidden, await gateway.SendAsync("/admin/users"));

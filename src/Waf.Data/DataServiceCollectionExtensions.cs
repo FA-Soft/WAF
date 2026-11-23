@@ -7,7 +7,7 @@ namespace Waf.Data;
 /// <summary>Registration of the data layer.</summary>
 public static class DataServiceCollectionExtensions
 {
-    /// <summary>Registers <see cref="ConfigDbContext"/> on <paramref name="paths"/> and <see cref="ConfigurationStore"/>.</summary>
+    /// <summary>Registers <see cref="ConfigDbContext"/> on <paramref name="paths"/>, <see cref="ConfigurationStore"/> and <see cref="AuditLogStore"/>.</summary>
     public static IServiceCollection AddWafData(this IServiceCollection services, StoragePaths paths)
     {
         ArgumentNullException.ThrowIfNull(paths);
@@ -15,6 +15,7 @@ public static class DataServiceCollectionExtensions
         services.AddSingleton(paths);
         services.AddDbContextFactory<ConfigDbContext>(options => options.UseSqlite(ConnectionString(paths)));
         services.AddSingleton<ConfigurationStore>();
+        services.AddSingleton<AuditLogStore>();
         return services;
     }
 

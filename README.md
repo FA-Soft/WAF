@@ -98,6 +98,10 @@ Accounts are stored in identity.db in the data folder, apart from the configurat
 - **Ending sessions:** changing the password, changing 2FA or **Sign out other sessions** ends every other session at its next request.
 - **Login history:** every sign-in, failed attempt, lockout and sign-out, with time, address and browser (the last 1,000, at most 90 days). Your account page shows the previous sign-in and the failed attempts since then. For an unknown user name, the name typed is not stored, as it may be a password typed into the wrong field.
 
+**Audit log.** The **Audit log** page shows who changed what, and when: user name, address and time for every configuration change, sign-in, sign-out, lockout, password change, change to two-factor sign-in, ended sessions, backup restore, configuration or backup download (noting whether secrets were included) and log cleanup. Filter it by kind, by user or by configuration version. Every configuration version links to its audit entry, which also lists the routes, rules, rate limits and settings the version changed; the configuration history links back from each version. Entries are stored in `config.db`, are never changed or removed, and survive a backup restore. A restore adds an entry for each restored version that differs from the one it replaces, so every version still has an entry that describes it. Versions stored before the audit log existed get an entry with their author and comment when the database is upgraded. Single failed sign-in attempts are kept only in the login history, so guessing passwords cannot flood the audit log.
+
+![The audit log](docs/images/admin-audit.png)
+
 The admin UI is exempt from user-defined WAF rules and from the fail-closed 503 state, so a bad rule can never lock you out.
 
 ## Configuration concepts

@@ -33,6 +33,8 @@ public static class AdminDownloads
         [FromForm(Name = "version")] long? version,
         [FromForm(Name = "includeSecrets")] bool? includeSecrets,
         ConfigurationStore store,
+        AuditLogStore audit,
+        HttpContext context,
         TimeProvider time,
         CancellationToken cancellationToken)
     {
@@ -45,6 +47,13 @@ public static class AdminDownloads
         }
 
         var json = ConfigurationExport.ToJson(stored.Configuration, includeSecrets == true);
+        await audit.RecordAsync(
+            AuditCategory.Maintenance,
+            AuditActions.ConfigDownloaded,
+            AdminActor.From(context),
+            $"Configuration version {stored.Version} downloaded{(includeSecrets == true ? " with secrets" : " without secrets")}.",
+            null,
+            cancellationToken).ConfigureAwait(false);
         var name = string.Create(CultureInfo.InvariantCulture, $"waf-config-v{stored.Version}-{time.GetUtcNow():yyyyMMdd}.json");
         return Results.File(Encoding.UTF8.GetBytes(json), "application/json", name);
     }
@@ -53,6 +62,8 @@ public static class AdminDownloads
     private static async Task<IResult> ExportBackupAsync(
         [FromForm(Name = "includeSecrets")] bool? includeSecrets,
         ConfigurationStore store,
+        AuditLogStore audit,
+        HttpContext context,
         TimeProvider time,
         CancellationToken cancellationToken)
     {
@@ -65,6 +76,14 @@ public static class AdminDownloads
         {
             return Results.Conflict(ex.Message);
         }
+
+        await audit.RecordAsync(
+            AuditCategory.Maintenance,
+            AuditActions.BackupDownloaded,
+            AdminActor.From(context),
+            $"Backup downloaded: {backup.Versions.Count} version(s){(backup.IncludesSecrets ? " with secrets" : " without secrets")}.",
+            null,
+            cancellationToken).ConfigureAwait(false);
 
         using var buffer = new MemoryStream();
         BackupArchive.Write(buffer, backup);

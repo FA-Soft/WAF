@@ -38,6 +38,9 @@ else
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private RateLimitRule? _limit;
     private IReadOnlyList<string> _errors = [];
     private long _baseVersion;
@@ -67,7 +70,7 @@ else
         }
 
         configuration.RateLimits.Remove(limit);
-        var result = await Configurations.ActivateIfCurrentAsync(BaseVersion ?? active.Version, configuration, "admin UI", $"Rate limit '{limit.Name}' deleted.", CancellationToken.None);
+        var result = await Configurations.ActivateIfCurrentAsync(BaseVersion ?? active.Version, configuration, AdminActor.From(HttpContext), $"Rate limit '{limit.Name}' deleted.", CancellationToken.None);
         if (!result.Succeeded)
         {
             _errors = result.Errors;

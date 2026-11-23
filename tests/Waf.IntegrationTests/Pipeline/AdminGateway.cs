@@ -25,6 +25,8 @@ public abstract partial class AdminGateway : GatewayFixture
 
     public ConfigurationStore Store => App.Services.GetRequiredService<ConfigurationStore>();
 
+    public AuditLogStore AuditLog => App.Services.GetRequiredService<AuditLogStore>();
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     protected override async ValueTask BeforeStartAsync()

@@ -1,5 +1,6 @@
 @page "/history"
 @inject ConfigurationStore Store
+@inject AuditLogStore Audit
 
 <PageTitle>Configuration history · @ProductInfo.Name</PageTitle>
 
@@ -15,7 +16,7 @@
     <div class="alert alert-ok" role="status">@Saved</div>
 }
 
-<p class="actions"><a class="button button-secondary" href="backup">Backup and import</a></p>
+<p class="actions"><a class="button button-secondary" href="backup">Backup and import</a> <a class="button button-secondary" href="audit?category=Configuration">Audit log</a></p>
 
 @if (_versions.Count == 0)
 {
@@ -25,7 +26,7 @@ else
 {
     <table>
         <thead>
-            <tr><th scope="col">Version</th><th scope="col">Stored (UTC)</th><th scope="col">By</th><th scope="col">Description</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+            <tr><th scope="col">Version</th><th scope="col">Stored (UTC)</th><th scope="col">By</th><th scope="col">Description</th><th scope="col">Audit</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
         </thead>
         <tbody>
             @foreach (var version in _versions)
@@ -41,6 +42,12 @@ else
                     <td>@version.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)</td>
                     <td>@version.Author</td>
                     <td>@version.Comment</td>
+                    <td>
+                        @if (_audited.Contains(version.Version))
+                        {
+                            <a href="@($"audit?version={version.Version}")" aria-label="@($"Audit log of version {version.Version}")">Audit entry</a>
+                        }
+                    </td>
                     <td><a href="@($"history/{version.Version}")" aria-label="@($"Details of version {version.Version}")">@(version.Version == _activeVersion ? "Details" : "Details and restore")</a></td>
                 </tr>
             }
@@ -51,6 +58,7 @@ else
 @code {
     private IReadOnlyList<StoredConfiguration> _versions = [];
     private long? _activeVersion;
+    private HashSet<long> _audited = [];
 
     [SupplyParameterFromQuery]
     public string? Saved { get; set; }
@@ -58,6 +66,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         _versions = await Store.GetHistoryAsync(100, CancellationToken.None);
+        var entries = await Audit.GetForVersionsAsync(_versions.Select(v => v.Version), CancellationToken.None);
+        _audited = [.. entries.Select(e => e.ConfigurationVersionId!.Value)];
         _activeVersion = (await Store.GetLastKnownGoodAsync(CancellationToken.None))?.Version;
     }
 }

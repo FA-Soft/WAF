@@ -10,9 +10,10 @@ public sealed record SignInSummary(SignInEvent? PreviousSignIn, int FailedSince)
 
 /// <summary>
 /// The login history in <c>identity.db</c>: sign-ins, failed attempts, lockouts, sign-outs. Keeps the newest
-/// <see cref="MaxEvents"/> entries of at most <see cref="MaxAge"/>.
+/// <see cref="MaxEvents"/> entries of at most <see cref="MaxAge"/>. Sign-ins, sign-outs, lockouts and ended sessions
+/// are also written to the audit log (kept forever); single failed attempts are not, so guessing cannot flood it.
 /// </summary>
-public sealed class SignInHistory(AdminIdentityDbContext db, TimeProvider time)
+public sealed class SignInHistory(AdminIdentityDbContext db, AuditLogStore audit, TimeProvider time)
 {
     public const int MaxEvents = 1000;
     public static readonly TimeSpan MaxAge = TimeSpan.FromDays(90);
@@ -39,12 +40,30 @@ public sealed class SignInHistory(AdminIdentityDbContext db, TimeProvider time)
         });
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        if (AuditOf(result) is { } audited)
+        {
+            var name = user?.UserName;
+            await audit.RecordAsync(
+                audited.Category, audited.Action, AdminActor.From(context, name, AdminActor.AdminUi), audited.Summary, null, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         var cutoff = (time.GetUtcNow() - MaxAge).ToUnixTimeMilliseconds();
         var newest = await db.SignInEvents.MaxAsync(e => e.Id, cancellationToken).ConfigureAwait(false);
         await db.SignInEvents
             .Where(e => e.TimestampMs < cutoff || e.Id <= newest - MaxEvents)
             .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    private static (AuditCategory Category, string Action, string Summary)? AuditOf(SignInOutcome result) => result switch
+    {
+        SignInOutcome.Succeeded => (AuditCategory.SignIn, AuditActions.SignedIn, "Signed in."),
+        SignInOutcome.RecoveryCodeUsed => (AuditCategory.SignIn, AuditActions.SignedInWithRecoveryCode, "Signed in with a recovery code."),
+        SignInOutcome.SignedOut => (AuditCategory.SignIn, AuditActions.SignedOut, "Signed out."),
+        SignInOutcome.LockedOut => (AuditCategory.SignIn, AuditActions.LockedOut, "Account locked after too many failed sign-in attempts."),
+        SignInOutcome.SessionsEnded => (AuditCategory.Security, AuditActions.SessionsEnded, "Signed out all other sessions."),
+        _ => null,
+    };
 
     /// <summary>The newest <paramref name="count"/> entries, newest first.</summary>
     public Task<List<SignInEvent>> GetRecentAsync(int count, CancellationToken cancellationToken = default) =>

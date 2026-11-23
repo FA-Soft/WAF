@@ -16,6 +16,7 @@ namespace Waf.Host.Hosting;
 /// </remarks>
 internal sealed partial class GatewayConfigurationService(
     ConfigurationStore store,
+    AuditLogStore audit,
     WafEngineHolder engines,
     ProxyRouteUpdater routes,
     ConfigurationStatus status,
@@ -23,24 +24,21 @@ internal sealed partial class GatewayConfigurationService(
     TimeProvider time,
     ILogger<GatewayConfigurationService> logger) : IGatewayConfigurationService, IDisposable
 {
-    /// <summary>Author recorded for an appsettings import from the admin UI.</summary>
-    public const string AppSettingsImportAuthor = "appsettings import (admin UI)";
-
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public void Dispose() => _gate.Dispose();
 
-    public Task<ActivationResult> ActivateAsync(GatewayConfiguration candidate, string author, string? comment, CancellationToken cancellationToken) =>
-        ActivateLockedAsync(null, candidate, author, comment, cancellationToken);
+    public Task<ActivationResult> ActivateAsync(GatewayConfiguration candidate, AuditActor actor, string? comment, CancellationToken cancellationToken) =>
+        ActivateLockedAsync(null, candidate, actor, comment, cancellationToken);
 
-    public Task<ActivationResult> ActivateIfCurrentAsync(long baseVersion, GatewayConfiguration candidate, string author, string? comment, CancellationToken cancellationToken) =>
-        ActivateLockedAsync(baseVersion, candidate, author, comment, cancellationToken);
+    public Task<ActivationResult> ActivateIfCurrentAsync(long baseVersion, GatewayConfiguration candidate, AuditActor actor, string? comment, CancellationToken cancellationToken) =>
+        ActivateLockedAsync(baseVersion, candidate, actor, comment, cancellationToken);
 
     /// <summary>
     /// Activates the configuration of an earlier version again. It is stored as a new version (history only
     /// grows) after the same checks as any other change.
     /// </summary>
-    public async Task<ActivationResult> RollbackAsync(long version, string author, CancellationToken cancellationToken)
+    public async Task<ActivationResult> RollbackAsync(long version, AuditActor actor, CancellationToken cancellationToken)
     {
         var previous = await store.GetAsync(version, cancellationToken).ConfigureAwait(false);
         if (previous is null)
@@ -48,10 +46,10 @@ internal sealed partial class GatewayConfigurationService(
             return ActivationResult.Failed([$"Configuration version {version} does not exist."]);
         }
 
-        return await ActivateAsync(previous.Configuration, author, $"Rollback to version {version}.", cancellationToken).ConfigureAwait(false);
+        return await ActivateAsync(previous.Configuration, actor, $"Rollback to version {version}.", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<ActivationResult> RollbackAsync(long version, long baseVersion, string author, CancellationToken cancellationToken)
+    public async Task<ActivationResult> RollbackAsync(long version, long baseVersion, AuditActor actor, CancellationToken cancellationToken)
     {
         var previous = await store.GetAsync(version, cancellationToken).ConfigureAwait(false);
         if (previous is null)
@@ -59,13 +57,13 @@ internal sealed partial class GatewayConfigurationService(
             return ActivationResult.Failed([$"Configuration version {version} does not exist."]);
         }
 
-        return await ActivateIfCurrentAsync(baseVersion, previous.Configuration, author, $"Restored version {version}.", cancellationToken).ConfigureAwait(false);
+        return await ActivateIfCurrentAsync(baseVersion, previous.Configuration, actor, $"Restored version {version}.", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<RestoreResult> RestoreBackupAsync(GatewayBackup backup, string author, CancellationToken cancellationToken)
+    public async Task<RestoreResult> RestoreBackupAsync(GatewayBackup backup, AuditActor actor, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(backup);
-        ArgumentException.ThrowIfNullOrWhiteSpace(author);
+        ArgumentNullException.ThrowIfNull(actor);
 
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -115,14 +113,21 @@ internal sealed partial class GatewayConfigurationService(
             // 3. Keep a copy of the current database, 4. replace the history, 5. swap.
             var safetyCopy = SafetyCopyPath();
             await store.CopyDatabaseToAsync(safetyCopy, cancellationToken).ConfigureAwait(false);
-            await store.ReplaceAllAsync(versions, backup.ActiveVersion, cancellationToken).ConfigureAwait(false);
+            await store.ReplaceAllAsync(versions, backup.ActiveVersion, actor, cancellationToken).ConfigureAwait(false);
             if (engines.Current?.ConfigTag != tag)
             {
                 engines.Activate(engine);
                 routes.Apply(prepared);
             }
 
-            LogRestored(logger, author, versions.Count, backup.ActiveVersion, safetyCopy);
+            await audit.RecordAsync(
+                AuditCategory.Maintenance,
+                AuditActions.BackupRestored,
+                actor,
+                $"Backup restored: {versions.Count} version(s), version {backup.ActiveVersion} active.",
+                $"Backup created at {backup.CreatedAtUtc:u} by WAF Gateway {backup.ProductVersion}. The previous database was copied to {Path.GetFileName(safetyCopy)}.",
+                cancellationToken).ConfigureAwait(false);
+            LogRestored(logger, actor.UserName, versions.Count, backup.ActiveVersion, safetyCopy);
             return new RestoreResult(true, [], backup.ActiveVersion, safetyCopy);
         }
         finally
@@ -147,7 +152,7 @@ internal sealed partial class GatewayConfigurationService(
         GatewayConfigurationJson.Parse(GatewayConfigurationJson.Serialize(configuration)).Configuration
             ?? throw new InvalidOperationException("The configuration could not be copied.");
 
-    public async Task<ActivationResult> ImportAppSettingsAsync(string author, CancellationToken cancellationToken)
+    public async Task<ActivationResult> ImportAppSettingsAsync(AuditActor actor, CancellationToken cancellationToken)
     {
         var notice = status.AppSettingsNotice;
         if (notice is null)
@@ -160,7 +165,7 @@ internal sealed partial class GatewayConfigurationService(
             return ActivationResult.Failed(notice.Errors);
         }
 
-        var result = await ActivateAsync(notice.Candidate!, author, "Imported from appsettings.", cancellationToken).ConfigureAwait(false);
+        var result = await ActivateAsync(notice.Candidate!, actor, "Imported from appsettings.", cancellationToken).ConfigureAwait(false);
         if (result.Succeeded)
         {
             await store.SetAppSettingsFingerprintAsync(notice.Fingerprint, cancellationToken).ConfigureAwait(false);
@@ -197,10 +202,10 @@ internal sealed partial class GatewayConfigurationService(
     }
 
     private async Task<ActivationResult> ActivateLockedAsync(
-        long? baseVersion, GatewayConfiguration candidate, string author, string? comment, CancellationToken cancellationToken)
+        long? baseVersion, GatewayConfiguration candidate, AuditActor actor, string? comment, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(candidate);
-        ArgumentException.ThrowIfNullOrWhiteSpace(author);
+        ArgumentNullException.ThrowIfNull(actor);
 
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -213,7 +218,7 @@ internal sealed partial class GatewayConfigurationService(
                 ]);
             }
 
-            return await ActivateCoreAsync(candidate, author, comment, running, cancellationToken).ConfigureAwait(false);
+            return await ActivateCoreAsync(candidate, actor, comment, running, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -222,13 +227,13 @@ internal sealed partial class GatewayConfigurationService(
     }
 
     private async Task<ActivationResult> ActivateCoreAsync(
-        GatewayConfiguration candidate, string author, string? comment, StoredConfiguration? running, CancellationToken cancellationToken)
+        GatewayConfiguration candidate, AuditActor actor, string? comment, StoredConfiguration? running, CancellationToken cancellationToken)
     {
         // 1. Validate.
         var errors = GatewayConfigurationValidator.Validate(candidate);
         if (errors.Count > 0)
         {
-            LogRejected(logger, author, errors.Count);
+            LogRejected(logger, actor.UserName, errors.Count);
             return ActivationResult.Failed(errors);
         }
 
@@ -259,12 +264,12 @@ internal sealed partial class GatewayConfigurationService(
         // 3. Store, then 4. swap. Nothing is swapped if storing fails. The engine goes first: requests routed
         // by the new routes then always find their engine, and requests still routed by the old routes are
         // judged by the previous engine (WafEngineHolder.Resolve), so every request sees one configuration.
-        var (stored, _) = await store.SaveIfChangedAsync(candidate, author, comment, cancellationToken).ConfigureAwait(false);
+        var (stored, _) = await store.SaveIfChangedAsync(candidate, actor, comment, cancellationToken).ConfigureAwait(false);
         engines.Activate(engine);
         routes.Apply(prepared);
         await store.SetLastKnownGoodAsync(stored.Version, cancellationToken).ConfigureAwait(false);
 
-        LogActivated(logger, stored.Version, author);
+        LogActivated(logger, stored.Version, actor.UserName);
         return new ActivationResult(true, [], stored);
     }
 

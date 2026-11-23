@@ -15,12 +15,66 @@ partial class ConfigDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261122155302_AddAppSettingsFingerprint";
+    public override string LastMigrationId => "20261123155111_AddAuditLog";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "11.0.0");
+
+        modelBuilder.Entity("Waf.Data.AuditEntry", b =>
+            {
+                b.Property<long>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Action")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Category")
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("ClientIp")
+                    .HasMaxLength(64)
+                    .HasColumnType("TEXT");
+
+                b.Property<long?>("ConfigurationVersionId")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Details")
+                    .HasMaxLength(4000)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Source")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Summary")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("TimestampUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("UserName")
+                    .IsRequired()
+                    .HasMaxLength(256)
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.HasIndex("ConfigurationVersionId");
+
+                b.HasIndex("TimestampUtc");
+
+                b.ToTable("AuditEntries");
+            });
 
         modelBuilder.Entity("Waf.Data.ConfigurationState", b =>
             {

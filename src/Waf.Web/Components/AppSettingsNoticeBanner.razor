@@ -5,6 +5,7 @@
 @inject ConfigurationStatus Status
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
+@inject AuditLogStore Audit
 
 @if (Status.AppSettingsNotice is { } notice)
 {
@@ -55,11 +56,14 @@
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private IReadOnlyList<string> _errors = [];
 
     private async Task ImportAsync()
     {
-        var result = await Configurations.ImportAppSettingsAsync("admin UI (import from appsettings)", CancellationToken.None);
+        var result = await Configurations.ImportAppSettingsAsync(AdminActor.From(HttpContext), CancellationToken.None);
         if (result.Succeeded)
         {
             Navigation.NavigateTo(Navigation.Uri, forceLoad: false);
@@ -73,6 +77,8 @@
     private async Task DismissAsync()
     {
         await Configurations.DismissAppSettingsAsync(CancellationToken.None);
+        await Audit.RecordAsync(
+            AuditCategory.Configuration, AuditActions.AppSettingsDismissed, AdminActor.From(HttpContext), "Changed configuration in appsettings ignored (not imported).");
         Navigation.NavigateTo(Navigation.Uri, forceLoad: false);
     }
 }

@@ -24,7 +24,7 @@ public sealed class StorageTests
         var stored = await LatestAsync(gateway);
         Assert.NotNull(stored);
         Assert.Equal(1, stored.Version);
-        Assert.Equal(ConfigurationBootstrap.ImportAuthor, stored.Author);
+        Assert.Equal(ConfigurationBootstrap.ImportActor.UserName, stored.Author);
         Assert.Equal("first", Assert.Single(stored.Configuration.Routes).Name);
 
         using var http = new HttpClient();

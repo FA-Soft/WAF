@@ -11,6 +11,7 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 - [Templates and presets](#templates-and-presets)
 - [Test a request](#test-a-request)
 - [Configuration history](#configuration-history)
+- [Audit log](#audit-log)
 - [Backup and import](#backup-and-import)
 - [Your account](#your-account)
 
@@ -120,13 +121,19 @@ The result: a blocked SQL injection, with the reason.
 
 ## Configuration history
 
-Every configuration version, with the active one marked.
+Every configuration version, with the active one marked, who stored it and a link to its audit entry.
 
 ![Configuration history](images/admin-history.png)
 
 A version's details: what restoring it would change compared with the running configuration.
 
 ![Version details and restore](images/admin-history-version.png)
+
+## Audit log
+
+Who changed what, and when: configuration changes (with what each version changed), sign-ins and sign-outs, security settings, downloads and backups. Filter by kind, user or configuration version.
+
+![Audit log](images/admin-audit.png)
 
 ## Backup and import
 

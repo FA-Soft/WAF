@@ -2,6 +2,7 @@
 @inject IGatewayConfigurationService Configurations
 @inject ConfigurationStore Store
 @inject NavigationManager Navigation
+@inject AuditLogStore Audit
 
 <PageTitle>Version @Version · @ProductInfo.Name</PageTitle>
 
@@ -29,6 +30,18 @@ else
         <dd>@_stored.Author</dd>
         <dt>Description</dt>
         <dd>@(_stored.Comment ?? "-")</dd>
+        <dt>Audit log</dt>
+        <dd>
+            @if (_audit is null)
+            {
+                <span class="muted">No entry.</span>
+            }
+            else
+            {
+                <a href="@($"audit?version={_stored.Version}")">@_audit.Summary</a>
+                <span class="muted">(@_audit.UserName, @AuditWhere(_audit))</span>
+            }
+        </dd>
     </dl>
 
     @if (_errors.Count > 0)
@@ -94,8 +107,12 @@ else
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private StoredConfiguration? _stored;
     private StoredConfiguration? _previous;
+    private AuditEntry? _audit;
     private StoredConfiguration? _active;
     private IReadOnlyList<ConfigurationChange> _restoreChanges = [];
     private IReadOnlyList<ConfigurationChange> _ownChanges = [];
@@ -108,6 +125,9 @@ else
     private RestoreVersionFormModel? RestoreForm { get; set; }
 
     private bool IsActive => _active?.Version == _stored?.Version;
+
+    private static string AuditWhere(AuditEntry entry) =>
+        entry.ClientIp is null ? entry.Source : $"{entry.Source}, {entry.ClientIp}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,6 +144,7 @@ else
             return;
         }
 
+        _audit = (await Audit.GetForVersionsAsync([Version], CancellationToken.None)).LastOrDefault();
         _previous = Version > 1 ? await Store.GetAsync(Version - 1, CancellationToken.None) : null;
         _ownChanges = _previous is null ? [] : ConfigurationDiff.Compare(_previous.Configuration, _stored.Configuration);
         _restoreChanges = ConfigurationDiff.Compare(_active.Configuration, _stored.Configuration);
@@ -131,7 +152,7 @@ else
 
     private async Task RestoreAsync()
     {
-        var result = await Configurations.RollbackAsync(Version, RestoreForm!.BaseVersion, "admin UI", CancellationToken.None);
+        var result = await Configurations.RollbackAsync(Version, RestoreForm!.BaseVersion, AdminActor.From(HttpContext), CancellationToken.None);
         if (result.Succeeded)
         {
             Navigation.NavigateTo($"history?saved={Uri.EscapeDataString($"Version {Version} restored as version {result.Version!.Version}.")}");

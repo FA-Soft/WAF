@@ -142,6 +142,9 @@ else if (Model is not null)
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     public const string ApplyCommand = "apply";
 
     private Preset? _preset;
@@ -196,7 +199,7 @@ else if (Model is not null)
             else
             {
                 var result = await Configurations.ActivateIfCurrentAsync(
-                    active.Version, _preview.Candidate!, "admin UI", $"Preset '{preset.Title}' applied.", CancellationToken.None);
+                    active.Version, _preview.Candidate!, AdminActor.From(HttpContext), $"Preset '{preset.Title}' applied.", CancellationToken.None);
                 if (result.Succeeded)
                 {
                     Navigation.NavigateTo($"library?saved={Uri.EscapeDataString($"Preset '{preset.Title}' applied (version {result.Version!.Version}).")}");

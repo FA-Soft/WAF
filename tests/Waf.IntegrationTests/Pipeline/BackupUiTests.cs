@@ -50,7 +50,7 @@ public sealed partial class BackupUiTests
                 new RuleCondition { Field = ConditionField.Header, HeaderName = "X-Api-Key", Operator = ConditionOperator.Equals, Negate = true, Values = { "s3cret" } },
             },
         });
-        Assert.True((await Service(gateway).ActivateAsync(configuration, "test", "API key rule.", Ct)).Succeeded);
+        Assert.True((await Service(gateway).ActivateAsync(configuration, AuditActor.System("test"), "API key rule.", Ct)).Succeeded);
     }
 
     private static async Task<(string FileName, byte[] Content)> DownloadAsync(Gateway gateway, string path, Dictionary<string, string> fields)

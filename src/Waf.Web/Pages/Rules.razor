@@ -168,6 +168,9 @@
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private StoredConfiguration? _active;
     private IReadOnlyList<string> _errors = [];
 
@@ -220,7 +223,7 @@
             return;
         }
 
-        var result = await Configurations.ActivateIfCurrentAsync(active.Version, configuration, "admin UI", description, CancellationToken.None);
+        var result = await Configurations.ActivateIfCurrentAsync(active.Version, configuration, AdminActor.From(HttpContext), description, CancellationToken.None);
         if (result.Succeeded)
         {
             Navigation.NavigateTo($"rules?saved={Uri.EscapeDataString($"{description.TrimEnd('.')} (version {result.Version!.Version}).")}");

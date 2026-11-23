@@ -68,6 +68,7 @@ internal static partial class GatewayApplication
         builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
         builder.Services.AddSingleton(storagePaths);
         builder.Services.AddSingleton(store);
+        builder.Services.AddSingleton(AuditLogStore.Create(storagePaths, TimeProvider.System));
         builder.Services.AddSingleton(configurationStatus);
         builder.Services.AddSingleton<GatewayConfigurationService>();
         builder.Services.AddSingleton<Waf.Web.IGatewayConfigurationService>(sp => sp.GetRequiredService<GatewayConfigurationService>());

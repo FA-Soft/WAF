@@ -41,6 +41,9 @@ else
 }
 
 @code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private WafRule? _rule;
     private IReadOnlyList<string> _errors = [];
     private long _baseVersion;
@@ -70,7 +73,7 @@ else
         }
 
         configuration.Rules.Remove(rule);
-        var result = await Configurations.ActivateIfCurrentAsync(BaseVersion ?? active.Version, configuration, "admin UI", $"Rule '{rule.Name}' deleted.", CancellationToken.None);
+        var result = await Configurations.ActivateIfCurrentAsync(BaseVersion ?? active.Version, configuration, AdminActor.From(HttpContext), $"Rule '{rule.Name}' deleted.", CancellationToken.None);
         if (!result.Succeeded)
         {
             _errors = result.Errors;

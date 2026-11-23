@@ -127,7 +127,7 @@ public sealed partial class RoutesUiTests
         Assert.Contains("Route &#x27;shop&#x27; added (version 2).", html, StringComparison.Ordinal);
         Assert.Equal((HttpStatusCode.OK, "B"), await gateway.ProxyAsync("shop.example.com"));
         var latest = await gateway.Store.GetLatestAsync(Ct);
-        Assert.Equal((2L, "admin UI", "Route 'shop' added."), (latest!.Version, latest.Author, latest.Comment));
+        Assert.Equal((2L, GatewayFixture.AdminUserName, "Route 'shop' added."), (latest!.Version, latest.Author, latest.Comment));
     }
 
     [Fact]

@@ -66,7 +66,7 @@ public sealed class RequestLogTests
             Name = "no-secret",
             Conditions = { new RuleCondition { Field = ConditionField.Path, Operator = ConditionOperator.StartsWith, Values = { "/secret" } } },
         });
-        Assert.True((await gateway.App.Services.GetRequiredService<IGatewayConfigurationService>().ActivateAsync(configuration, "test", null, Ct)).Succeeded);
+        Assert.True((await gateway.App.Services.GetRequiredService<IGatewayConfigurationService>().ActivateAsync(configuration, AuditActor.System("test"), null, Ct)).Succeeded);
 
         Assert.Equal(HttpStatusCode.OK, await SendAsync(gateway, "/hello?token=query-secret", configure: r =>
         {

@@ -2,6 +2,7 @@
 @inject UserManager<IdentityUser> Users
 @inject SignInManager<IdentityUser> SignIn
 @inject SignInHistory History
+@inject AuditLogStore Audit
 @inject NavigationManager Navigation
 
 <PageTitle>Your account · @ProductInfo.Name</PageTitle>
@@ -157,6 +158,7 @@
 
         // A new security stamp: this session continues, other sessions end at their next request.
         await SignIn.RefreshSignInAsync(user);
+        await Audit.RecordAsync(AuditCategory.Security, AuditActions.PasswordChanged, AdminActor.From(HttpContext), "Password changed; other sessions were signed out.");
         Navigation.NavigateTo("account?changed=true");
     }
 
