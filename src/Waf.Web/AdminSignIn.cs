@@ -24,6 +24,9 @@ public enum SignInStep
 
     /// <summary>No password was entered first, or that was too long ago.</summary>
     NoPendingSignIn,
+
+    /// <summary>The password was right, but signing in remotely needs two-factor sign-in, which the account has not set up.</summary>
+    RemoteNeedsTwoFactor,
 }
 
 /// <summary>Outcome of a sign-in attempt, with how long a lock or block lasts.</summary>
@@ -36,6 +39,8 @@ public sealed record SignInAttempt(SignInStep Step, TimeSpan RetryAfter = defaul
         SignInStep.LockedOut => $"Too many failed attempts: this account is locked for {Minutes(RetryAfter)}. Try again later.",
         SignInStep.Throttled => $"Too many failed attempts from your address: signing in is blocked for {Minutes(RetryAfter)}.",
         SignInStep.NoPendingSignIn => "Enter your user name and password first.",
+        SignInStep.RemoteNeedsTwoFactor =>
+            "Signing in remotely needs two-factor sign-in. Turn it on for this account on the gateway's own machine (Your account → Two-factor sign-in), then try again.",
         _ => null,
     };
 
@@ -70,6 +75,20 @@ public sealed class AdminSignIn(SignInManager<IdentityUser> signIn, SignInThrott
             throttle.RecordFailure(ip);
             await history.RecordAsync(context, SignInOutcome.UnknownUser, null).ConfigureAwait(false);
             return new SignInAttempt(SignInStep.Failed);
+        }
+
+        // Remote access always needs 2FA. The password is checked first (with lockout), so the answer reveals nothing
+        // to someone who does not know it.
+        if (RemoteAdminRequest.IsRemote(context) && !await signIn.UserManager.GetTwoFactorEnabledAsync(user).ConfigureAwait(false))
+        {
+            var check = await signIn.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true).ConfigureAwait(false);
+            if (check.Succeeded)
+            {
+                await history.RecordAsync(context, SignInOutcome.RemoteNeedsTwoFactor, user).ConfigureAwait(false);
+                return new SignInAttempt(SignInStep.RemoteNeedsTwoFactor);
+            }
+
+            return await RecordAsync(context, ip, user, check, SignInOutcome.Succeeded, SignInOutcome.WrongPassword).ConfigureAwait(false);
         }
 
         var result = await signIn.PasswordSignInAsync(user, password, isPersistent: false, lockoutOnFailure: true).ConfigureAwait(false);

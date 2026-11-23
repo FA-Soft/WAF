@@ -133,6 +133,9 @@ public enum SignInOutcome
     RecoveryCodeUsed,
     SignedOut,
     SessionsEnded,
+
+    /// <summary>Password correct, but refused: signing in remotely needs two-factor sign-in.</summary>
+    RemoteNeedsTwoFactor,
 }
 
 /// <summary>One entry of the login history.</summary>

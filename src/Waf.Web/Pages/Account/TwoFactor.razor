@@ -184,6 +184,12 @@ else
 
     private async Task DisableAsync()
     {
+        if (RemoteAdminRequest.IsRemote(HttpContext))
+        {
+            _errors = ["Two-factor sign-in cannot be turned off over remote access, which requires it. Use the gateway's own machine."];
+            return;
+        }
+
         if (!await Users.CheckPasswordAsync(_user, Disable!.Password))
         {
             _errors = ["The password is not correct."];

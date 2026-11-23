@@ -1,9 +1,10 @@
+using FASoft.Waf.Proxy;
 using FASoft.Waf.Web;
 
 namespace FASoft.Waf.Host.Hosting;
 
 /// <summary>
-/// Request pipeline for the localhost admin listener: the Blazor admin UI (server-side rendered, enhanced
+/// Request pipeline of the admin UI, for the localhost admin listener and for remote admin access: the Blazor admin UI (server-side rendered, enhanced
 /// navigation and forms), its static files and the health endpoint. The UI needs a signed-in admin account;
 /// static files and the health endpoint do not.
 /// </summary>
@@ -19,6 +20,15 @@ internal static class AdminPipeline
 
     public static void Configure(IApplicationBuilder admin)
     {
+        // Remote admin access only: the real client IP (trusted proxies), then the allowlist. Before anything else, so
+        // a refused client gets the same empty 404 as an unknown address.
+        var remote = admin.ApplicationServices.GetRequiredService<RemoteAdminAccess>();
+        admin.UseWhen(remote.IsRemoteAdmin, branch =>
+        {
+            branch.UseClientIpResolution();
+            branch.UseMiddleware<RemoteAdminGateMiddleware>();
+        });
+
         admin.Use((context, next) =>
         {
             var headers = context.Response.Headers;
@@ -32,6 +42,9 @@ internal static class AdminPipeline
 
         admin.UseRouting();
         admin.UseAuthentication();
+
+        // Remote, not signed in: only the sign-in pages; everything else is "not found" (no redirect that reveals the UI).
+        admin.UseWhen(RemoteAdminRequest.IsRemote, branch => branch.UseMiddleware<RemoteAdminSignInGateMiddleware>());
         admin.UseAuthorization();
         admin.UseAntiforgery();
         admin.UseEndpoints(endpoints =>
