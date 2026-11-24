@@ -247,8 +247,19 @@ jobs:
           sudo dpkg --add-architecture arm64
           sudo apt-get update -qq
           newest() { apt-cache search --names-only "^$1\$" | awk '{ print $1 }' | sort -V | tail -n 1; }
-          sudo apt-get install -y -qq libc6:arm64 libgcc-s1:arm64 libstdc++6:arm64 \
-            "$(newest 'libssl3(t64)?'):arm64" "$(newest 'libicu[0-9]+'):arm64"
+          # Not "apt-get install": a multiarch install needs the same version for both architectures, and the ports
+          # mirror often lags behind, which would downgrade the runner's own libc6. Only the library files are needed.
+          debs="$(mktemp -d)" sysroot="$(mktemp -d)"
+          (cd "$debs" && apt-get download -qq libc6:arm64 libgcc-s1:arm64 libstdc++6:arm64 \
+            "$(newest 'libssl3(t64)?'):arm64" "$(newest 'libicu[0-9]+'):arm64")
+          for deb in "$debs"/*.deb; do dpkg-deb -x "$deb" "$sysroot"; done
+          sudo mkdir -p /usr/lib/aarch64-linux-gnu
+          for dir in "$sysroot/lib/aarch64-linux-gnu" "$sysroot/usr/lib/aarch64-linux-gnu"; do
+            [ ! -d "$dir" ] || sudo cp -a "$dir/." /usr/lib/aarch64-linux-gnu/
+          done
+          # The program loader at the path arm64 programs ask for (/lib is /usr/lib on current Ubuntu).
+          [ -e /lib/ld-linux-aarch64.so.1 ] || sudo ln -s /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64.so.1
+          ls -l /lib/ld-linux-aarch64.so.1 /usr/lib/aarch64-linux-gnu/ | head -n 40
           # Emulation works outside the service: if this fails, the problem is QEMU or the libraries, not systemd.
           artifacts/linux/wafgateway-${{ matrix.rid }}/wafctl --help >/dev/null
           # The .NET runtime under QEMU: no write-xor-execute (very slow when emulated), more time to start.
