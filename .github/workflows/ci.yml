@@ -222,11 +222,19 @@ jobs:
           sed 's|@PREFIX@|/opt/wafgateway|g' deploy/linux/wafgateway.service > /tmp/wafgateway.service
           systemd-analyze verify /tmp/wafgateway.service 2>&1 | grep -v 'Command /opt/wafgateway/WafGateway is not executable' || true
 
+      # Registers static QEMU interpreters in binfmt_misc (kernel-wide, not only for containers). Newer Ubuntu
+      # runner images no longer have the qemu-user-static apt package.
+      - name: Set up QEMU
+        if: matrix.emulated
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Run arm64 programs with QEMU
         if: matrix.emulated
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq qemu-user-static binfmt-support
+          # The F flag loads the interpreter at registration, so it also works in the service's sandbox.
+          cat /proc/sys/fs/binfmt_misc/qemu-aarch64
           grep -q '^flags:.*F' /proc/sys/fs/binfmt_misc/qemu-aarch64
           # The .NET runtime under QEMU: no write-xor-execute (very slow when emulated), more time to start.
           sudo mkdir -p /etc/systemd/system/wafgateway.service.d
