@@ -2,7 +2,6 @@ name: Cleanup GitHub Actions Storage
 
 on:
   schedule:
-    # Every 12 hours
     - cron: '0 */12 * * *'
   workflow_dispatch:
 
@@ -15,35 +14,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Cleanup artifacts and caches older than 3 days
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-        shell: bash
         run: |
           set -euo pipefail
 
           echo "=== CLEANUP STARTED ==="
 
-          #################################################################
-          # ARTIFACTS
-          #################################################################
-
           ARTIFACT_CUTOFF=$(date -u -d "3 days ago" +"%Y-%m-%dT%H:%M:%SZ")
 
-          echo ""
           echo "Deleting artifacts older than 3 days..."
-          echo "Cutoff: $ARTIFACT_CUTOFF"
 
           gh api \
             "/repos/$REPO/actions/artifacts?per_page=100" \
             --paginate \
             --jq '.artifacts[] | "\(.id) \(.created_at)"' |
           while read -r ID CREATED; do
-
             if [[ "$CREATED" < "$ARTIFACT_CUTOFF" ]]; then
               echo "Deleting artifact $ID ($CREATED)"
 
@@ -54,14 +44,9 @@ jobs:
             fi
           done
 
-          #################################################################
-          # CACHES
-          #################################################################
-
-          echo ""
-          echo "Deleting caches older than 3 days..."
-
           CACHE_CUTOFF=$(date -d "3 days ago" +%s)
+
+          echo "Deleting caches older than 3 days..."
 
           gh api \
             "/repos/$REPO/actions/caches?per_page=100" \
@@ -76,4 +61,9 @@ jobs:
 
               gh api \
                 --method DELETE \
-         
+                "/repos/$REPO/actions/caches/$ID" \
+                || true
+            fi
+          done
+
+          echo "=== CLEANUP COMPLETED ==="
