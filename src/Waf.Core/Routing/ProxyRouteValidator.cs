@@ -48,6 +48,8 @@ public static class ProxyRouteValidator
             {
                 errors.Add($"{label}: the message for visitors must be one line of at most {MaxErrorMessageLength} characters.");
             }
+
+            ValidateErrorMessageTranslations(label, route, errors);
         }
 
         return errors;
@@ -157,6 +159,31 @@ public static class ProxyRouteValidator
             if (destination.Port is < 1 or > 65535)
             {
                 errors.Add($"{where}: port must be between 1 and 65535 (was {destination.Port}).");
+            }
+        }
+    }
+
+    private static void ValidateErrorMessageTranslations(string label, ProxyRouteOptions route, List<string> errors)
+    {
+        if (route.ErrorMessageTranslations is not { Count: > 0 } translations)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(route.ErrorMessage))
+        {
+            errors.Add($"{label}: translations of the message for visitors need the English message too (it is the fallback).");
+        }
+
+        foreach (var (language, text) in translations)
+        {
+            if (!FASoft.Waf.Core.Languages.Translated.Contains(language, StringComparer.Ordinal))
+            {
+                errors.Add($"{label}: '{language}' is not a language for the message for visitors (use nl, fr or de).");
+            }
+            else if (string.IsNullOrWhiteSpace(text) || text.Length > MaxErrorMessageLength || text.Any(char.IsControl))
+            {
+                errors.Add($"{label}: the message for visitors in '{language}' must be one line of at most {MaxErrorMessageLength} characters.");
             }
         }
     }

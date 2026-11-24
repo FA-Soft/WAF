@@ -95,6 +95,15 @@ public static class YarpConfigMapper
             if (!string.IsNullOrWhiteSpace(route.ErrorMessage))
             {
                 metadata[ErrorMessageMetadataKey] = route.ErrorMessage.Trim();
+
+                // "WafErrorMessage.nl" and so on: the message in the visitor's language.
+                foreach (var (language, text) in route.ErrorMessageTranslations ?? new Dictionary<string, string>())
+                {
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        metadata[$"{ErrorMessageMetadataKey}.{language}"] = text.Trim();
+                    }
+                }
             }
 
             yarpRoutes.Add(MapRoute(route) with { Metadata = metadata });

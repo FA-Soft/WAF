@@ -48,8 +48,10 @@ public enum ErrorFormat
 /// <param name="Kind">Why no backend answered.</param>
 /// <param name="RequestId">The request's ID, also in the request log.</param>
 /// <param name="Time">When it happened.</param>
-/// <param name="Message">The route's message for visitors, if it has one.</param>
-public sealed record BackendErrorInfo(BackendErrorKind Kind, string RequestId, DateTimeOffset Time, string? Message = null)
+/// <param name="Message">The route's message for visitors (in <paramref name="Language"/> when it has a translation), if it has one.</param>
+/// <param name="Language">The visitor's language (en, nl, fr, de) for the texts; status codes, the problem type and SOAP
+/// fault codes are the same in every language.</param>
+public sealed record BackendErrorInfo(BackendErrorKind Kind, string RequestId, DateTimeOffset Time, string? Message = null, string Language = "en")
 {
     /// <summary>The gateway's status: 503, 502 or 504.</summary>
     public int Status => Kind switch
@@ -59,21 +61,24 @@ public sealed record BackendErrorInfo(BackendErrorKind Kind, string RequestId, D
         _ => StatusCodes.Status502BadGateway,
     };
 
-    /// <summary>The HTTP status phrase (the problem's <c>title</c>).</summary>
-    public string Title => Kind switch
+    /// <summary>The HTTP status phrase in English, the same in every language (the Fault detail's <c>title</c>).</summary>
+    public string StatusPhrase => Kind switch
     {
         BackendErrorKind.NoBackend => "Service Unavailable",
         BackendErrorKind.Timeout => "Gateway Timeout",
         _ => "Bad Gateway",
     };
 
-    /// <summary>What happened, for people and programs (the problem's <c>detail</c>).</summary>
-    public string Detail => Kind switch
+    /// <summary>The status phrase in the visitor's language (the problem's <c>title</c>).</summary>
+    public string Title => VisitorTexts.Get(Language, StatusPhrase);
+
+    /// <summary>What happened, in the visitor's language (the problem's <c>detail</c>).</summary>
+    public string Detail => VisitorTexts.Get(Language, Kind switch
     {
         BackendErrorKind.NoBackend => "No server is available to handle this request. Please try again later.",
         BackendErrorKind.Timeout => "The server behind the gateway did not answer in time. Please try again later.",
         _ => "The server behind the gateway did not give a valid answer. Please try again later.",
-    };
+    });
 
     /// <summary>"2026-11-24T10:42:07Z".</summary>
     public string TimeText => Time.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
@@ -181,6 +186,7 @@ public static class BackendErrorResponses
         response.Clear();
         response.StatusCode = HttpStatus(format, error);
         response.ContentType = contentType;
+        VisitorTexts.MarkLanguage(response, error.Language);
         response.Headers.CacheControl = "no-store";
         response.Headers.XContentTypeOptions = "nosniff";
         if (error.Kind == BackendErrorKind.NoBackend)
@@ -259,7 +265,7 @@ public static class BackendErrorResponses
     {
         writer.WriteStartElement("gw", "gatewayError", SoapDetailNamespace);
         writer.WriteElementString("gw", "status", SoapDetailNamespace, error.Status.ToString(CultureInfo.InvariantCulture));
-        writer.WriteElementString("gw", "title", SoapDetailNamespace, error.Title);
+        writer.WriteElementString("gw", "title", SoapDetailNamespace, error.StatusPhrase); // fixed, for programs
         writer.WriteElementString("gw", "detail", SoapDetailNamespace, error.Detail);
         if (!string.IsNullOrEmpty(error.Message))
         {
@@ -277,7 +283,7 @@ public static class BackendErrorResponses
     }
 
     private static string FaultString(BackendErrorInfo error) =>
-        string.IsNullOrEmpty(error.Message) ? $"{error.Title}: {error.Detail}" : $"{error.Title}: {error.Message}";
+        VisitorTexts.Format(error.Language, "{0}: {1}", error.Title, string.IsNullOrEmpty(error.Message) ? error.Detail : error.Message);
 
     private static string Soap11(BackendErrorInfo error) => Xml(writer =>
     {
@@ -304,7 +310,7 @@ public static class BackendErrorResponses
         writer.WriteEndElement();
         writer.WriteStartElement("env", "Reason", Soap12Namespace);
         writer.WriteStartElement("env", "Text", Soap12Namespace);
-        writer.WriteAttributeString("xml", "lang", null, "en");
+        writer.WriteAttributeString("xml", "lang", null, error.Language);
         writer.WriteString(FaultString(error));
         writer.WriteEndElement();
         writer.WriteEndElement();
@@ -331,7 +337,7 @@ public static class BackendErrorResponses
         var message = string.IsNullOrEmpty(error.Message) ? string.Empty : $"<p class=\"message\">{e.Encode(error.Message)}</p>";
         return $$"""
             <!doctype html>
-            <html lang="en">
+            <html lang="{{error.Language}}">
             <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -354,10 +360,10 @@ public static class BackendErrorResponses
             <body>
             <main>
             {{Logo}}
-            <h1>This site is temporarily unavailable.</h1>
-            <p>Please try again in a few minutes.</p>
+            <h1>{{e.Encode(VisitorTexts.Get(error.Language, "This site is temporarily unavailable."))}}</h1>
+            <p>{{e.Encode(VisitorTexts.Get(error.Language, "Please try again in a few minutes."))}}</p>
             {{message}}
-            <p class="meta">Error {{status}} · {{e.Encode(error.Title)}}<br>Request ID {{e.Encode(error.RequestId)}} · {{error.TimeText}}</p>
+            <p class="meta">{{e.Encode(VisitorTexts.Format(error.Language, "Error {0} · {1}", status, error.Title))}}<br>{{e.Encode(VisitorTexts.Format(error.Language, "Request ID {0} · {1}", error.RequestId, error.TimeText))}}</p>
             </main>
             </body>
             </html>
@@ -423,13 +429,17 @@ internal sealed class BackendErrorMiddleware(RequestDelegate next, BackendErrorC
 
         var feature = context.GetReverseProxyFeature();
         var route = feature.Route.Config.RouteId;
-        var message = feature.Route.Config.Metadata?.GetValueOrDefault(YarpConfigMapper.ErrorMessageMetadataKey);
+        // The route's message in the visitor's language, falling back to its English text.
+        var language = VisitorTexts.LanguageOf(context.Request);
+        var metadata = feature.Route.Config.Metadata;
+        var message = metadata?.GetValueOrDefault(YarpConfigMapper.ErrorMessageMetadataKey + "." + language)
+            ?? metadata?.GetValueOrDefault(YarpConfigMapper.ErrorMessageMetadataKey);
         var now = time.GetUtcNow();
 
         counter.Add(route, kind, now);
         // The request ID is on the error the client got: searching the request log for it finds this entry.
         RequestLogFeature.RecordBackendError(context, $"{LogText(kind, failure.Exception)} (request ID {context.TraceIdentifier})");
-        await BackendErrorResponses.WriteAsync(context, new BackendErrorInfo(kind, context.TraceIdentifier, now, message)).ConfigureAwait(false);
+        await BackendErrorResponses.WriteAsync(context, new BackendErrorInfo(kind, context.TraceIdentifier, now, message, language)).ConfigureAwait(false);
     }
 
     /// <summary>The kind of error for a forwarder error; null when the client caused it (cancelled, bad request body).</summary>

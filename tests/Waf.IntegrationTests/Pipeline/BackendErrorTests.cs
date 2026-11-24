@@ -44,12 +44,25 @@ public sealed class BackendErrorTests
             "--Gateway:Routes:1:Destinations:0:Target=lab",
             "--Gateway:Routes:1:Destinations:0:TargetPort=web",
             "--Gateway:Routes:1:ErrorMessage=Planned maintenance until 14:00",
+            "--Gateway:Routes:1:ErrorMessageTranslations:nl=Gepland onderhoud tot 14:00",
+            // A rule that blocks /blocked on every route: the gateway's own 403.
+            "--Gateway:Rules:0:Name=no-blocked",
+            "--Gateway:Rules:0:Action=Block",
+            "--Gateway:Rules:0:Conditions:0:Field=Path",
+            "--Gateway:Rules:0:Conditions:0:Operator=StartsWith",
+            "--Gateway:Rules:0:Conditions:0:Values:0=/blocked",
         ];
 
-        public async Task<HttpResponseMessage> SendAsync(string host, HttpMethod method, string? accept = null, string? contentType = null, string? soapAction = null)
+        public async Task<HttpResponseMessage> SendAsync(
+            string host, HttpMethod method, string? accept = null, string? contentType = null, string? soapAction = null, string? language = null, string path = "/service")
         {
-            using var request = new HttpRequestMessage(method, new Uri($"http://127.0.0.1:{HttpPort}/service"));
+            using var request = new HttpRequestMessage(method, new Uri($"http://127.0.0.1:{HttpPort}{path}"));
             request.Headers.Host = host;
+            if (language is not null)
+            {
+                request.Headers.TryAddWithoutValidation("Accept-Language", language);
+            }
+
             if (accept is not null)
             {
                 request.Headers.TryAddWithoutValidation("Accept", accept);
@@ -179,5 +192,48 @@ public sealed class BackendErrorTests
         var dashboard = await gateway.GetPageAsync("/");
         Assert.Contains("Backend errors since the start", dashboard, StringComparison.Ordinal);
         Assert.Contains("<td>internal-orders</td>", dashboard, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Visitors_get_the_gateways_answers_in_their_language()
+    {
+        await using var gateway = new Gateway();
+        await gateway.InitializeAsync();
+
+        // Dutch: the page and the route's Dutch message; the status and the headers say so.
+        using (var dutch = await gateway.SendAsync("lab.example.com", HttpMethod.Get, accept: "text/html", language: "nl-BE,nl;q=0.9,en;q=0.5"))
+        {
+            var body = WebUtility.HtmlDecode(await dutch.Content.ReadAsStringAsync(Ct));
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, dutch.StatusCode);
+            Assert.Equal(["nl"], dutch.Content.Headers.ContentLanguage);
+            Assert.Contains("Accept-Language", dutch.Headers.Vary);
+            Assert.Contains("<html lang=\"nl\">", body, StringComparison.Ordinal);
+            Assert.Contains("Deze site is tijdelijk niet beschikbaar.", body, StringComparison.Ordinal);
+            Assert.Contains("Gepland onderhoud tot 14:00", body, StringComparison.Ordinal);
+            AssertNoInternals(gateway, body);
+        }
+
+        // French: no French message for the route, so its English text; the machine-readable fields are unchanged.
+        using (var french = await gateway.SendAsync("lab.example.com", HttpMethod.Get, accept: "application/json", language: "fr-FR"))
+        {
+            var problem = JsonElement.Parse(await french.Content.ReadAsStringAsync(Ct));
+            Assert.Equal(["fr"], french.Content.Headers.ContentLanguage);
+            Assert.Equal(("about:blank", 503, "Service indisponible", "Planned maintenance until 14:00"),
+                (problem.GetProperty("type").GetString(), problem.GetProperty("status").GetInt32(), problem.GetProperty("title").GetString(), problem.GetProperty("message").GetString()));
+        }
+
+        // German: the gateway's own 403, in plain text.
+        using (var blocked = await gateway.SendAsync("orders.example.com", HttpMethod.Get, language: "de-DE", path: "/blocked"))
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
+            Assert.Equal(["de"], blocked.Content.Headers.ContentLanguage);
+            Assert.Contains("Accept-Language", blocked.Headers.Vary);
+            Assert.Equal("Verboten. Die Anfrage wurde von der Web Application Firewall blockiert.", await blocked.Content.ReadAsStringAsync(Ct));
+        }
+
+        // Any other language: English.
+        using var other = await gateway.SendAsync("orders.example.com", HttpMethod.Get, language: "ja-JP", path: "/blocked");
+        Assert.Equal(["en"], other.Content.Headers.ContentLanguage);
+        Assert.StartsWith("Forbidden.", await other.Content.ReadAsStringAsync(Ct), StringComparison.Ordinal);
     }
 }

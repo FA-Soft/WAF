@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Net.Http.Headers;
 
 // The resources are named after the root namespace (FASoft.Waf.Web), which differs from the assembly name (Waf.Web).
 [assembly: Microsoft.Extensions.Localization.RootNamespace("FASoft.Waf.Web")]
@@ -63,21 +62,7 @@ public static class AdminLanguage
     /// The first supported language of an <c>Accept-Language</c> header, in order of preference (quality, then
     /// position): <c>nl-BE</c> gives <c>nl</c>. Null when none is supported.
     /// </summary>
-    public static string? FromAcceptLanguage(string? header)
-    {
-        if (string.IsNullOrWhiteSpace(header) || !StringWithQualityHeaderValue.TryParseList([header], out var values))
-        {
-            return null;
-        }
-
-        return values
-            .Select((value, index) => (Tag: value.Value.Value ?? string.Empty, Quality: value.Quality ?? 1, index))
-            .Where(v => v.Quality > 0)
-            .OrderByDescending(v => v.Quality)
-            .ThenBy(v => v.index)
-            .Select(v => v.Tag.Split('-', 2)[0].ToLowerInvariant())
-            .FirstOrDefault(IsSupported);
-    }
+    public static string? FromAcceptLanguage(string? header) => FASoft.Waf.Core.Languages.Match(header);
 
     /// <summary>The language for a request: the account's choice, else the browser's, else English.</summary>
     public static string For(HttpContext context)

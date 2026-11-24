@@ -60,6 +60,7 @@ public static class TargetResolver
                 HealthCheck = route.HealthCheck,
                 Https = route.Https,
                 ErrorMessage = route.ErrorMessage,
+                ErrorMessageTranslations = route.ErrorMessageTranslations,
             };
             foreach (var destination in route.Destinations)
             {

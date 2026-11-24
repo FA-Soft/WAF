@@ -9,6 +9,7 @@
   <data name="'Match' is missing." xml:space="preserve"><value>'Match' is missing.</value></data>
   <data name="'ResolveIntervalSeconds' only applies with a MAC address." xml:space="preserve"><value>'ResolveIntervalSeconds' only applies with a MAC address.</value></data>
   <data name="'{0}' is not a MAC address. Use e.g. aa:bb:cc:dd:ee:ff." xml:space="preserve"><value>'{0}' is not a MAC address. Use e.g. aa:bb:cc:dd:ee:ff.</value></data>
+  <data name="'{0}' is not a language for the message for visitors (use nl, fr or de)." xml:space="preserve"><value>'{0}' is not a language for the message for visitors (use nl, fr or de).</value></data>
   <data name="'{0}' is not a supported regular expression: {1}" xml:space="preserve"><value>'{0}' is not a supported regular expression: {1}</value></data>
   <data name="'{0}' is not a valid HTTP method (use e.g. GET, POST)." xml:space="preserve"><value>'{0}' is not a valid HTTP method (use e.g. GET, POST).</value></data>
   <data name="'{0}' is not a valid IP address or host name." xml:space="preserve"><value>'{0}' is not a valid IP address or host name.</value></data>
@@ -333,6 +334,7 @@
   <data name="Detection-only mode" xml:space="preserve"><value>Detection-only mode</value></data>
   <data name="Detection-only mode switched off." xml:space="preserve"><value>Detection-only mode switched off.</value></data>
   <data name="Detection-only mode switched on." xml:space="preserve"><value>Detection-only mode switched on.</value></data>
+  <data name="Deutsch" xml:space="preserve"><value>Deutsch</value></data>
   <data name="Disable" xml:space="preserve"><value>Disable</value></data>
   <data name="Disabled" xml:space="preserve"><value>Disabled</value></data>
   <data name="Discard" xml:space="preserve"><value>Discard</value></data>
@@ -375,6 +377,7 @@
   <data name="Enter the 6-digit code the app now shows." xml:space="preserve"><value>Enter the 6-digit code the app now shows.</value></data>
   <data name="Enter the 6-digit code." xml:space="preserve"><value>Enter the 6-digit code.</value></data>
   <data name="Enter the API key." xml:space="preserve"><value>Enter the API key.</value></data>
+  <data name="Enter the English message too: visitors in other languages get it." xml:space="preserve"><value>Enter the English message too: visitors in other languages get it.</value></data>
   <data name="Enter the client's IP address, e.g. 203.0.113.10." xml:space="preserve"><value>Enter the client's IP address, e.g. 203.0.113.10.</value></data>
   <data name="Enter the code your authenticator app shows." xml:space="preserve"><value>Enter the code your authenticator app shows.</value></data>
   <data name="Enter the code." xml:space="preserve"><value>Enter the code.</value></data>
@@ -418,6 +421,7 @@
   <data name="Forwarded" xml:space="preserve"><value>Forwarded</value></data>
   <data name="Forwarded to" xml:space="preserve"><value>Forwarded to</value></data>
   <data name="Forwards to" xml:space="preserve"><value>Forwards to</value></data>
+  <data name="Français" xml:space="preserve"><value>Français</value></data>
   <data name="Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate." xml:space="preserve"><value>Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate.</value></data>
   <data name="From" xml:space="preserve"><value>From</value></data>
   <data name="From the request log (request {0})." xml:space="preserve"><value>From the request log (request {0}).</value></data>
@@ -538,6 +542,7 @@
   <data name="Model" xml:space="preserve"><value>Model</value></data>
   <data name="More filters" xml:space="preserve"><value>More filters</value></data>
   <data name="Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Nederlands" xml:space="preserve"><value>Nederlands</value></data>
   <data name="Needs subdomains and at least 365 days." xml:space="preserve"><value>Needs subdomains and at least 365 days.</value></data>
   <data name="New password" xml:space="preserve"><value>New password</value></data>
   <data name="New password again" xml:space="preserve"><value>New password again</value></data>
@@ -1079,6 +1084,7 @@
   <data name="View in the request log" xml:space="preserve"><value>View in the request log</value></data>
   <data name="View the configuration history" xml:space="preserve"><value>View the configuration history</value></data>
   <data name="View the history" xml:space="preserve"><value>View the history</value></data>
+  <data name="Visitors whose browser prefers Dutch, French or German get the message in their language; empty: the message above." xml:space="preserve"><value>Visitors whose browser prefers Dutch, French or German get the message in their language; empty: the message above.</value></data>
   <data name="WAF event" xml:space="preserve"><value>WAF event</value></data>
   <data name="Waiting for review" xml:space="preserve"><value>Waiting for review</value></data>
   <data name="Website" xml:space="preserve"><value>Website</value></data>
@@ -1229,6 +1235,7 @@
   <data name="the label '{0}' is used twice." xml:space="preserve"><value>the label '{0}' is used twice.</value></data>
   <data name="the label is used by more than one port of this target." xml:space="preserve"><value>the label is used by more than one port of this target.</value></data>
   <data name="the label may only contain letters, digits, '-', '_' and '.'." xml:space="preserve"><value>the label may only contain letters, digits, '-', '_' and '.'.</value></data>
+  <data name="the message for visitors in '{0}' must be one line of at most {1} characters." xml:space="preserve"><value>the message for visitors in '{0}' must be one line of at most {1} characters.</value></data>
   <data name="the message for visitors must be one line of at most {0} characters." xml:space="preserve"><value>the message for visitors must be one line of at most {0} characters.</value></data>
   <data name="the method" xml:space="preserve"><value>the method</value></data>
   <data name="the name is used by more than one rate limit." xml:space="preserve"><value>the name is used by more than one rate limit.</value></data>
@@ -1247,6 +1254,7 @@
   <data name="the user agent" xml:space="preserve"><value>the user agent</value></data>
   <data name="the {0} header" xml:space="preserve"><value>the {0} header</value></data>
   <data name="there is no target '{0}'." xml:space="preserve"><value>there is no target '{0}'.</value></data>
+  <data name="translations of the message for visitors need the English message too (it is the fallback)." xml:space="preserve"><value>translations of the message for visitors need the English message too (it is the fallback).</value></data>
   <data name="unknown category." xml:space="preserve"><value>unknown category.</value></data>
   <data name="unknown field." xml:space="preserve"><value>unknown field.</value></data>
   <data name="unknown operator." xml:space="preserve"><value>unknown operator.</value></data>

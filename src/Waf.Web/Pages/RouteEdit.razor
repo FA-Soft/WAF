@@ -206,6 +206,18 @@ else if (Model is not null)
             <FormField Id="error-message" Label="@T("Message for visitors")" Optional Help="@T("Shown on the error, e.g. Planned maintenance until 14:00. One line, at most 300 characters.")" For="() => Model.ErrorMessage">
                 <InputText id="error-message" aria-describedby="error-message-help" @bind-Value="Model.ErrorMessage" maxlength="300" autocomplete="off" />
             </FormField>
+            <p class="field-help">@T("Visitors whose browser prefers Dutch, French or German get the message in their language; empty: the message above.")</p>
+            <div class="field-row">
+                <FormField Id="error-message-nl" Label="Nederlands" Optional For="() => Model.ErrorMessageNl">
+                    <InputText id="error-message-nl" lang="nl" @bind-Value="Model.ErrorMessageNl" maxlength="300" autocomplete="off" />
+                </FormField>
+                <FormField Id="error-message-fr" Label="Français" Optional For="() => Model.ErrorMessageFr">
+                    <InputText id="error-message-fr" lang="fr" @bind-Value="Model.ErrorMessageFr" maxlength="300" autocomplete="off" />
+                </FormField>
+                <FormField Id="error-message-de" Label="Deutsch" Optional For="() => Model.ErrorMessageDe">
+                    <InputText id="error-message-de" lang="de" @bind-Value="Model.ErrorMessageDe" maxlength="300" autocomplete="off" />
+                </FormField>
+            </div>
         </fieldset>
 
         <div class="actions">
