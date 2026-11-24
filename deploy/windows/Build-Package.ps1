@@ -48,6 +48,10 @@ foreach ($project in @('Waf.Host', 'Waf.Cli')) {
 }
 
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Install.ps1') -Destination $package
+# The license and the notices of the third-party components the programs include.
+foreach ($file in @('LICENSE', 'THIRD-PARTY-NOTICES.md')) {
+    Copy-Item -LiteralPath (Join-Path $repository $file) -Destination $package
+}
 # Not used by the service: debug symbols, Development settings and IIS hosting files.
 Get-ChildItem -LiteralPath $package -Filter '*.pdb' | Remove-Item -Force
 foreach ($file in @('appsettings.Development.json', 'web.config', 'aspnetcorev2_inprocess.dll')) {

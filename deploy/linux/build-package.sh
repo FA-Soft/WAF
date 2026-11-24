@@ -37,6 +37,8 @@ done
 rm -f "$PACKAGE"/*.pdb "$PACKAGE/appsettings.Development.json" "$PACKAGE/web.config" "$PACKAGE/aspnetcorev2_inprocess.dll"
 
 cp "$REPOSITORY/deploy/linux/install.sh" "$REPOSITORY/deploy/linux/wafgateway.service" "$PACKAGE/"
+# The license and the notices of the third-party components the programs include.
+cp "$REPOSITORY/LICENSE" "$REPOSITORY/THIRD-PARTY-NOTICES.md" "$PACKAGE/"
 printf 'runtime=%s\nversion=%s\n' "$RUNTIME" "${VERSION:-dev}" > "$PACKAGE/PACKAGE"
 chmod 0755 "$PACKAGE/install.sh" "$PACKAGE/WafGateway" "$PACKAGE/wafctl" 2>/dev/null || true
 
