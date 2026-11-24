@@ -210,22 +210,22 @@ elif [ -n "$busy" ]; then
     printf '%s\n' "$busy"
     note "Stop or move that program (for example a web server you now add as a route), then: sudo systemctl start $SERVICE"
 else
-    systemctl start "$SERVICE" || true
+    # Type=notify: start returns when the listeners are up, or fails when the gateway exits first.
     healthy=0
-    for _ in $(seq 1 120); do
-        state="$(systemctl is-active "$SERVICE" 2>/dev/null || true)"
-        case "$state" in active|activating|reloading) ;; *) break ;; esac
-        if command -v curl >/dev/null 2>&1; then
-            if curl -fsS -o /dev/null --max-time 5 "http://127.0.0.1:$admin_port/healthz"; then healthy=1; break; fi
-        elif systemctl is-active --quiet "$SERVICE"; then
-            healthy=1; break
-        fi
-        sleep 1
-    done
+    if systemctl start "$SERVICE"; then
+        for _ in $(seq 1 60); do
+            # Not running any more (failed, or waiting to restart after a crash): stop waiting.
+            [ "$(systemctl show -p SubState --value "$SERVICE")" = running ] || break
+            if ! command -v curl >/dev/null 2>&1; then healthy=1; break; fi
+            if curl -fs -o /dev/null --max-time 5 "http://127.0.0.1:$admin_port/healthz"; then healthy=1; break; fi
+            sleep 1
+        done
+    fi
     if [ "$healthy" -eq 1 ]; then
         step "WAF Gateway is running"
     else
-        warn "The service did not become healthy. See: journalctl -u $SERVICE -n 50 --no-pager"
+        warn "The service did not start. Its last log lines (more with: journalctl -u $SERVICE -n 100 --no-pager):"
+        journalctl -u "$SERVICE" -n 20 --no-pager >&2 || true
     fi
 fi
 

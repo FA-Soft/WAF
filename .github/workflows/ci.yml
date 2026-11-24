@@ -236,6 +236,21 @@ jobs:
           # The F flag loads the interpreter at registration, so it also works in the service's sandbox.
           cat /proc/sys/fs/binfmt_misc/qemu-aarch64
           grep -q '^flags:.*F' /proc/sys/fs/binfmt_misc/qemu-aarch64
+          # The gateway is a dynamically linked arm64 program: it needs the arm64 C library, OpenSSL and ICU, as on
+          # a Pi. Ubuntu's x64 mirrors have no arm64 packages; those come from ports.ubuntu.com.
+          . /etc/os-release
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ] && ! grep -q '^Architectures:' /etc/apt/sources.list.d/ubuntu.sources; then
+            sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          fi
+          printf 'Types: deb\nURIs: http://ports.ubuntu.com/ubuntu-ports\nSuites: %s %s-updates %s-security\nComponents: main universe\nArchitectures: arm64\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' \
+            "$VERSION_CODENAME" "$VERSION_CODENAME" "$VERSION_CODENAME" | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.sources
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update -qq
+          newest() { apt-cache search --names-only "^$1\$" | awk '{ print $1 }' | sort -V | tail -n 1; }
+          sudo apt-get install -y -qq libc6:arm64 libgcc-s1:arm64 libstdc++6:arm64 \
+            "$(newest 'libssl3(t64)?'):arm64" "$(newest 'libicu[0-9]+'):arm64"
+          # Emulation works outside the service: if this fails, the problem is QEMU or the libraries, not systemd.
+          artifacts/linux/wafgateway-${{ matrix.rid }}/wafctl --help >/dev/null
           # The .NET runtime under QEMU: no write-xor-execute (very slow when emulated), more time to start.
           sudo mkdir -p /etc/systemd/system/wafgateway.service.d
           printf '[Service]\nEnvironment=DOTNET_EnableWriteXorExecute=0\nTimeoutStartSec=600\n' | sudo tee /etc/systemd/system/wafgateway.service.d/qemu.conf

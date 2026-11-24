@@ -27,7 +27,8 @@ run_installer() {
 
 status_code() { curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$1" || true; }
 main_pid() { systemctl show -p MainPID --value wafgateway; }
-proc_field() { awk -v key="$1:" '$1 == key { print $2 }' "/proc/$(main_pid)/status"; }
+# A field of the gateway's /proc/<pid>/status; empty when it is not running (MainPID=0).
+proc_field() { awk -v key="$1:" '$1 == key { print $2 }' "/proc/$(main_pid)/status" 2>/dev/null || true; }
 mode_owner() { stat -c '%a %U:%G' "$1"; }
 
 [ "$(id -u)" -eq 0 ] || { echo "Run as root (sudo)." >&2; exit 2; }
