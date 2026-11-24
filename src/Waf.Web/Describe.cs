@@ -41,24 +41,35 @@ internal static class Describe
 
         var known = targets?.ToList() ?? [];
         addresses ??= ConfiguredTargetAddresses.Instance;
-        return string.Join(", ", destinations.Select(d =>
+        // Primaries first, then the failovers in the order they take over.
+        return string.Join(", ", destinations.OrderBy(d => d.Failover ?? 0).Select(d =>
         {
-            if (!d.UsesTarget)
-            {
-                return Address(d.Scheme, d.Address, d.Port);
-            }
-
-            var label = TargetResolver.Label(d.Target, d.TargetPort);
-            if (TargetResolver.Find(known, d.Target) is not { } target || TargetResolver.FindPort(target, d.TargetPort) is not { } port)
-            {
-                return label;
-            }
-
-            return addresses.CurrentAddress(target) is { Length: > 0 } address
-                ? $"{label} ({Address(port.Scheme, address, port.Port)})"
-                : $"{label} (not found: no traffic)";
+            var text = Destination(d, known, addresses);
+            return d.Failover is { } failover ? string.Create(CultureInfo.InvariantCulture, $"{text} · failover {failover}") : text;
         }));
     }
+
+    private static string Destination(ProxyDestinationOptions d, List<BackendTarget> known, ITargetAddressSource addresses)
+    {
+        if (!d.UsesTarget)
+        {
+            return Address(d.Scheme, d.Address, d.Port);
+        }
+
+        var label = TargetResolver.Label(d.Target, d.TargetPort);
+        if (TargetResolver.Find(known, d.Target) is not { } target || TargetResolver.FindPort(target, d.TargetPort) is not { } port)
+        {
+            return label;
+        }
+
+        return addresses.CurrentAddress(target) is { Length: > 0 } address
+            ? $"{label} ({Address(port.Scheme, address, port.Port)})"
+            : $"{label} (not found: no traffic)";
+    }
+
+    /// <summary>A moment as the admin UI shows it: "2026-11-24 10:42 UTC".</summary>
+    public static string Time(DateTimeOffset moment) =>
+        moment.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + " UTC";
 
     /// <summary>e.g. "http://10.0.0.5:8080" or "http://[fd00::5]:8080".</summary>
     public static string Address(string scheme, string address, int port)

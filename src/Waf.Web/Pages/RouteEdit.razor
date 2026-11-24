@@ -94,12 +94,23 @@ else if (Model is not null)
                 Where to
                 <HelpTip Title="Backends">
                     <p>The server(s) that answer the requests. With several backends, requests are spread over them, and a backend that stops answering is skipped.</p>
+                    <p><strong>Failover backends</strong> only get traffic while none of the backends above is healthy: failover 1 first, then 2, and so on. For example a second network address of the same machine, or another machine that can take over. Traffic returns once a backend above is healthy again for 30 seconds.</p>
+                    <p>A backend that refuses the connection is skipped at once, and the request goes to the next one. A request that already reached a backend is never sent again.</p>
                 </HelpTip>
             </legend>
 
             <FormField Id="destinations" Label="Backends" Help="One per line: an address such as http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http), or a target and port label such as nas/web (see Targets)." For="() => Model.Destinations">
                 <InputTextArea id="destinations" aria-describedby="destinations-help" @bind-Value="Model.Destinations" rows="3" />
             </FormField>
+
+            <FormField Id="failover" Label="Failover backends" Optional Help="One per line, in the order they take over: line 1 is failover 1. Empty: no failover." For="() => Model.FailoverDestinations">
+                <InputTextArea id="failover" aria-describedby="failover-help" @bind-Value="Model.FailoverDestinations" rows="2" />
+            </FormField>
+
+            @if (!string.IsNullOrWhiteSpace(Model.FailoverDestinations) && string.IsNullOrWhiteSpace(Model.HealthCheckPath))
+            {
+                <p class="field-help">Tip: set a health check path below. Without one, a backend that stops answering (instead of refusing connections) is only noticed by failing requests, and a stopped backend is tried again every half minute.</p>
+            }
 
             @if (_targetChoices.Count > 0)
             {
@@ -113,6 +124,7 @@ else if (Model is not null)
                             }
                         </InputSelect>
                         <button type="submit" name="Model.Command" value="add-target" class="button button-secondary" formnovalidate>Add</button>
+                        <button type="submit" name="Model.Command" value="add-target-failover" class="button button-secondary" formnovalidate>Add as failover</button>
                     </div>
                 </div>
             }

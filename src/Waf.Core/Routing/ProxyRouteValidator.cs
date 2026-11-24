@@ -9,6 +9,9 @@ public static class ProxyRouteValidator
 {
     private const int MaxHealthCheckSeconds = 3600;
 
+    /// <summary>The highest failover number (failover 1 is tried first).</summary>
+    public const int MaxFailover = 99;
+
     public static IReadOnlyList<string> Validate(IReadOnlyList<ProxyRouteOptions> routes)
     {
         ArgumentNullException.ThrowIfNull(routes);
@@ -111,10 +114,20 @@ public static class ProxyRouteValidator
             return;
         }
 
+        if (destinations.All(d => d.IsFailover))
+        {
+            errors.Add($"{label}: at least one destination must be a primary (without 'Failover'); failover destinations only take over from it.");
+        }
+
         for (var i = 0; i < destinations.Count; i++)
         {
             var destination = destinations[i];
             var where = destinations.Count == 1 ? label : $"{label}, destination #{i + 1}";
+
+            if (destination.Failover is < 1 or > MaxFailover)
+            {
+                errors.Add($"{where}: 'Failover' must be between 1 and {MaxFailover} (was {destination.Failover}); leave it out for a primary destination.");
+            }
 
             // A target destination before resolution: its target and port label are checked by TargetValidator.
             if (destination.UsesTarget && string.IsNullOrEmpty(destination.Address) && destination.Port == 0)

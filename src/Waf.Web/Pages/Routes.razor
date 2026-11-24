@@ -1,5 +1,6 @@
 @page "/routes"
 @inject ITargetAddressMonitor Addresses
+@inject IRouteFailoverMonitor Failover
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
@@ -57,7 +58,11 @@ else if (_active is not null)
                     </td>
                     <td>@Describe.Destinations(route.Destinations, _active.Configuration.Targets, Addresses)</td>
                     <td>
-                        @if (route.Enabled)
+                        @if (route.Enabled && _onFailover.TryGetValue(name, out var failover))
+                        {
+                            <span class="badge badge-warning" title="@($"No primary backend is healthy; traffic goes to {failover.Destinations}.")">On failover @failover.Failover since @Describe.Time(failover.Since)</span>
+                        }
+                        else if (route.Enabled)
                         {
                             <span class="badge badge-ok">Enabled</span>
                         }
@@ -91,8 +96,14 @@ else if (_active is not null)
     [SupplyParameterFromQuery]
     public string? Saved { get; set; }
 
-    protected override async Task OnInitializedAsync() =>
+    /// <summary>Routes whose traffic goes to a failover backend right now.</summary>
+    private Dictionary<string, RouteFailoverStatus> _onFailover = [];
+
+    protected override async Task OnInitializedAsync()
+    {
         _active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _onFailover = Failover.Statuses.ToDictionary(s => s.RouteName, StringComparer.OrdinalIgnoreCase);
+    }
 
     private async Task ToggleAsync(string name)
     {

@@ -44,11 +44,14 @@ public sealed class BackendServer : IAsyncDisposable
 
     public int Port { get; }
 
-    public static async Task<BackendServer> StartAsync(string id, X509Certificate2? certificate = null)
+    /// <param name="id">What the backend answers with, e.g. "A".</param>
+    /// <param name="certificate">With a certificate: HTTPS.</param>
+    /// <param name="port">0: a free port; otherwise this port (e.g. to start a stopped backend again).</param>
+    public static async Task<BackendServer> StartAsync(string id, X509Certificate2? certificate = null, int port = 0)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, 0, listen =>
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, port, listen =>
         {
             if (certificate is not null)
             {
@@ -93,8 +96,17 @@ public sealed class BackendServer : IAsyncDisposable
         return new BackendServer(id, new Uri(address).Port, app);
     }
 
+    private bool _disposed;
+
+    /// <summary>Stops the backend; it refuses connections from then on. Safe to call twice.</summary>
     public async ValueTask DisposeAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         await _app.StopAsync(CancellationToken.None);
         await _app.DisposeAsync();
     }

@@ -166,7 +166,28 @@ Routes are normally managed in the admin UI. On a fresh install they can be seed
 - **AllowInvalidBackendCertificate** (default `false`): accept a self-signed certificate from an HTTPS backend you control.
 - **Https** (both default `false`): `RedirectHttp` sends plain HTTP requests to HTTPS, `Hsts` adds the Strict-Transport-Security header; see [Redirect to HTTPS and HSTS](#redirect-to-https-and-hsts). With both off the route also works over plain HTTP.
 - **HealthCheck:** with a `Path`, each destination is probed and taken out of rotation while it fails. Passive checks (failed requests) are always on.
+- **Failover:** a destination with `"Failover": 1` (2, 3, …) only gets traffic while no primary destination is healthy; see [Failover](#failover).
 - **Forwarded headers:** `X-Forwarded-For`, `-Proto` and `-Host` are always set by the gateway; values sent by clients are overwritten and a client `Forwarded` header is removed. `X-Forwarded-For` carries the resolved client IP (see below).
+
+#### Failover
+
+A route can have **failover destinations**: a second network address of the same machine, or another machine that can take over. They get no traffic while a primary (a destination without `Failover`) is healthy.
+
+```json
+"Destinations": [
+  { "Address": "10.0.0.5", "Port": 8080 },
+  { "Address": "10.0.1.5", "Port": 8080, "Failover": 1 },
+  { "Target": "nas", "TargetPort": "web", "Failover": 2 }
+]
+```
+
+- **Which destination:** traffic goes to the healthy primaries, shared as usual. Only when none is healthy does it go to failover 1, then 2, and so on; failovers with the same number share the load. A failover can be an address, or a target and port label, including a target found by its MAC address. A route needs at least one primary.
+- **Detection:** the route's health check (`HealthCheck.Path`) and failed requests. A primary that **refuses** the connection, or does not accept it within 5 seconds, is skipped at once: the same request goes to the next candidate, so visitors don't see the outage. A request whose sending has started is **never sent again** (that would not be safe for a POST): it gets the error. Set a health check path so a backend that stops answering is noticed within the check interval.
+- **Back to the primary** once it has been healthy for 30 seconds (the hold time), so a primary that keeps going up and down does not bounce traffic back and forth. Without a health check, a primary that refused connections is tried again after 30 seconds.
+- **Nothing healthy at all:** the route answers `503`.
+- **Visible:** the Routes page shows "On failover 1 since 2026-11-24 10:42 UTC" and the dashboard warns. The request log names the destination that served each request, e.g. `http://10.0.1.5:8080/ · failover 1`. Switching to the failover and back is written to the service log (event IDs 900 and 901; 902 when nothing is healthy, 903 when a request was sent to the next destination).
+- **In the route editor:** the backends go in **Backends**, the failovers in **Failover backends**, one per line, in the order they take over. **Add as failover** adds a target there.
+- **Host settings** (`Gateway:Failover`, normally left out): `HoldTime` (default `00:00:30`), `ConnectTimeout` (`00:00:05`, for routes with failover destinations) and `RefusedPeriod` (`00:00:30`, how long a destination that refused a connection gets no traffic).
 
 ### Targets
 

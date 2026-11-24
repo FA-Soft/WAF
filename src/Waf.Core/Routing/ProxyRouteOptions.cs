@@ -18,7 +18,10 @@ public sealed class ProxyRouteOptions
     /// <summary>Which requests this route handles.</summary>
     public RouteMatchOptions Match { get; set; } = new();
 
-    /// <summary>Backends to forward to. More than one spreads the load across them.</summary>
+    /// <summary>
+    /// Backends to forward to. More than one primary spreads the load across them; failover destinations
+    /// (<see cref="ProxyDestinationOptions.Failover"/>) only get traffic while no primary is healthy.
+    /// </summary>
     public IList<ProxyDestinationOptions> Destinations { get; } = [];
 
     /// <summary>
@@ -92,6 +95,16 @@ public sealed class ProxyDestinationOptions
 
     /// <summary>Label of one of the target's ports, e.g. <c>web</c>.</summary>
     public string? TargetPort { get; set; }
+
+    /// <summary>
+    /// Empty (the default): a primary destination. 1, 2, …: a failover destination, used in this order only while no
+    /// primary is healthy (failovers with the same number share the load).
+    /// </summary>
+    public int? Failover { get; set; }
+
+    /// <summary>True for a failover destination. Not part of the configuration JSON.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsFailover => Failover is not null;
 
     /// <summary>True when this destination names a target instead of an address. Not part of the configuration JSON.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
