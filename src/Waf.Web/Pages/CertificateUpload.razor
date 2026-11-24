@@ -2,26 +2,26 @@
 @inject ICertificateManager Certificates
 @inject NavigationManager Navigation
 
-<PageTitle>Upload a certificate · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Upload a certificate") · @ProductInfo.Name</PageTitle>
 
-<p><a href="certificates">← Certificates</a></p>
+<p><a href="certificates">← @T("Certificates")</a></p>
 <h1>
-    Upload a certificate
-    <HelpTip Title="Upload a certificate">
-        <p><strong>PFX</strong> (.pfx or .p12): one file with the certificate, its chain and the private key; enter its password if it has one.</p>
-        <p><strong>PEM</strong> (.pem, .crt, .cer): the certificate file (add the intermediate certificates after it, as most certificate authorities supply them) and the private key file. An encrypted key needs its password.</p>
-        <p>The private key is stored encrypted on this gateway and is never shown again. After uploading, you choose the host names that use it.</p>
+    @T("Upload a certificate")
+    <HelpTip Title="@T("Upload a certificate")">
+        <p>@TM("<strong>PFX</strong> (.pfx or .p12): one file with the certificate, its chain and the private key; enter its password if it has one.")</p>
+        <p>@TM("<strong>PEM</strong> (.pem, .crt, .cer): the certificate file (add the intermediate certificates after it, as most certificate authorities supply them) and the private key file. An encrypted key needs its password.")</p>
+        <p>@T("The private key is stored encrypted on this gateway and is never shown again. After uploading, you choose the host names that use it.")</p>
     </HelpTip>
 </h1>
 
 @if (_errors.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>The certificate was not uploaded.</strong>
+        <strong>@T("The certificate was not uploaded.")</strong>
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
@@ -29,22 +29,22 @@
 
 <EditForm Model="Model" FormName="upload-certificate" OnSubmit="UploadAsync" Enhance enctype="multipart/form-data" class="form">
     <div class="field">
-        <label for="certificate-file">Certificate (PFX or PEM)</label>
-        <p class="field-help" id="certificate-file-help">At most @(CertificateFiles.MaxFileBytes / 1024) KB.</p>
+        <label for="certificate-file">@T("Certificate (PFX or PEM)")</label>
+        <p class="field-help" id="certificate-file-help">@T("At most {0} KB.", CertificateFiles.MaxFileBytes / 1024)</p>
         <input type="file" id="certificate-file" name="certificateFile" accept=".pfx,.p12,.pem,.crt,.cer" aria-describedby="certificate-file-help" required />
     </div>
     <div class="field">
-        <label for="key-file">Private key (PEM only) <span class="optional">(optional)</span></label>
-        <p class="field-help" id="key-file-help">Not needed for a PFX file, or when the key is in the certificate file.</p>
+        <label for="key-file">@T("Private key (PEM only)") <span class="optional">@T("(optional)")</span></label>
+        <p class="field-help" id="key-file-help">@T("Not needed for a PFX file, or when the key is in the certificate file.")</p>
         <input type="file" id="key-file" name="keyFile" accept=".pem,.key" aria-describedby="key-file-help" />
     </div>
     <div class="field">
-        <label for="certificate-password">Password <span class="optional">(optional)</span></label>
-        <p class="field-help" id="certificate-password-help">Of the PFX file or the encrypted private key.</p>
+        <label for="certificate-password">@T("Password") <span class="optional">@T("(optional)")</span></label>
+        <p class="field-help" id="certificate-password-help">@T("Of the PFX file or the encrypted private key.")</p>
         <input type="password" id="certificate-password" name="Model.Password" autocomplete="off" aria-describedby="certificate-password-help" />
     </div>
-    <button type="submit" class="button">Upload</button>
-    <a class="button button-secondary" href="certificates">Cancel</a>
+    <button type="submit" class="button">@T("Upload")</button>
+    <a class="button button-secondary" href="certificates">@T("Cancel")</a>
 </EditForm>
 
 @code {
@@ -64,7 +64,7 @@
         var certificate = await ReadAsync(files?.GetFile("certificateFile"));
         if (certificate is null)
         {
-            _errors = ["Choose a certificate file."];
+            _errors = [Text.N("Choose a certificate file.")];
             return;
         }
 

@@ -247,6 +247,26 @@ The language menu at the top right: **Browser** (the default) follows the browse
 
 ![Language menu](images/admin-language.png)
 
+The same admin UI in Dutch, French and German: the sign-in page (in the browser's language, before signing in), the dashboard and the route editor.
+
+![Sign-in page in Dutch](images/admin-login-nl.png)
+
+![Dashboard in Dutch](images/admin-dashboard-nl.png)
+
+![Route editor in Dutch](images/admin-route-edit-nl.png)
+
+![Sign-in page in French](images/admin-login-fr.png)
+
+![Dashboard in French](images/admin-dashboard-fr.png)
+
+![Route editor in French](images/admin-route-edit-fr.png)
+
+![Sign-in page in German](images/admin-login-de.png)
+
+![Dashboard in German](images/admin-dashboard-de.png)
+
+![Route editor in German](images/admin-route-edit-de.png)
+
 ## When no backend answers
 
 Not part of the admin UI: what a visitor's browser shows when no backend of a route answers (here a 502). Programs get the same error as JSON, XML or a SOAP Fault. The page follows the visitor's light or dark setting:

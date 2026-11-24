@@ -10,21 +10,21 @@
 @if (Status.AppSettingsNotice is { } notice)
 {
     <div class="alert alert-warning" role="status">
-        <strong>The configuration in appsettings was changed, but it is not used.</strong>
-        <HelpTip Title="Why is it not used?">
-            <p>The configuration you edit in this admin UI is the one that runs. Changes to the Gateway section of appsettings.json are only applied when you import them here, after the usual checks, as a new version you can roll back.</p>
+        <strong>@T("The configuration in appsettings was changed, but it is not used.")</strong>
+        <HelpTip Title="@T("Why is it not used?")">
+            <p>@T("The configuration you edit in this admin UI is the one that runs. Changes to the Gateway section of appsettings.json are only applied when you import them here, after the usual checks, as a new version you can roll back.")</p>
         </HelpTip>
         @if (notice.CanImport)
         {
-            <p>It passed all checks and can be imported. Importing replaces the running configuration (including changes made in this UI).</p>
+            <p>@T("It passed all checks and can be imported. Importing replaces the running configuration (including changes made in this UI).")</p>
         }
         else
         {
-            <p>It cannot be imported because it has problems:</p>
+            <p>@T("It cannot be imported because it has problems:")</p>
             <ul>
                 @foreach (var error in notice.Errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         }
@@ -34,7 +34,7 @@
             <ul class="field-error">
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         }
@@ -44,12 +44,12 @@
             {
                 <form method="post" @formname="appsettings-import" @onsubmit="ImportAsync" data-enhance>
                     <AntiforgeryToken />
-                    <button type="submit" class="button">Import from appsettings</button>
+                    <button type="submit" class="button">@T("Import from appsettings")</button>
                 </form>
             }
             <form method="post" @formname="appsettings-dismiss" @onsubmit="DismissAsync" data-enhance>
                 <AntiforgeryToken />
-                <button type="submit" class="button button-secondary">Dismiss</button>
+                <button type="submit" class="button button-secondary">@T("Dismiss")</button>
             </form>
         </div>
     </div>

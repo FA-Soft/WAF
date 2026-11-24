@@ -152,7 +152,7 @@ public sealed class MacAddressTargetTests
         }
 
         Assert.Single(await AuditAsync(gateway, AuditActions.TargetUnavailable));
-        Assert.Contains("Target &#x27;lab&#x27; is not found", await gateway.GetPageAsync("/"), StringComparison.Ordinal);
+        Assert.Contains("Target 'lab' is not found", WebUtility.HtmlDecode(await gateway.GetPageAsync("/")), StringComparison.Ordinal);
         Assert.Contains("Not found: no traffic", await gateway.GetPageAsync("/targets"), StringComparison.Ordinal);
         Assert.Equal(1, (await gateway.Store.GetLatestAsync(Ct))!.Version);
 

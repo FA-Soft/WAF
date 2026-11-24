@@ -2,14 +2,14 @@
 @inject RequestLogReader Reader
 @inject IGatewayConfigurationService Configurations
 
-<PageTitle>Request @Id · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Request {0}", Id) · @ProductInfo.Name</PageTitle>
 
-<p><a href="logs">← Request log</a></p>
+<p><a href="logs">← @T("Request log")</a></p>
 
 @if (_entry is null)
 {
-    <h1>Request @Id</h1>
-    <div class="alert alert-danger" role="alert">This log entry does not exist (any more).</div>
+    <h1>@T("Request {0}", Id)</h1>
+    <div class="alert alert-danger" role="alert">@T("This log entry does not exist (any more).")</div>
 }
 else
 {
@@ -26,49 +26,49 @@ else
     </p>
 
     <dl class="details">
-        <dt>Time (UTC)</dt>
+        <dt>@T("Time (UTC)")</dt>
         <dd>@LogFormat.Time(_entry.TimestampMs)</dd>
-        <dt>Client IP</dt>
-        <dd>@_entry.ClientIp <a href="@($"logs?range=all&ip={Uri.EscapeDataString(_entry.ClientIp)}")">all requests from this client</a></dd>
-        <dt>Host</dt>
+        <dt>@T("Client IP")</dt>
+        <dd>@_entry.ClientIp <a href="@($"logs?range=all&ip={Uri.EscapeDataString(_entry.ClientIp)}")">@T("all requests from this client")</a></dd>
+        <dt>@T("Host")</dt>
         <dd>@_entry.Host</dd>
-        <dt>Path</dt>
+        <dt>@T("Path")</dt>
         <dd><code>@_entry.Path</code></dd>
-        <dt>Route</dt>
-        <dd>@(_entry.RouteName ?? "none")</dd>
-        <dt>Forwarded to</dt>
-        <dd>@(_entry.Destination ?? "not forwarded")</dd>
-        <dt>Rule</dt>
+        <dt>@T("Route")</dt>
+        <dd>@(_entry.RouteName ?? T("none"))</dd>
+        <dt>@T("Forwarded to")</dt>
+        <dd>@(_entry.Destination ?? T("not forwarded"))</dd>
+        <dt>@T("Rule")</dt>
         <dd>
             @if (_entry.RuleName is null)
             {
-                <span>none</span>
+                <span>@T("none")</span>
             }
             else
             {
-                @_entry.RuleName <a href="@($"logs?range=all&rule={Uri.EscapeDataString(_entry.RuleName)}")">all requests it matched</a>
+                @_entry.RuleName <a href="@($"logs?range=all&rule={Uri.EscapeDataString(_entry.RuleName)}")">@T("all requests it matched")</a>
             }
         </dd>
         @if (_entry.Event is not null)
         {
-            <dt>WAF event</dt>
+            <dt>@T("WAF event")</dt>
             <dd>@_entry.Event</dd>
         }
         @if (_entry.Detail is not null)
         {
-            <dt>Detail</dt>
+            <dt>@T("Detail")</dt>
             <dd><code>@_entry.Detail</code></dd>
         }
-        <dt>Status</dt>
+        <dt>@T("Status")</dt>
         <dd>@_entry.StatusCode</dd>
-        <dt>Latency</dt>
+        <dt>@T("Latency")</dt>
         <dd>@LogFormat.Latency(_entry.LatencyMs)</dd>
     </dl>
     @if (_configuration is not null)
     {
         <section class="card section" aria-labelledby="actions-heading">
-            <h2 id="actions-heading">Turn this into configuration</h2>
-            <p class="muted">Each action opens a pre-filled form; nothing changes until you check it and save.</p>
+            <h2 id="actions-heading">@T("Turn this into configuration")</h2>
+            <p class="muted">@T("Each action opens a pre-filled form; nothing changes until you check it and save.")</p>
             <ul class="log-actions">
                 @foreach (var (action, actionLabel, help) in LogActions.Available(_entry, _configuration))
                 {
@@ -81,7 +81,7 @@ else
         </section>
     }
 
-    <p class="muted">Query strings, headers, cookies and bodies are not logged. For a detected attack, only the matching fragment (at most 100 characters) is kept as evidence, never from a cookie.</p>
+    <p class="muted">@T("Query strings, headers, cookies and bodies are not logged. For a detected attack, only the matching fragment (at most 100 characters) is kept as evidence, never from a cookie.")</p>
 }
 
 @code {

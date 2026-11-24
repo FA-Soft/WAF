@@ -2,33 +2,33 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>@(_preset?.Title ?? "Preset") · @ProductInfo.Name</PageTitle>
+<PageTitle>@T(_preset?.Title ?? "Preset") · @ProductInfo.Name</PageTitle>
 
-<p><a href="library">← Templates and presets</a></p>
+<p><a href="library">← @T("Templates and presets")</a></p>
 
 @if (_preset is null)
 {
-    <h1>Preset not found</h1>
-    <div class="alert alert-danger" role="alert">There is no preset '@PresetId'. <a href="library">See the available presets</a>.</div>
+    <h1>@T("Preset not found")</h1>
+    <div class="alert alert-danger" role="alert">@T("There is no preset '{0}'.", PresetId ?? string.Empty) <a href="library">@T("See the available presets")</a>.</div>
 }
 else if (_active is null)
 {
-    <h1>@_preset.Title</h1>
-    <div class="alert alert-danger" role="alert">No configuration is active yet, so there is nothing to apply the preset to.</div>
+    <h1>@T(_preset.Title)</h1>
+    <div class="alert alert-danger" role="alert">@T("No configuration is active yet, so there is nothing to apply the preset to.")</div>
 }
 else if (Model is not null)
 {
-    <h1>@_preset.Title</h1>
-    <p>@_preset.Details</p>
+    <h1>@T(_preset.Title)</h1>
+    <p>@T(_preset.Details)</p>
 
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
-            <strong>The preset was not applied.</strong> The running configuration is unchanged.
+            <strong>@T("The preset was not applied.")</strong> @T("The running configuration is unchanged.")
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
@@ -36,7 +36,7 @@ else if (Model is not null)
 
     @if (_notice is not null)
     {
-        <div class="alert alert-warning" role="alert">@_notice</div>
+        <div class="alert alert-warning" role="alert">@Message(_notice)</div>
     }
 
     <EditForm Model="Model" FormName="preset-apply" OnSubmit="HandleAsync" Enhance class="form">
@@ -45,25 +45,25 @@ else if (Model is not null)
         @if (_preset.Inputs != PresetInputs.None)
         {
             <fieldset>
-                <legend>Settings</legend>
+                <legend>@T("Settings")</legend>
 
                 @if (_preset.Asks(PresetInputs.PathPrefix))
                 {
-                    <FormField Id="path" Label="Path" Help="@PathHelp" For="() => Model.PathPrefix">
+                    <FormField Id="path" Label="@T("Path")" Help="@PathHelp" For="() => Model.PathPrefix">
                         <InputText id="path" aria-describedby="path-help" @bind-Value="Model.PathPrefix" autocomplete="off" />
                     </FormField>
                 }
 
                 @if (_preset.Asks(PresetInputs.AllowedIps))
                 {
-                    <FormField Id="ips" Label="Your IP addresses" Help="One per line, e.g. 203.0.113.7 or a range such as 203.0.113.0/24 or 2001:db8::/48. Only these may open the path." For="() => Model.AllowedIps">
+                    <FormField Id="ips" Label="@T("Your IP addresses")" Help="@T("One per line, e.g. 203.0.113.7 or a range such as 203.0.113.0/24 or 2001:db8::/48. Only these may open the path.")" For="() => Model.AllowedIps">
                         <InputTextArea id="ips" aria-describedby="ips-help" @bind-Value="Model.AllowedIps" rows="4" />
                     </FormField>
                 }
 
                 @if (_preset.Asks(PresetInputs.PermitLimit))
                 {
-                    <FormField Id="limit" Label="Requests per minute" Help="Per client IP. Clients that send more get 429 until they slow down." For="() => Model.PermitLimit">
+                    <FormField Id="limit" Label="@T("Requests per minute")" Help="@T("Per client IP. Clients that send more get 429 until they slow down.")" For="() => Model.PermitLimit">
                         <InputNumber id="limit" aria-describedby="limit-help" @bind-Value="Model.PermitLimit" min="1" />
                     </FormField>
                 }
@@ -72,8 +72,8 @@ else if (Model is not null)
                 {
                     <div class="field checkbox-field">
                         <InputCheckbox id="detection-only" @bind-Value="Model.DetectionOnly" aria-describedby="detection-only-help" />
-                        <label for="detection-only">Only log at first</label>
-                        <p class="field-help" id="detection-only-help">Try it without risk: matches are logged as "would block" and the requests continue. Switch it off later in the editor.</p>
+                        <label for="detection-only">@T("Only log at first")</label>
+                        <p class="field-help" id="detection-only-help">@T("Try it without risk: matches are logged as \"would block\" and the requests continue. Switch it off later in the editor.")</p>
                     </div>
                 }
 
@@ -82,17 +82,17 @@ else if (Model is not null)
                     <RouteScopeEditor Prefix="Model" Choices="Model.RouteChoices" />
                 }
 
-                <button type="submit" name="Model.Command" value="preview" class="button button-secondary">Update preview</button>
+                <button type="submit" name="Model.Command" value="preview" class="button button-secondary">@T("Update preview")</button>
             </fieldset>
         }
 
         <section class="preview" aria-labelledby="preview-heading" aria-live="polite">
-            <h2 id="preview-heading">Preview: what will change</h2>
+            <h2 id="preview-heading">@T("Preview: what will change")</h2>
 
             @if (_preview is null || _preview.InputProblems.Count > 0)
             {
                 <div class="alert alert-warning" role="status">
-                    <strong>Complete the settings above, then press "Update preview".</strong>
+                    <strong>@T("Complete the settings above, then press \"Update preview\".")</strong>
                     @if (_preview is not null)
                     {
                         <ul>
@@ -106,7 +106,7 @@ else if (Model is not null)
             }
             else if (_preview.Changes.Count == 0)
             {
-                <div class="alert alert-ok" role="status">Nothing to change: this preset is already in place.</div>
+                <div class="alert alert-ok" role="status">@T("Nothing to change: this preset is already in place.")</div>
             }
             else
             {
@@ -115,18 +115,18 @@ else if (Model is not null)
                 @if (_preview.ValidationErrors.Count > 0)
                 {
                     <div class="alert alert-danger" role="alert">
-                        <strong>This preset cannot be applied to the current configuration:</strong>
+                        <strong>@T("This preset cannot be applied to the current configuration:")</strong>
                         <ul>
                             @foreach (var error in _preview.ValidationErrors)
                             {
-                                <li>@error</li>
+                                <li>@Message(error)</li>
                             }
                         </ul>
                     </div>
                 }
                 else
                 {
-                    <p class="muted">Applying creates version @(_active.Version + 1) and takes effect immediately, without a restart. You can roll it back on the <a href="history">history page</a>.</p>
+                    <p class="muted">@TM("Applying creates version {0} and takes effect immediately, without a restart. You can roll it back on the <a href=\"history\">history page</a>.", _active.Version + 1)</p>
                 }
             }
         </section>
@@ -134,9 +134,9 @@ else if (Model is not null)
         <div class="actions">
             @if (_preview?.CanApply == true)
             {
-                <button type="submit" name="Model.Command" value="apply" class="button">Apply these changes</button>
+                <button type="submit" name="Model.Command" value="apply" class="button">@T("Apply these changes")</button>
             }
-            <a class="button button-secondary" href="library">Cancel</a>
+            <a class="button button-secondary" href="library">@T("Cancel")</a>
         </div>
     </EditForm>
 }
@@ -160,8 +160,8 @@ else if (Model is not null)
     private PresetFormModel? Model { get; set; }
 
     private string PathHelp => _preset?.Id == "protect-login"
-        ? "Where the login form posts to, e.g. /login or /account/signin. Paths below it count too."
-        : "The path to protect, e.g. /admin. Paths below it are protected too.";
+        ? Text.T("Where the login form posts to, e.g. /login or /account/signin. Paths below it count too.")
+        : Text.T("The path to protect, e.g. /admin. Paths below it are protected too.");
 
     protected override async Task OnInitializedAsync()
     {
@@ -194,7 +194,7 @@ else if (Model is not null)
             {
                 // The settings were edited after the preview, or someone else changed the configuration: never
                 // save something the user has not seen.
-                _notice = "The settings or the running configuration changed since the preview. Check the updated preview below, then apply again.";
+                _notice = Text.N("The settings or the running configuration changed since the preview. Check the updated preview below, then apply again.");
             }
             else
             {

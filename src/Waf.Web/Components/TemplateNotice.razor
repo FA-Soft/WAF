@@ -2,9 +2,9 @@
 @if (!string.IsNullOrEmpty(Title))
 {
     <div class="alert alert-info" role="status">
-        <strong>Started from the template "@Title".</strong>
-        Check every field and replace the example values with your own: nothing is saved until you press the button at the bottom.
-        <a href="library">Other templates</a>
+        <strong>@T("Started from the template \"{0}\".", T(Title))</strong>
+        @T("Check every field and replace the example values with your own: nothing is saved until you press the button at the bottom.")
+        <a href="library">@T("Other templates")</a>
     </div>
 }
 

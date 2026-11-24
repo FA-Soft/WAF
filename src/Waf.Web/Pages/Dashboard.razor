@@ -6,9 +6,9 @@
 @inject ConfigurationStore Store
 @inject IRequestLogMonitor RequestLog
 
-<PageTitle>Dashboard · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Dashboard") · @ProductInfo.Name</PageTitle>
 
-<h1>Dashboard</h1>
+<h1>@T("Dashboard")</h1>
 
 <TwoFactorNotice />
 <CertificateNotice />
@@ -16,30 +16,38 @@
 @foreach (var lost in Addresses.Statuses.Where(s => !s.Available))
 {
     <div class="alert alert-warning" role="status">
-        <strong>Target '@lost.TargetName' is not found</strong> (MAC address @lost.MacAddress@(lost.LastSeen is { } seen ? $", last seen {seen.UtcDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)}Z" : string.Empty)): its routes get no traffic until it is back. <a href="targets">Targets</a>
+        @if (lost.LastSeen is { } seen)
+        {
+            @TM("<strong>Target '{0}' is not found</strong> (MAC address {1}, last seen {2}Z): its routes get no traffic until it is back.", lost.TargetName, lost.MacAddress, seen.UtcDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture))
+        }
+        else
+        {
+            @TM("<strong>Target '{0}' is not found</strong> (MAC address {1}): its routes get no traffic until it is back.", lost.TargetName, lost.MacAddress)
+        }
+        <a href="targets">@T("Targets")</a>
     </div>
 }
 
 @foreach (var failover in Failover.Statuses)
 {
     <div class="alert alert-warning" role="status">
-        <strong>Route '@failover.RouteName' is on failover @failover.Failover</strong> since @Describe.Time(failover.Since): no primary backend is healthy, so its traffic goes to @failover.Destinations. It returns once a primary is healthy again. <a href="routes">Routes</a>
+        @TM("<strong>Route '{0}' is on failover {1}</strong> since {2}: no primary backend is healthy, so its traffic goes to {3}. It returns once a primary is healthy again.", failover.RouteName, failover.Failover, Describe.Time(failover.Since), failover.Destinations) <a href="routes">@T("Routes")</a>
     </div>
 }
 
 @if (Engines.Current is null)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>The firewall is not running: public traffic is refused (503).</strong>
+        <strong>@T("The firewall is not running: public traffic is refused (503).")</strong>
         <p>@Engines.UnavailableReason</p>
     </div>
 }
 else if (Engines.Current.DetectionOnly)
 {
     <div class="alert alert-warning" role="status">
-        <strong>Detection only.</strong> Requests that would be blocked are logged but let through.
-        <HelpTip Title="Detection only">
-            <p>Use this mode to try out rules without risk. Switch it off in the settings once the logs show no unwanted blocks.</p>
+        <strong>@T("Detection only.")</strong> @T("Requests that would be blocked are logged but let through.")
+        <HelpTip Title="@T("Detection only")">
+            <p>@T("Use this mode to try out rules without risk. Switch it off in the settings once the logs show no unwanted blocks.")</p>
         </HelpTip>
     </div>
 }
@@ -48,86 +56,86 @@ else if (Engines.Current.DetectionOnly)
 
 @if (_active is null)
 {
-    <p>No configuration has been activated yet.</p>
+    <p>@T("No configuration has been activated yet.")</p>
 }
 else
 {
     var configuration = _active.Configuration;
     var detections = Describe.EnabledDetections(configuration.Settings.AttackDetection);
 
-    <section class="cards" aria-label="Summary">
+    <section class="cards" aria-label="@T("Summary")">
         <div class="card">
-            <h2>Configuration</h2>
-            <p class="metric">Version @_active.Version</p>
+            <h2>@T("Configuration")</h2>
+            <p class="metric">@T("Version {0}", _active.Version)</p>
             <p class="muted">
-                Activated @_active.CreatedAtUtc.ToString("u", System.Globalization.CultureInfo.InvariantCulture) by @_active.Author
+                @T("Activated {0} by {1}", _active.CreatedAtUtc.ToString("u", System.Globalization.CultureInfo.InvariantCulture), Message(_active.Author))
             </p>
             @if (!string.IsNullOrEmpty(_active.Comment))
             {
-                <p>@_active.Comment</p>
+                <p>@Message(_active.Comment)</p>
             }
-            <a href="history">View history</a>
+            <a href="history">@T("View history")</a>
         </div>
         <div class="card">
             <h2>
-                Routes
-                <HelpTip Title="Routes"><p>A route decides which backend receives a request, based on host name, path and method. Requests that match no route get 404.</p></HelpTip>
+                @T("Routes")
+                <HelpTip Title="@T("Routes")"><p>@T("A route decides which backend receives a request, based on host name, path and method. Requests that match no route get 404.")</p></HelpTip>
             </h2>
             <p class="metric">@configuration.Routes.Count</p>
         </div>
         <div class="card">
             <h2>
-                Rules
-                <HelpTip Title="Rules"><p>Rules allow or block requests, for example by IP address or path. They run in priority order; the first Allow or Block decides.</p></HelpTip>
+                @T("Rules")
+                <HelpTip Title="@T("Rules")"><p>@T("Rules allow or block requests, for example by IP address or path. They run in priority order; the first Allow or Block decides.")</p></HelpTip>
             </h2>
             <p class="metric">@configuration.Rules.Count(r => r.Enabled)</p>
-            <p class="muted">@configuration.Rules.Count(r => !r.Enabled) disabled</p>
+            <p class="muted">@T("{0} disabled", configuration.Rules.Count(r => !r.Enabled))</p>
         </div>
         <div class="card">
             <h2>
-                Attack detection
-                <HelpTip Title="Attack detection"><p>Built-in checks for common attacks in the path, query string, headers and (optionally) the body.</p></HelpTip>
+                @T("Attack detection")
+                <HelpTip Title="@T("Attack detection")"><p>@T("Built-in checks for common attacks in the path, query string, headers and (optionally) the body.")</p></HelpTip>
             </h2>
-            <p class="metric">@(detections.Count == 0 ? "Off" : $"{detections.Count} of 5")</p>
+            <p class="metric">@(detections.Count == 0 ? Text.T("Off") : Text.T("{0} of 5", detections.Count))</p>
             <p class="muted">@string.Join(", ", detections)</p>
         </div>
         <div class="card">
             <h2>
-                Request log
-                <HelpTip Title="Request log"><p>Every public request is recorded in events.db, in the background. If the disk cannot keep up, entries are dropped rather than slowing down requests; the count shows here.</p></HelpTip>
+                @T("Request log")
+                <HelpTip Title="@T("Request log")"><p>@T("Every public request is recorded in events.db, in the background. If the disk cannot keep up, entries are dropped rather than slowing down requests; the count shows here.")</p></HelpTip>
             </h2>
             @if (RequestLog.Statistics is { } log)
             {
                 <p class="metric">@log.Written.ToString("N0", CultureInfo.CurrentCulture)</p>
-                <p class="muted">written since start@(log.Queued > 0 ? $", {log.Queued:N0} waiting" : string.Empty)</p>
+                <p class="muted">@(log.Queued > 0 ? T("written since start, {0} waiting", log.Queued.ToString("N0", CultureInfo.CurrentCulture)) : T("written since start"))</p>
                 @if (log.Dropped > 0)
                 {
                     <p><span class="badge badge-warning">@log.Dropped.ToString("N0", CultureInfo.CurrentCulture) dropped</span></p>
                 }
                 @if (log.LastError is not null)
                 {
-                    <p class="field-error">Writing fails: @log.LastError</p>
+                    <p class="field-error">@T("Writing fails: {0}", log.LastError)</p>
                 }
-                <p><a href="logs">View the log</a> · <a href="logs/settings">Retention</a></p>
+                <p>@TM("<a href=\"logs\">View the log</a> · <a href=\"logs/settings\">Retention</a>")</p>
             }
             else
             {
-                <p class="metric">Off</p>
-                <p class="muted">Switched off in the host settings (Gateway:EventLog:Enabled).</p>
+                <p class="metric">@T("Off")</p>
+                <p class="muted">@T("Switched off in the host settings (Gateway:EventLog:Enabled).")</p>
             }
         </div>
     </section>
 
     <section aria-labelledby="routes-heading">
-        <h2 id="routes-heading">Routes <a class="heading-link" href="routes">Manage routes</a></h2>
+        <h2 id="routes-heading">@T("Routes") <a class="heading-link" href="routes">@T("Manage routes")</a></h2>
         @if (configuration.Routes.Count == 0)
         {
-            <p>No routes yet: every public request gets 404.</p>
+            <p>@T("No routes yet: every public request gets 404.")</p>
         }
         else
         {
             <table>
-                <thead><tr><th scope="col">Name</th><th scope="col">Handles</th><th scope="col">Forwards to</th></tr></thead>
+                <thead><tr><th scope="col">@T("Name")</th><th scope="col">@T("Handles")</th><th scope="col">@T("Forwards to")</th></tr></thead>
                 <tbody>
                     @foreach (var route in configuration.Routes)
                     {
@@ -146,14 +154,14 @@ else
     {
         <section aria-labelledby="backend-errors-heading">
             <h2 id="backend-errors-heading">
-                Backend errors since the start
-                <HelpTip Title="Backend errors">
-                    <p>Requests that got an error because no backend answered: <strong>no backend</strong> (503, none was healthy), <strong>backend error</strong> (502, the connection failed or the answer was invalid) and <strong>time-out</strong> (504). The request log has each request, with the backend that was tried.</p>
+                @T("Backend errors since the start")
+                <HelpTip Title="@T("Backend errors")">
+                    <p>@TM("Requests that got an error because no backend answered: <strong>no backend</strong> (503, none was healthy), <strong>backend error</strong> (502, the connection failed or the answer was invalid) and <strong>time-out</strong> (504). The request log has each request, with the backend that was tried.")</p>
                 </HelpTip>
-                <a class="heading-link" href="logs?show=Errors">View in the request log</a>
+                <a class="heading-link" href="logs?show=Errors">@T("View in the request log")</a>
             </h2>
             <table>
-                <thead><tr><th scope="col">Route</th><th scope="col">No backend (503)</th><th scope="col">Backend error (502)</th><th scope="col">Time-out (504)</th><th scope="col">Last</th></tr></thead>
+                <thead><tr><th scope="col">@T("Route")</th><th scope="col">@T("No backend (503)")</th><th scope="col">@T("Backend error (502)")</th><th scope="col">@T("Time-out (504)")</th><th scope="col">@T("Last")</th></tr></thead>
                 <tbody>
                     @foreach (var route in errors)
                     {
@@ -171,15 +179,15 @@ else
     }
 
     <section aria-labelledby="rules-heading">
-        <h2 id="rules-heading">Rules <a class="heading-link" href="rules">Manage rules</a></h2>
+        <h2 id="rules-heading">@T("Rules") <a class="heading-link" href="rules">@T("Manage rules")</a></h2>
         @if (configuration.Rules.Count == 0)
         {
-            <p>No rules yet. Attack detection and rate limits still apply.</p>
+            <p>@T("No rules yet. Attack detection and rate limits still apply.")</p>
         }
         else
         {
             <table>
-                <thead><tr><th scope="col">Priority</th><th scope="col">Name</th><th scope="col">When</th><th scope="col">Then</th></tr></thead>
+                <thead><tr><th scope="col">@T("Priority")</th><th scope="col">@T("Name")</th><th scope="col">@T("When")</th><th scope="col">@T("Then")</th></tr></thead>
                 <tbody>
                     @foreach (var rule in configuration.Rules.OrderBy(r => r.Priority).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
                     {
@@ -198,7 +206,7 @@ else
     @if (configuration.RateLimits.Count > 0)
     {
         <section aria-labelledby="limits-heading">
-            <h2 id="limits-heading">Rate limits <a class="heading-link" href="rate-limits">Manage rate limits</a></h2>
+            <h2 id="limits-heading">@T("Rate limits") <a class="heading-link" href="rate-limits">@T("Manage rate limits")</a></h2>
             <ul>
                 @foreach (var limit in configuration.RateLimits.Where(l => l.Enabled))
                 {

@@ -2,32 +2,32 @@
 @inject ITargetAddressMonitor Addresses
 @inject IGatewayConfigurationService Configurations
 
-<PageTitle>Targets · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Targets") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Targets
-    <HelpTip Title="Targets">
-        <p>A target is a machine behind the gateway, with a name and labelled ports: for example <em>nas</em> at 192.168.1.20, with <em>web</em> on port 5000 and <em>admin</em> on port 5001. Routes can forward to "nas · web" instead of an address.</p>
-        <p>When the machine gets another address, change it here once: every route that uses the target follows at once.</p>
+    @T("Targets")
+    <HelpTip Title="@T("Targets")">
+        <p>@TM("A target is a machine behind the gateway, with a name and labelled ports: for example <em>nas</em> at 192.168.1.20, with <em>web</em> on port 5000 and <em>admin</em> on port 5001. Routes can forward to \"nas · web\" instead of an address.")</p>
+        <p>@T("When the machine gets another address, change it here once: every route that uses the target follows at once.")</p>
     </HelpTip>
 </h1>
 
 @if (!string.IsNullOrEmpty(Saved))
 {
-    <div class="alert alert-ok" role="status">@Saved</div>
+    <div class="alert alert-ok" role="status">@Message(Saved)</div>
 }
 
-<p class="actions"><a class="button" href="targets/new">Add a target</a></p>
+<p class="actions">@TM("<a class=\"button\" href=\"targets/new\">Add a target</a>")</p>
 
 @if (_active is not null && _active.Configuration.Targets.Count == 0)
 {
-    <p>No targets yet. Routes forward to addresses such as http://10.0.0.5:8080. Add a target to give a machine and its ports a name that routes can use.</p>
+    <p>@T("No targets yet. Routes forward to addresses such as http://10.0.0.5:8080. Add a target to give a machine and its ports a name that routes can use.")</p>
 }
 else if (_active is not null)
 {
     <table>
         <thead>
-            <tr><th scope="col">Name</th><th scope="col">Address</th><th scope="col">Ports</th><th scope="col">Used by</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+            <tr><th scope="col">@T("Name")</th><th scope="col">@T("Address")</th><th scope="col">@T("Ports")</th><th scope="col">@T("Used by")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr>
         </thead>
         <tbody>
             @foreach (var target in _active.Configuration.Targets)
@@ -50,11 +50,11 @@ else if (_active is not null)
                             }
                             else if (status.Available)
                             {
-                                <span class="muted">looking for it…</span>
+                                <span class="muted">@T("looking for it…")</span>
                             }
                             else
                             {
-                                <span class="badge badge-danger">Not found: no traffic</span>
+                                <span class="badge badge-danger">@T("Not found: no traffic")</span>
                             }
                             <div class="muted">MAC @status.MacAddress · @Seen(status)</div>
                         }
@@ -71,10 +71,10 @@ else if (_active is not null)
                             }
                         </ul>
                     </td>
-                    <td>@(routes.Count == 0 ? "No routes" : string.Join(", ", routes))</td>
+                    <td>@(routes.Count == 0 ? Text.T("No routes") : string.Join(", ", routes))</td>
                     <td><div class="row-actions">
-                        <a href="@($"targets/{Uri.EscapeDataString(target.Name)}/edit")">Edit</a>
-                        <a href="@($"targets/{Uri.EscapeDataString(target.Name)}/delete")">Delete</a>
+                        <a href="@($"targets/{Uri.EscapeDataString(target.Name)}/edit")">@T("Edit")</a>
+                        <a href="@($"targets/{Uri.EscapeDataString(target.Name)}/delete")">@T("Delete")</a>
                     </div></td>
                 </tr>
             }
@@ -101,5 +101,5 @@ else if (_active is not null)
 
     /// <summary>"seen 2026-11-24 10:42:07Z" or "not seen yet".</summary>
     private static string Seen(TargetAddressStatus status) =>
-        status.LastSeen is { } seen ? $"seen {seen.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)}Z" : "not seen yet";
+        status.LastSeen is { } seen ? T("seen {0}Z", seen.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)) : T("not seen yet");
 }

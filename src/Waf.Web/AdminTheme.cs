@@ -28,7 +28,7 @@ public static class AdminTheme
     public const string Path = "/account/theme";
 
     /// <summary>The choices, in the order the switch shows them.</summary>
-    public static readonly IReadOnlyList<(string Value, string Label)> Choices = [(System, "System"), (Light, "Light"), (Dark, "Dark")];
+    public static readonly IReadOnlyList<(string Value, string Label)> Choices = [(System, Text.N("System")), (Light, Text.N("Light")), (Dark, Text.N("Dark"))];
 
     /// <summary>The user's theme: <see cref="Light"/>, <see cref="Dark"/> or <see cref="System"/>.</summary>
     public static string Of(ClaimsPrincipal? user) =>

@@ -5,25 +5,25 @@
 @inject NavigationManager Navigation
 @inject ITargetAddressMonitor Addresses
 
-<PageTitle>@(IsNew ? "Add a target" : $"Edit target {TargetName}") · @ProductInfo.Name</PageTitle>
+<PageTitle>@(IsNew ? Text.T("Add a target") : Text.T("Edit target {0}", TargetName)) · @ProductInfo.Name</PageTitle>
 
-<p><a href="targets">← Targets</a></p>
-<h1>@(IsNew ? "Add a target" : $"Edit target '{TargetName}'")</h1>
+<p><a href="targets">← @T("Targets")</a></p>
+<h1>@(IsNew ? Text.T("Add a target") : Text.T("Edit target '{0}'", TargetName))</h1>
 
 @if (_notFound)
 {
-    <div class="alert alert-danger" role="alert">Target '@TargetName' does not exist (any more). <a href="targets">Back to the targets</a>.</div>
+    <div class="alert alert-danger" role="alert">@T("Target '{0}' does not exist (any more).", TargetName) <a href="targets">@T("Back to the targets")</a>.</div>
 }
 else if (Model is not null)
 {
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert" tabindex="-1">
-            <strong>The target was not saved.</strong> The running configuration is unchanged.
+            <strong>@T("The target was not saved.")</strong> @T("The running configuration is unchanged.")
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
@@ -31,53 +31,53 @@ else if (Model is not null)
 
     <EditForm Model="Model" FormName="target-edit" OnSubmit="HandleAsync" Enhance class="form">
         <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-danger validation-summary" />
+        <ValidationList Class="alert alert-danger validation-summary" />
         <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
         <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
         <input type="hidden" name="Model.OriginalName" value="@Model.OriginalName" />
 
         <fieldset>
-            <legend>The machine</legend>
-            <FormField Id="name" Label="Name" Help="A short, unique name, e.g. nas or iis. Renaming it renames it in its routes too." For="() => Model.Name">
+            <legend>@T("The machine")</legend>
+            <FormField Id="name" Label="@T("Name")" Help="@T("A short, unique name, e.g. nas or iis. Renaming it renames it in its routes too.")" For="() => Model.Name">
                 <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
             </FormField>
-            <FormField Id="address" Label="Address" Help="IP address or host name, e.g. 192.168.1.20 or nas.local. With a MAC address: optional, the address to use until the MAC address is found." For="() => Model.Address">
+            <FormField Id="address" Label="@T("Address")" Help="@T("IP address or host name, e.g. 192.168.1.20 or nas.local. With a MAC address: optional, the address to use until the MAC address is found.")" For="() => Model.Address">
                 <InputText id="address" aria-describedby="address-help" @bind-Value="Model.Address" autocomplete="off" />
             </FormField>
-            <FormField Id="description" Label="Description" Optional Help="A note for yourself, e.g. where the machine is." For="() => Model.Description">
+            <FormField Id="description" Label="@T("Description")" Optional Help="@T("A note for yourself, e.g. where the machine is.")" For="() => Model.Description">
                 <InputText id="description" aria-describedby="description-help" @bind-Value="Model.Description" autocomplete="off" />
             </FormField>
         </fieldset>
 
         <fieldset>
             <legend>
-                Changing address (DHCP)
-                <HelpTip Title="MAC address">
-                    <p>For a device that gets its IP address from DHCP, which can change: enter its MAC address, and the gateway looks up its current IP address at the interval below. Its routes follow it, without a new configuration version.</p>
-                    <p>Only for devices on the gateway's own network (not behind a router or VPN). Devices with a private (random) Wi-Fi address need that turned off for this network. When the device is not found for 10 minutes, its routes get no traffic until it is back.</p>
-                    <p>Often simpler: a fixed address (DHCP reservation) in your router, or the device's host name.</p>
+                @T("Changing address (DHCP)")
+                <HelpTip Title="@T("MAC address")">
+                    <p>@T("For a device that gets its IP address from DHCP, which can change: enter its MAC address, and the gateway looks up its current IP address at the interval below. Its routes follow it, without a new configuration version.")</p>
+                    <p>@T("Only for devices on the gateway's own network (not behind a router or VPN). Devices with a private (random) Wi-Fi address need that turned off for this network. When the device is not found for 10 minutes, its routes get no traffic until it is back.")</p>
+                    <p>@T("Often simpler: a fixed address (DHCP reservation) in your router, or the device's host name.")</p>
                 </HelpTip>
             </legend>
-            <FormField Id="mac" Label="MAC address" Optional Help="e.g. aa:bb:cc:dd:ee:ff. Empty: the address above is fixed." For="() => Model.MacAddress">
+            <FormField Id="mac" Label="@T("MAC address")" Optional Help="@T("e.g. aa:bb:cc:dd:ee:ff. Empty: the address above is fixed.")" For="() => Model.MacAddress">
                 <div class="inline-controls">
                     <InputText id="mac" aria-describedby="mac-help" @bind-Value="Model.MacAddress" autocomplete="off" />
-                    <button type="submit" name="Model.Command" value="lookup-mac" class="button button-secondary" formnovalidate>Look up MAC address</button>
+                    <button type="submit" name="Model.Command" value="lookup-mac" class="button button-secondary" formnovalidate>@T("Look up MAC address")</button>
                 </div>
             </FormField>
             @if (!string.IsNullOrEmpty(Model.LookUpResult))
             {
                 <p class="field-help" role="status">@Model.LookUpResult</p>
             }
-            <FormField Id="interval" Label="Look it up every (seconds)" Optional Help="10 to 3600; empty: every 60 seconds." For="() => Model.ResolveIntervalSeconds">
+            <FormField Id="interval" Label="@T("Look it up every (seconds)")" Optional Help="@T("10 to 3600; empty: every 60 seconds.")" For="() => Model.ResolveIntervalSeconds">
                 <InputNumber id="interval" aria-describedby="interval-help" @bind-Value="Model.ResolveIntervalSeconds" min="10" max="3600" />
             </FormField>
         </fieldset>
 
         <fieldset>
             <legend>
-                Ports
-                <HelpTip Title="Ports">
-                    <p>Each port gets a label, unique for this machine, such as <em>web</em> or <em>admin</em>. Routes use the label (nas · web), so a changed port number is changed here once.</p>
+                @T("Ports")
+                <HelpTip Title="@T("Ports")">
+                    <p>@TM("Each port gets a label, unique for this machine, such as <em>web</em> or <em>admin</em>. Routes use the label (nas · web), so a changed port number is changed here once.")</p>
                 </HelpTip>
             </legend>
 
@@ -88,42 +88,42 @@ else if (Model is not null)
                 var id = $"port-{i}";
                 <div class="condition" role="group" aria-label="@($"Port {i + 1}")">
                     <div class="condition-head">
-                        <strong>Port @(i + 1)</strong>
+                        <strong>@T("Port {0}", i + 1)</strong>
                         @if (Model.Ports.Count > 1 || !port.IsEmpty)
                         {
-                            <button type="submit" class="link-button" name="Model.Command" value="@($"remove-port-{i}")" formnovalidate>Remove</button>
+                            <button type="submit" class="link-button" name="Model.Command" value="@($"remove-port-{i}")" formnovalidate>@T("Remove")</button>
                         }
                     </div>
                     <input type="hidden" name="@($"{name}.OriginalName")" value="@port.OriginalName" />
                     <div class="field-row">
                         <div class="field">
-                            <label for="@($"{id}-name")">Label</label>
-                            <input id="@($"{id}-name")" name="@($"{name}.Name")" value="@port.Name" placeholder="e.g. web" autocomplete="off" />
+                            <label for="@($"{id}-name")">@T("Label")</label>
+                            <input id="@($"{id}-name")" name="@($"{name}.Name")" value="@port.Name" placeholder="@T("e.g. web")" autocomplete="off" />
                         </div>
                         <div class="field">
-                            <label for="@($"{id}-port")">Port</label>
+                            <label for="@($"{id}-port")">@T("Port")</label>
                             <input id="@($"{id}-port")" name="@($"{name}.Port")" type="number" min="1" max="65535" value="@port.Port" />
                         </div>
                     </div>
                     <div class="checkbox-row">
-                        <label><input type="checkbox" name="@($"{name}.Https")" value="true" checked="@port.Https" /> HTTPS (the machine answers with TLS on this port)</label>
+                        <label><input type="checkbox" name="@($"{name}.Https")" value="true" checked="@port.Https" /> @T("HTTPS (the machine answers with TLS on this port)")</label>
                     </div>
                 </div>
             }
 
-            <button type="submit" class="button button-secondary" name="Model.Command" value="add-port" formnovalidate>Add another port</button>
+            <button type="submit" class="button button-secondary" name="Model.Command" value="add-port" formnovalidate>@T("Add another port")</button>
         </fieldset>
 
         @if (!Model.IsNew && _usedBy.Count > 0)
         {
-            <p class="muted">Used by: @string.Join(", ", _usedBy). Saving changes where these routes forward to, at once.</p>
+            <p class="muted">@T("Used by: {0}. Saving changes where these routes forward to, at once.", string.Join(", ", _usedBy))</p>
         }
 
         <div class="actions">
-            <button type="submit" class="button">@(Model.IsNew ? "Add target" : "Save changes")</button>
-            <a class="button button-secondary" href="targets">Cancel</a>
+            <button type="submit" class="button">@(Model.IsNew ? Text.T("Add target") : Text.T("Save changes"))</button>
+            <a class="button button-secondary" href="targets">@T("Cancel")</a>
         </div>
-        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+        <p class="muted">@T("Saving creates a new configuration version and takes effect immediately, without a restart.")</p>
     </EditForm>
 }
 
@@ -207,19 +207,19 @@ else if (Model is not null)
         var address = model.Address?.Trim();
         if (string.IsNullOrEmpty(address) || !FASoft.Waf.Core.Net.StrictIpAddress.TryParse(address, out _))
         {
-            model.LookUpResult = "Enter the device's current IP address above first (not a host name), then look up its MAC address.";
+            model.LookUpResult = Text.T("Enter the device's current IP address above first (not a host name), then look up its MAC address.");
             return;
         }
 
         var mac = await Addresses.LookUpMacAddressAsync(address, CancellationToken.None);
         if (mac is null)
         {
-            model.LookUpResult = $"{address} did not answer, or is not on the gateway's own network: no MAC address found.";
+            model.LookUpResult = Text.T("{0} did not answer, or is not on the gateway's own network: no MAC address found.", address);
             return;
         }
 
         model.MacAddress = mac;
-        model.LookUpResult = $"{address} answers with MAC address {mac}. Save to look it up from now on.";
+        model.LookUpResult = Text.T("{0} answers with MAC address {1}. Save to look it up from now on.", address, mac);
     }
 
     private async Task SaveAsync()
@@ -228,7 +228,7 @@ else if (Model is not null)
         var active = await Configurations.GetActiveAsync(CancellationToken.None);
         if (active is null)
         {
-            _errors = ["No configuration is active yet."];
+            _errors = [Text.N("No configuration is active yet.")];
             return;
         }
 

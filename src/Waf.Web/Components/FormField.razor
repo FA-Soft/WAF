@@ -13,7 +13,7 @@
         @Label
         @if (Optional)
         {
-            <span class="field-optional">(optional)</span>
+            <span class="field-optional">@T("(optional)")</span>
         }
     </label>
     @if (Help is not null)
@@ -21,13 +21,20 @@
         <p class="field-help" id="@HelpId">@Help</p>
     }
     @ChildContent
-    @if (For is not null)
+    @if (For is not null && EditContext is not null)
     {
-        <ValidationMessage For="For" class="field-error" />
+        @* The messages in the language of the UI (ValidationMessage would show the attributes' English texts). *@
+        foreach (var message in EditContext.GetValidationMessages(FieldIdentifier.Create(For)))
+        {
+            <div class="field-error validation-message">@Message(message)</div>
+        }
     }
 </div>
 
 @code {
+    [CascadingParameter]
+    private EditContext? EditContext { get; set; }
+
     /// <summary>The id of the input inside; the label points to it.</summary>
     [Parameter, EditorRequired]
     public string Id { get; set; } = string.Empty;

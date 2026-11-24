@@ -4,14 +4,14 @@
 @inject NavigationManager Navigation
 @inject RequestLogReader LogReader
 
-<PageTitle>@(RuleName is null ? "Add a rule" : $"Edit rule {RuleName}") · @ProductInfo.Name</PageTitle>
+<PageTitle>@(RuleName is null ? Text.T("Add a rule") : Text.T("Edit rule {0}", RuleName)) · @ProductInfo.Name</PageTitle>
 
-<p><a href="rules">← Rules</a></p>
-<h1>@(RuleName is null ? "Add a rule" : $"Edit rule '{RuleName}'")</h1>
+<p><a href="rules">← @T("Rules")</a></p>
+<h1>@(RuleName is null ? Text.T("Add a rule") : Text.T("Edit rule '{0}'", RuleName))</h1>
 
 @if (_notFound)
 {
-    <div class="alert alert-danger" role="alert">Rule '@RuleName' does not exist (any more). <a href="rules">Back to the rules</a>.</div>
+    <div class="alert alert-danger" role="alert">@T("Rule '{0}' does not exist (any more).", RuleName) <a href="rules">@T("Back to the rules")</a>.</div>
 }
 else if (Model is not null)
 {
@@ -21,11 +21,11 @@ else if (Model is not null)
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
-            <strong>The rule was not saved.</strong> The running configuration is unchanged.
+            <strong>@T("The rule was not saved.")</strong> @T("The running configuration is unchanged.")
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
@@ -33,15 +33,15 @@ else if (Model is not null)
 
     <EditForm Model="Model" FormName="rule-edit" OnSubmit="HandleAsync" Enhance class="form">
         <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-danger validation-summary" />
+        <ValidationList Class="alert alert-danger validation-summary" />
         <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
         <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
 
         <fieldset>
-            <legend>Rule</legend>
+            <legend>@T("Rule")</legend>
             @if (Model.IsNew)
             {
-                <FormField Id="name" Label="Name" Help="A short, unique name, e.g. block-admin or office-only." For="() => Model.Name">
+                <FormField Id="name" Label="@T("Name")" Help="@T("A short, unique name, e.g. block-admin or office-only.")" For="() => Model.Name">
                     <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
                 </FormField>
             }
@@ -51,47 +51,47 @@ else if (Model is not null)
                 <input type="hidden" name="Model.Name" value="@Model.Name" />
             }
 
-            <FormField Id="description" Label="Description" Optional Help="Why this rule exists; shown in the list and the logs." For="() => Model.Description">
+            <FormField Id="description" Label="@T("Description")" Optional Help="@T("Why this rule exists; shown in the list and the logs.")" For="() => Model.Description">
                 <InputText id="description" aria-describedby="description-help" @bind-Value="Model.Description" autocomplete="off" />
             </FormField>
 
             <div class="field-row">
-                <FormField Id="rule-action" Label="Then" Help="What happens when all conditions match." For="() => Model.Action">
+                <FormField Id="rule-action" Label="@T("Then")" Help="@T("What happens when all conditions match.")" For="() => Model.Action">
                     <InputSelect id="rule-action" aria-describedby="rule-action-help" @bind-Value="Model.Action">
                         @foreach (var (value, label) in ConditionLabels.Actions)
                         {
-                            <option value="@value">@label</option>
+                            <option value="@value">@T(label)</option>
                         }
                     </InputSelect>
                 </FormField>
 
-                <FormField Id="priority" Label="Priority" Help="Lower numbers run first. The first matching Allow or Block decides." For="() => Model.Priority">
+                <FormField Id="priority" Label="@T("Priority")" Help="@T("Lower numbers run first. The first matching Allow or Block decides.")" For="() => Model.Priority">
                     <InputNumber id="priority" aria-describedby="priority-help" @bind-Value="Model.Priority" min="0" />
                 </FormField>
             </div>
 
             <div class="field checkbox-field">
                 <InputCheckbox id="enabled" @bind-Value="Model.Enabled" />
-                <label for="enabled">Enabled</label>
-                <p class="field-help">A disabled rule is kept but never evaluated.</p>
+                <label for="enabled">@T("Enabled")</label>
+                <p class="field-help">@T("A disabled rule is kept but never evaluated.")</p>
             </div>
 
             <div class="field checkbox-field">
                 <InputCheckbox id="detection-only" @bind-Value="Model.DetectionOnly" aria-describedby="detection-only-help" />
-                <label for="detection-only">Detection only: log instead of block</label>
-                <p class="field-help" id="detection-only-help">Try out a Block rule without risk: matches are logged as "would block" and the request continues.</p>
+                <label for="detection-only">@T("Detection only: log instead of block")</label>
+                <p class="field-help" id="detection-only-help">@T("Try out a Block rule without risk: matches are logged as \"would block\" and the request continues.")</p>
             </div>
 
             <RouteScopeEditor Prefix="Model" Choices="Model.RouteChoices" />
         </fieldset>
 
-        <ConditionListEditor Prefix="Model" Conditions="Model.Conditions" Legend="When all of these match" />
+        <ConditionListEditor Prefix="Model" Conditions="Model.Conditions" Legend="@T("When all of these match")" />
 
         <div class="actions">
-            <button type="submit" class="button">@(Model.IsNew ? "Add rule" : "Save changes")</button>
-            <a class="button button-secondary" href="rules">Cancel</a>
+            <button type="submit" class="button">@(Model.IsNew ? Text.T("Add rule") : Text.T("Save changes"))</button>
+            <a class="button button-secondary" href="rules">@T("Cancel")</a>
         </div>
-        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+        <p class="muted">@T("Saving creates a new configuration version and takes effect immediately, without a restart.")</p>
     </EditForm>
 }
 
@@ -161,8 +161,8 @@ else if (Model is not null)
         if (_logEntry is not null && action == LogAction.Block)
         {
             _logMessage = LogActions.AddToBlockList(Model, _logEntry)
-                ? $"{_logEntry.ClientIp} was added to this IP block list."
-                : $"{_logEntry.ClientIp} is already covered by this list.";
+                ? Text.T("{0} was added to this IP block list.", _logEntry.ClientIp)
+                : Text.T("{0} is already covered by this list.", _logEntry.ClientIp);
         }
     }
 
@@ -187,13 +187,13 @@ else if (Model is not null)
 
         if (model.IsNew && index >= 0)
         {
-            _errors = [$"A rule named '{rule.Name}' already exists. Choose another name."];
+            _errors = [Text.F("A rule named '{0}' already exists. Choose another name.", rule.Name)];
             return;
         }
 
         if (!model.IsNew && index < 0)
         {
-            _errors = [$"Rule '{rule.Name}' no longer exists; it was deleted in the meantime."];
+            _errors = [Text.F("Rule '{0}' no longer exists; it was deleted in the meantime.", rule.Name)];
             return;
         }
 

@@ -2,28 +2,28 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>Rules · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Rules") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Rules
-    <HelpTip Title="Rules">
-        <p>Rules allow or block requests, for example by IP address, path or header. They run in priority order (lowest number first); the first matching Allow or Block rule decides. "Log only" rules just record a match. Requests no rule decides on are allowed, after attack detection and rate limits.</p>
+    @T("Rules")
+    <HelpTip Title="@T("Rules")">
+        <p>@T("Rules allow or block requests, for example by IP address, path or header. They run in priority order (lowest number first); the first matching Allow or Block rule decides. \"Log only\" rules just record a match. Requests no rule decides on are allowed, after attack detection and rate limits.")</p>
     </HelpTip>
 </h1>
 
 @if (!string.IsNullOrEmpty(Saved))
 {
-    <div class="alert alert-ok" role="status">@Saved</div>
+    <div class="alert alert-ok" role="status">@Message(Saved)</div>
 }
 
 @if (_errors.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>The change was not applied.</strong>
+        <strong>@T("The change was not applied.")</strong>
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
@@ -36,44 +36,41 @@
     <section class="card setting" aria-labelledby="detection-only-heading">
         <div>
             <h2 id="detection-only-heading">
-                Detection-only mode
-                <HelpTip Title="Detection-only mode">
-                    <p>When on, nothing is blocked: requests that rules, attack detection or rate limits would block are only logged. Use it to try out a new configuration without risk, then switch it off.</p>
+                @T("Detection-only mode")
+                <HelpTip Title="@T("Detection-only mode")">
+                    <p>@T("When on, nothing is blocked: requests that rules, attack detection or rate limits would block are only logged. Use it to try out a new configuration without risk, then switch it off.")</p>
                 </HelpTip>
             </h2>
             <p>
                 @if (global)
                 {
-                    <span class="badge badge-warning">On</span> <span>Requests that would be blocked are logged but let through.</span>
+                    <span class="badge badge-warning">@T("On")</span> <span>@T("Requests that would be blocked are logged but let through.")</span>
                 }
                 else
                 {
-                    <span class="badge badge-ok">Off</span> <span>Blocks are enforced.</span>
+                    <span class="badge badge-ok">@T("Off")</span> <span>@T("Blocks are enforced.")</span>
                 }
             </p>
         </div>
         <form method="post" @formname="detection-only-toggle" @onsubmit="ToggleDetectionOnlyAsync" data-enhance>
             <AntiforgeryToken />
-            <button type="submit" class="button @(global ? null : "button-secondary")">@(global ? "Switch off: enforce blocks" : "Switch on: only log")</button>
+            <button type="submit" class="button @(global ? null : "button-secondary")">@(global ? T("Switch off: enforce blocks") : T("Switch on: only log"))</button>
         </form>
     </section>
 
     <div class="actions">
-        <a class="button" href="rules/new">Add a rule</a>
-        <a class="button button-secondary" href="rules/new?template=block-ips">New IP block list</a>
-        <a class="button button-secondary" href="rules/new?template=allow-ips">New IP allow list</a>
-        <a class="button button-secondary" href="library#rules">More templates and presets</a>
+        @TM("<a class=\"button\" href=\"rules/new\">Add a rule</a> <a class=\"button button-secondary\" href=\"rules/new?template=block-ips\">New IP block list</a> <a class=\"button button-secondary\" href=\"rules/new?template=allow-ips\">New IP allow list</a> <a class=\"button button-secondary\" href=\"library#rules\">More templates and presets</a>")
     </div>
 
     @if (_active.Configuration.Rules.Count == 0)
     {
-        <p>No rules yet. Attack detection and rate limits still protect your routes.</p>
+        <p>@T("No rules yet. Attack detection and rate limits still protect your routes.")</p>
     }
     else
     {
         <table>
             <thead>
-                <tr><th scope="col">Priority</th><th scope="col">Name</th><th scope="col">When</th><th scope="col">Then</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+                <tr><th scope="col">@T("Priority")</th><th scope="col">@T("Name")</th><th scope="col">@T("When")</th><th scope="col">@T("Then")</th><th scope="col">@T("Status")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr>
             </thead>
             <tbody>
                 @foreach (var rule in _active.Configuration.Rules.OrderBy(r => r.Priority).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
@@ -92,28 +89,28 @@
                             @Describe.Conditions(rule.Conditions)
                             @if (rule.Routes.Count > 0)
                             {
-                                <span class="muted cell-note">Only on route @string.Join(", ", rule.Routes)</span>
+                                <span class="muted cell-note">@Plural(rule.Routes.Count, "Only on route {1}", "Only on routes {1}", string.Join(", ", rule.Routes))</span>
                             }
                         </td>
                         <td>@Describe.Action(rule, global)</td>
                         <td>
                             @if (rule.Enabled)
                             {
-                                <span class="badge badge-ok">Enabled</span>
+                                <span class="badge badge-ok">@T("Enabled")</span>
                             }
                             else
                             {
-                                <span class="badge badge-muted">Disabled</span>
+                                <span class="badge badge-muted">@T("Disabled")</span>
                             }
                         </td>
                         <td>
                             <div class="row-actions">
-                                <a href="@($"rules/{Uri.EscapeDataString(name)}/edit")">Edit</a>
+                                <a href="@($"rules/{Uri.EscapeDataString(name)}/edit")">@T("Edit")</a>
                                 <form method="post" @formname="@($"toggle-rule-{name}")" @onsubmit="() => ToggleRuleAsync(name)" data-enhance>
                                     <AntiforgeryToken />
-                                    <button type="submit" class="link-button">@(rule.Enabled ? "Disable" : "Enable")</button>
+                                    <button type="submit" class="link-button">@(rule.Enabled ? Text.T("Disable") : Text.T("Enable"))</button>
                                 </form>
-                                <a href="@($"rules/{Uri.EscapeDataString(name)}/delete")">Delete</a>
+                                <a href="@($"rules/{Uri.EscapeDataString(name)}/delete")">@T("Delete")</a>
                             </div>
                         </td>
                     </tr>
@@ -125,21 +122,21 @@
     var exclusions = _active.Configuration.Settings.AttackDetection.Exclusions;
     <section aria-labelledby="exclusions-heading" id="exclusions">
         <h2 id="exclusions-heading">
-            Detection exclusions
-            <HelpTip Title="Detection exclusions">
-                <p>Places where attack detection is switched off, to allow a known false positive. Rules and rate limits still apply there. Add one from a blocked request in the <a href="logs?show=Blocked">request log</a>, or directly.</p>
+            @T("Detection exclusions")
+            <HelpTip Title="@T("Detection exclusions")">
+                <p>@TM("Places where attack detection is switched off, to allow a known false positive. Rules and rate limits still apply there. Add one from a blocked request in the <a href=\"logs?show=Blocked\">request log</a>, or directly.")</p>
             </HelpTip>
         </h2>
-        <p><a class="button button-secondary" href="detection/exclusions/new">Add an exclusion</a></p>
+        <p>@TM("<a class=\"button button-secondary\" href=\"detection/exclusions/new\">Add an exclusion</a>")</p>
         @if (exclusions.Count == 0)
         {
-            <p>None: attack detection checks every path.</p>
+            <p>@T("None: attack detection checks every path.")</p>
         }
         else
         {
             <table>
                 <thead>
-                    <tr><th scope="col">Path</th><th scope="col">Checks switched off</th><th scope="col">Routes</th><th scope="col">Reason</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+                    <tr><th scope="col">@T("Path")</th><th scope="col">@T("Checks switched off")</th><th scope="col">@T("Routes")</th><th scope="col">@T("Reason")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr>
                 </thead>
                 <tbody>
                     @for (var i = 0; i < exclusions.Count; i++)
@@ -148,13 +145,13 @@
                         var exclusion = exclusions[i];
                         <tr>
                             <td><code>@exclusion.PathPrefix</code></td>
-                            <td>@(exclusion.Categories.Count == 0 ? "All" : string.Join(", ", exclusion.Categories.Select(LogActions.Label)))</td>
-                            <td>@(exclusion.Routes.Count == 0 ? "All" : string.Join(", ", exclusion.Routes))</td>
+                            <td>@(exclusion.Categories.Count == 0 ? Text.T("All") : string.Join(", ", exclusion.Categories.Select(LogActions.Label)))</td>
+                            <td>@(exclusion.Routes.Count == 0 ? Text.T("All") : string.Join(", ", exclusion.Routes))</td>
                             <td>@exclusion.Reason</td>
                             <td>
                                 <form method="post" @formname="@($"remove-exclusion-{index}")" @onsubmit="() => RemoveExclusionAsync(index, exclusion.PathPrefix)" data-enhance>
                                     <AntiforgeryToken />
-                                    <button type="submit" class="link-button">Remove</button>
+                                    <button type="submit" class="link-button">@T("Remove")</button>
                                 </form>
                             </td>
                         </tr>
@@ -164,7 +161,7 @@
         }
     </section>
 
-    <p class="muted">Rate limits are managed on the <a href="rate-limits">Rate limits</a> page. Use <a href="test-request">Test a request</a> to check what the rules do.</p>
+    <p class="muted">@TM("Rate limits are managed on the <a href=\"rate-limits\">Rate limits</a> page. Use <a href=\"test-request\">Test a request</a> to check what the rules do.")</p>
 }
 
 @code {
@@ -183,7 +180,7 @@
     private Task ToggleDetectionOnlyAsync() => ChangeAsync(configuration =>
     {
         configuration.Settings.DetectionOnly = !configuration.Settings.DetectionOnly;
-        return configuration.Settings.DetectionOnly ? "Detection-only mode switched on." : "Detection-only mode switched off.";
+        return configuration.Settings.DetectionOnly ? Text.N("Detection-only mode switched on.") : Text.N("Detection-only mode switched off.");
     });
 
     private Task ToggleRuleAsync(string name) => ChangeAsync(configuration =>
@@ -208,7 +205,7 @@
         }
 
         exclusions.RemoveAt(index);
-        return $"Detection exclusion for {pathPrefix} removed.";
+        return Text.F("Detection exclusion for {0} removed.", pathPrefix);
     });
 
     /// <summary>Applies <paramref name="change"/> to a copy of the running configuration and activates it.</summary>
@@ -219,7 +216,7 @@
         var description = change(configuration);
         if (description is null)
         {
-            _errors = ["The rule or exclusion no longer exists; the page was out of date."];
+            _errors = [Text.N("The rule or exclusion no longer exists; the page was out of date.")];
             return;
         }
 

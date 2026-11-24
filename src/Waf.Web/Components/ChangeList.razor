@@ -4,7 +4,7 @@
     @foreach (var change in Changes)
     {
         <li class="change">
-            <span class="badge @KindBadge(change.Kind)">@change.Kind</span>
+            <span class="badge @KindBadge(change.Kind)">@KindText(change.Kind)</span>
             <strong>@Describe.ChangeTitle(change)</strong>
             @if (Describe.ChangeNote(change, Before, After) is { Length: > 0 } note)
             {
@@ -14,15 +14,15 @@
             @if (change.Section != ConfigurationSection.Settings)
             {
                 <details class="advanced">
-                    <summary>Show as configuration</summary>
+                    <summary>@T("Show as configuration")</summary>
                     <div class="change-json">
                         @if (change.Before is not null)
                         {
-                            <div><span class="muted">Before</span><pre>@change.Before</pre></div>
+                            <div><span class="muted">@T("Before")</span><pre>@change.Before</pre></div>
                         }
                         @if (change.After is not null)
                         {
-                            <div><span class="muted">After</span><pre>@change.After</pre></div>
+                            <div><span class="muted">@T("After")</span><pre>@change.After</pre></div>
                         }
                     </div>
                 </details>
@@ -42,6 +42,13 @@
     /// <summary>The configuration after the changes.</summary>
     [Parameter, EditorRequired]
     public GatewayConfiguration After { get; set; } = null!;
+
+    private static string KindText(ChangeKind kind) => kind switch
+    {
+        ChangeKind.Added => T("Added"),
+        ChangeKind.Removed => T("Removed"),
+        _ => T("Changed"),
+    };
 
     private static string KindBadge(ChangeKind kind) => kind switch
     {

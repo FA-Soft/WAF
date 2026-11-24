@@ -4,42 +4,42 @@
 @inject NavigationManager Navigation
 @inject AuditLogStore Audit
 
-<PageTitle>Version @Version · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Version {0}", Version) · @ProductInfo.Name</PageTitle>
 
-<p><a href="history">← Configuration history</a></p>
+<p><a href="history">← @T("Configuration history")</a></p>
 
 @if (_stored is null || _active is null)
 {
-    <h1>Version @Version</h1>
-    <div class="alert alert-danger" role="alert">Configuration version @Version does not exist. <a href="history">Back to the history</a>.</div>
+    <h1>@T("Version {0}", Version)</h1>
+    <div class="alert alert-danger" role="alert">@T("Configuration version {0} does not exist.", Version) <a href="history">@T("Back to the history")</a>.</div>
 }
 else
 {
     <h1>
-        Version @_stored.Version
+        @T("Version {0}", _stored.Version)
         @if (IsActive)
         {
-            <span class="badge badge-ok">Active</span>
+            <span class="badge badge-ok">@T("Active")</span>
         }
     </h1>
 
     <dl class="details">
-        <dt>Stored (UTC)</dt>
+        <dt>@T("Stored (UTC)")</dt>
         <dd>@_stored.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)</dd>
-        <dt>By</dt>
-        <dd>@_stored.Author</dd>
-        <dt>Description</dt>
-        <dd>@(_stored.Comment ?? "-")</dd>
-        <dt>Audit log</dt>
+        <dt>@T("By")</dt>
+        <dd>@Message(_stored.Author)</dd>
+        <dt>@T("Description")</dt>
+        <dd>@Message(_stored.Comment ?? "-")</dd>
+        <dt>@T("Audit log")</dt>
         <dd>
             @if (_audit is null)
             {
-                <span class="muted">No entry.</span>
+                <span class="muted">@T("No entry.")</span>
             }
             else
             {
-                <a href="@($"audit?version={_stored.Version}")">@_audit.Summary</a>
-                <span class="muted">(@_audit.UserName, @AuditWhere(_audit))</span>
+                <a href="@($"audit?version={_stored.Version}")">@Message(_audit.Summary)</a>
+                <span class="muted">(@Message(_audit.UserName), @AuditWhere(_audit))</span>
             }
         </dd>
     </dl>
@@ -47,61 +47,61 @@ else
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
-            <strong>The version was not restored.</strong> The running configuration is unchanged.
+            <strong>@T("The version was not restored.")</strong> @T("The running configuration is unchanged.")
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
     }
 
     <section class="preview" aria-labelledby="restore-heading">
-        <h2 id="restore-heading">Restore this version</h2>
+        <h2 id="restore-heading">@T("Restore this version")</h2>
         @if (IsActive)
         {
-            <p>This version is the running configuration.</p>
+            <p>@T("This version is the running configuration.")</p>
         }
         else if (_restoreChanges.Count == 0)
         {
-            <p>The running configuration (version @_active.Version) is identical to this version; restoring it would change nothing.</p>
+            <p>@T("The running configuration (version {0}) is identical to this version; restoring it would change nothing.", _active.Version)</p>
         }
         else
         {
-            <p>Restoring makes this configuration active again, as a new version. Compared with the running configuration (version @_active.Version), this changes:</p>
+            <p>@T("Restoring makes this configuration active again, as a new version. Compared with the running configuration (version {0}), this changes:", _active.Version)</p>
             <ChangeList Changes="_restoreChanges" Before="_active.Configuration" After="_stored.Configuration" />
             <EditForm Model="RestoreForm" FormName="restore-version" OnSubmit="RestoreAsync" Enhance>
                 <input type="hidden" name="RestoreForm.BaseVersion" value="@_active.Version" />
-                <button type="submit" class="button">Restore version @_stored.Version</button>
+                <button type="submit" class="button">@T("Restore version {0}", _stored.Version)</button>
             </EditForm>
         }
     </section>
 
     <section aria-labelledby="changed-heading">
-        <h2 id="changed-heading">What this version changed</h2>
+        <h2 id="changed-heading">@T("What this version changed")</h2>
         @if (_previous is null)
         {
-            <p>This is the first stored version.</p>
+            <p>@T("This is the first stored version.")</p>
         }
         else if (_ownChanges.Count == 0)
         {
-            <p>Same configuration as version @_previous.Version.</p>
+            <p>@T("Same configuration as version {0}.", _previous.Version)</p>
         }
         else
         {
-            <p class="muted">Compared with version @_previous.Version.</p>
+            <p class="muted">@T("Compared with version {0}.", _previous.Version)</p>
             <ChangeList Changes="_ownChanges" Before="_previous.Configuration" After="_stored.Configuration" />
         }
     </section>
 
     <section class="card section" aria-labelledby="export-heading">
-        <h2 id="export-heading">Export this version</h2>
+        <h2 id="export-heading">@T("Export this version")</h2>
         <form method="post" action="export/configuration">
             <AntiforgeryToken />
             <input type="hidden" name="version" value="@_stored.Version" />
             <SecretsCheckbox Id="export-secrets" Count="ConfigurationSecrets.Count(_stored.Configuration)" />
-            <button type="submit" class="button button-secondary">Download version @_stored.Version (JSON)</button>
+            <button type="submit" class="button button-secondary">@T("Download version {0} (JSON)", _stored.Version)</button>
         </form>
     </section>
 }

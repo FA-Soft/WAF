@@ -4,83 +4,83 @@
 @inject IRequestLogMonitor Monitor
 @inject TimeProvider Time
 
-<PageTitle>Request log · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Request log") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Request log
-    <HelpTip Title="Request log">
-        <p>Every public request: who sent it, where it went and what the firewall did. Query strings, headers, cookies and bodies are not stored; for a detected attack only the matching fragment is kept.</p>
-        <p>Filter with the form; the address bar keeps the filter, so you can bookmark a view. Times are in UTC. Turn on "Live" to see new requests as they arrive.</p>
+    @T("Request log")
+    <HelpTip Title="@T("Request log")">
+        <p>@T("Every public request: who sent it, where it went and what the firewall did. Query strings, headers, cookies and bodies are not stored; for a detected attack only the matching fragment is kept.")</p>
+        <p>@T("Filter with the form; the address bar keeps the filter, so you can bookmark a view. Times are in UTC. Turn on \"Live\" to see new requests as they arrive.")</p>
     </HelpTip>
 </h1>
 
 @if (Monitor.Statistics is null)
 {
-    <div class="alert alert-warning" role="status">Request logging is switched off in the host settings (<code>Gateway:EventLog:Enabled</code>).</div>
+    <div class="alert alert-warning" role="status">@TM("Request logging is switched off in the host settings (<code>Gateway:EventLog:Enabled</code>).")</div>
 }
 
-<form method="get" action="logs" class="log-filter" role="search" aria-label="Filter the request log">
+<form method="get" action="logs" class="log-filter" role="search" aria-label="@T("Filter the request log")">
     <div class="field-row">
         <div class="field">
-            <label for="range">Time</label>
+            <label for="range">@T("Time")</label>
             <select id="range" name="range">
                 @foreach (var (value, label, _) in LogQuery.Ranges)
                 {
-                    <option value="@value" selected="@(value == _query.Range)">@label</option>
+                    <option value="@value" selected="@(value == _query.Range)">@T(label)</option>
                 }
             </select>
         </div>
         <div class="field">
-            <label for="show">Show</label>
+            <label for="show">@T("Show")</label>
             <select id="show" name="show">
                 @foreach (var (value, label) in LogQuery.Views)
                 {
-                    <option value="@value" selected="@(value == _query.Show)">@label</option>
+                    <option value="@value" selected="@(value == _query.Show)">@T(label)</option>
                 }
             </select>
         </div>
         <div class="field field-wide">
-            <label for="q">Search</label>
-            <input type="search" id="q" name="q" value="@_query.Search" placeholder="path, host, IP, rule or detail" autocomplete="off" />
+            <label for="q">@T("Search")</label>
+            <input type="search" id="q" name="q" value="@_query.Search" placeholder="@T("path, host, IP, rule or detail")" autocomplete="off" />
         </div>
     </div>
     <details class="advanced" open="@(_query.Ip is not null || _query.Host is not null || _query.Route is not null || _query.Rule is not null || _query.Status is not null)">
-        <summary>More filters</summary>
+        <summary>@T("More filters")</summary>
         <div class="field-row">
             <div class="field">
-                <label for="ip">Client IP</label>
-                <input type="text" id="ip" name="ip" value="@_query.Ip" placeholder="e.g. 203.0.113.7" autocomplete="off" />
+                <label for="ip">@T("Client IP")</label>
+                <input type="text" id="ip" name="ip" value="@_query.Ip" placeholder="@T("e.g. 203.0.113.7")" autocomplete="off" />
             </div>
             <div class="field">
-                <label for="host">Host</label>
-                <input type="text" id="host" name="host" value="@_query.Host" placeholder="e.g. www.example.com" autocomplete="off" />
+                <label for="host">@T("Host")</label>
+                <input type="text" id="host" name="host" value="@_query.Host" placeholder="@T("e.g. www.example.com")" autocomplete="off" />
             </div>
             <div class="field">
-                <label for="route">Route</label>
+                <label for="route">@T("Route")</label>
                 <input type="text" id="route" name="route" value="@_query.Route" autocomplete="off" />
             </div>
             <div class="field">
-                <label for="rule">Rule</label>
+                <label for="rule">@T("Rule")</label>
                 <input type="text" id="rule" name="rule" value="@_query.Rule" autocomplete="off" />
             </div>
             <div class="field">
-                <label for="status">Status</label>
+                <label for="status">@T("Status")</label>
                 <input type="number" id="status" name="status" value="@_query.Status" min="100" max="599" />
             </div>
         </div>
     </details>
     <div class="actions">
-        <label for="size" class="inline-label">Per page</label>
+        <label for="size" class="inline-label">@T("Per page")</label>
         <select id="size" name="size">
             @foreach (var size in LogQuery.PageSizes)
             {
                 <option value="@size" selected="@(size == _query.Size)">@size</option>
             }
         </select>
-        <button type="submit" class="button">Apply</button>
+        <button type="submit" class="button">@T("Apply")</button>
         @if (_query.IsFiltered || _query.Range != LogQuery.DefaultRange)
         {
-            <a class="button button-secondary" href="logs">Clear filters</a>
+            <a class="button button-secondary" href="logs">@T("Clear filters")</a>
         }
     </div>
 </form>
@@ -89,39 +89,39 @@
     @if (_query.IsFirstPage)
     {
         <label class="live-toggle" id="live-toggle" hidden>
-            <input type="checkbox" id="live" /> Live
+            <input type="checkbox" id="live" /> @T("Live")
             <span class="muted" id="live-status" aria-live="polite"></span>
         </label>
-        <a href="@_query.Url("logs")" class="live-fallback">Refresh</a>
-        <a href="logs/settings" class="heading-link">Retention settings</a>
+        <a href="@_query.Url("logs")" class="live-fallback">@T("Refresh")</a>
+        <a href="logs/settings" class="heading-link">@T("Retention settings")</a>
     }
     else
     {
-        <a href="@_query.Url("logs")">Back to the newest</a>
+        <a href="@_query.Url("logs")">@T("Back to the newest")</a>
     }
 </div>
 
 @if (_error is not null)
 {
-    <div class="alert alert-danger" role="alert">The log could not be read: @_error</div>
+    <div class="alert alert-danger" role="alert">@T("The log could not be read: {0}", Message(_error))</div>
 }
 else if (_page.Items.Count == 0)
 {
-    <p id="log-empty">@(Reader.DatabaseExists ? "No requests match these filters." : "No requests have been logged yet.")</p>
+    <p id="log-empty">@(Reader.DatabaseExists ? Text.T("No requests match these filters.") : Text.T("No requests have been logged yet."))</p>
 }
 
 <div class="table-scroll">
     <table class="log-table" data-live-log data-live-url="@_query.Url("logs/live")" data-live-after="@_latest" data-live-max="@Math.Max(_query.Size, 200)" hidden="@(_page.Items.Count == 0 && !_query.IsFirstPage)">
         <thead>
             <tr>
-                <th scope="col">Time (UTC)</th>
-                <th scope="col">Client</th>
-                <th scope="col">Request</th>
-                <th scope="col">Route</th>
-                <th scope="col">Outcome</th>
-                <th scope="col">Rule</th>
-                <th scope="col">Status</th>
-                <th scope="col">Latency</th>
+                <th scope="col">@T("Time (UTC)")</th>
+                <th scope="col">@T("Client")</th>
+                <th scope="col">@T("Request")</th>
+                <th scope="col">@T("Route")</th>
+                <th scope="col">@T("Outcome")</th>
+                <th scope="col">@T("Rule")</th>
+                <th scope="col">@T("Status")</th>
+                <th scope="col">@T("Latency")</th>
             </tr>
         </thead>
         <tbody>
@@ -131,7 +131,7 @@ else if (_page.Items.Count == 0)
                 var note = LogFormat.Note(entry);
                 <tr>
                     <td class="nowrap"><a href="@($"logs/{entry.Id}")">@LogFormat.Time(entry.TimestampMs)</a></td>
-                    <td><a href="@_query.UrlWith("ip", entry.ClientIp)" title="Only this client">@entry.ClientIp</a></td>
+                    <td><a href="@_query.UrlWith("ip", entry.ClientIp)" title="@T("Only this client")">@entry.ClientIp</a></td>
                     <td class="log-request"><span class="method">@entry.Method</span> @entry.Host<span class="path">@entry.Path</span></td>
                     <td>@entry.RouteName</td>
                     <td>
@@ -152,14 +152,14 @@ else if (_page.Items.Count == 0)
 
 @if (_page.HasNewer || _page.HasOlder)
 {
-    <nav class="pager" aria-label="Pages">
+    <nav class="pager" aria-label="@T("Pages")">
         @if (_page.HasNewer)
         {
-            <a class="button button-secondary" href="@_query.Url("logs", ("after", _page.Items[0].Id.ToString(System.Globalization.CultureInfo.InvariantCulture)))">← Newer</a>
+            <a class="button button-secondary" href="@_query.Url("logs", ("after", _page.Items[0].Id.ToString(System.Globalization.CultureInfo.InvariantCulture)))">← @T("Newer")</a>
         }
         @if (_page.HasOlder)
         {
-            <a class="button button-secondary" href="@_query.Url("logs", ("before", _page.Items[^1].Id.ToString(System.Globalization.CultureInfo.InvariantCulture)))">Older →</a>
+            <a class="button button-secondary" href="@_query.Url("logs", ("before", _page.Items[^1].Id.ToString(System.Globalization.CultureInfo.InvariantCulture)))">@T("Older") →</a>
         }
     </nav>
 }

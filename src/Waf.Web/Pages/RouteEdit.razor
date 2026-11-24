@@ -5,14 +5,14 @@
 @inject NavigationManager Navigation
 @inject RequestLogReader LogReader
 
-<PageTitle>@(IsNew ? "Add a route" : $"Edit route {RouteName}") · @ProductInfo.Name</PageTitle>
+<PageTitle>@(IsNew ? Text.T("Add a route") : Text.T("Edit route {0}", RouteName)) · @ProductInfo.Name</PageTitle>
 
-<p><a href="routes">← Routes</a></p>
-<h1>@(IsNew ? "Add a route" : $"Edit route '{RouteName}'")</h1>
+<p><a href="routes">← @T("Routes")</a></p>
+<h1>@(IsNew ? Text.T("Add a route") : Text.T("Edit route '{0}'", RouteName))</h1>
 
 @if (_notFound)
 {
-    <div class="alert alert-danger" role="alert">Route '@RouteName' does not exist (any more). <a href="routes">Back to the routes</a>.</div>
+    <div class="alert alert-danger" role="alert">@T("Route '{0}' does not exist (any more).", RouteName) <a href="routes">@T("Back to the routes")</a>.</div>
 }
 else if (Model is not null)
 {
@@ -22,11 +22,11 @@ else if (Model is not null)
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert" tabindex="-1">
-            <strong>The route was not saved.</strong> The running configuration is unchanged.
+            <strong>@T("The route was not saved.")</strong> @T("The running configuration is unchanged.")
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
@@ -38,45 +38,45 @@ else if (Model is not null)
         <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
 
         <fieldset>
-            <legend>Name</legend>
+            <legend>@T("Name")</legend>
             @if (Model.IsNew)
             {
-                <FormField Id="name" Label="Name" Help="A short, unique name, e.g. website or api. Rules can refer to it; it cannot be changed later." For="() => Model.Name">
+                <FormField Id="name" Label="@T("Name")" Help="@T("A short, unique name, e.g. website or api. Rules can refer to it; it cannot be changed later.")" For="() => Model.Name">
                     <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
                 </FormField>
             }
             else
             {
-                <p><strong>@Model.Name</strong> <span class="muted">(the name cannot be changed because rules may refer to it)</span></p>
+                <p><strong>@Model.Name</strong> <span class="muted">@T("(the name cannot be changed because rules may refer to it)")</span></p>
                 <input type="hidden" name="Model.Name" value="@Model.Name" />
             }
 
             <div class="field checkbox-field">
                 <InputCheckbox id="enabled" @bind-Value="Model.Enabled" />
-                <label for="enabled">Enabled</label>
-                <p class="field-help">A disabled route is kept but not used: its requests get 404.</p>
+                <label for="enabled">@T("Enabled")</label>
+                <p class="field-help">@T("A disabled route is kept but not used: its requests get 404.")</p>
             </div>
         </fieldset>
 
         <fieldset>
             <legend>
-                Which requests
-                <HelpTip Title="Which requests">
-                    <p>All conditions you fill in must match. Leave the host names empty and the path at / to handle every request. When several routes match, the one with the most specific path wins.</p>
+                @T("Which requests")
+                <HelpTip Title="@T("Which requests")">
+                    <p>@T("All conditions you fill in must match. Leave the host names empty and the path at / to handle every request. When several routes match, the one with the most specific path wins.")</p>
                 </HelpTip>
             </legend>
 
-            <FormField Id="hosts" Label="Host names" Optional Help="One per line, e.g. www.example.com or *.example.com for all subdomains. Empty: any host name." For="() => Model.Hosts">
+            <FormField Id="hosts" Label="@T("Host names")" Optional Help="@T("One per line, e.g. www.example.com or *.example.com for all subdomains. Empty: any host name.")" For="() => Model.Hosts">
                 <InputTextArea id="hosts" aria-describedby="hosts-help" @bind-Value="Model.Hosts" rows="3" />
             </FormField>
 
-            <FormField Id="path" Label="Path prefix" Help="Handles this path and everything below it: /api matches /api and /api/users, not /apix. Use / for all paths." For="() => Model.PathPrefix">
+            <FormField Id="path" Label="@T("Path prefix")" Help="@T("Handles this path and everything below it: /api matches /api and /api/users, not /apix. Use / for all paths.")" For="() => Model.PathPrefix">
                 <InputText id="path" aria-describedby="path-help" @bind-Value="Model.PathPrefix" autocomplete="off" />
             </FormField>
 
             <div class="field" role="group" aria-labelledby="methods-label" aria-describedby="methods-help">
-                <span class="label" id="methods-label">Methods <span class="field-optional">(optional)</span></span>
-                <p class="field-help" id="methods-help">Only these methods. None ticked: every method.</p>
+                <span class="label" id="methods-label">@T("Methods") <span class="field-optional">@T("(optional)")</span></span>
+                <p class="field-help" id="methods-help">@T("Only these methods. None ticked: every method.")</p>
                 <div class="checkbox-row">
                     <label><InputCheckbox @bind-Value="Model.MethodGet" /> GET</label>
                     <label><InputCheckbox @bind-Value="Model.MethodPost" /> POST</label>
@@ -91,31 +91,31 @@ else if (Model is not null)
 
         <fieldset>
             <legend>
-                Where to
-                <HelpTip Title="Backends">
-                    <p>The server(s) that answer the requests. With several backends, requests are spread over them, and a backend that stops answering is skipped.</p>
-                    <p><strong>Failover backends</strong> only get traffic while none of the backends above is healthy: failover 1 first, then 2, and so on. For example a second network address of the same machine, or another machine that can take over. Traffic returns once a backend above is healthy again for 30 seconds.</p>
-                    <p>A backend that refuses the connection is skipped at once, and the request goes to the next one. A request that already reached a backend is never sent again.</p>
+                @T("Where to")
+                <HelpTip Title="@T("Backends")">
+                    <p>@T("The server(s) that answer the requests. With several backends, requests are spread over them, and a backend that stops answering is skipped.")</p>
+                    <p>@TM("<strong>Failover backends</strong> only get traffic while none of the backends above is healthy: failover 1 first, then 2, and so on. For example a second network address of the same machine, or another machine that can take over. Traffic returns once a backend above is healthy again for 30 seconds.")</p>
+                    <p>@T("A backend that refuses the connection is skipped at once, and the request goes to the next one. A request that already reached a backend is never sent again.")</p>
                 </HelpTip>
             </legend>
 
-            <FormField Id="destinations" Label="Backends" Help="One per line: an address such as http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http), or a target and port label such as nas/web (see Targets)." For="() => Model.Destinations">
+            <FormField Id="destinations" Label="@T("Backends")" Help="@T("One per line: an address such as http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http), or a target and port label such as nas/web (see Targets).")" For="() => Model.Destinations">
                 <InputTextArea id="destinations" aria-describedby="destinations-help" @bind-Value="Model.Destinations" rows="3" />
             </FormField>
 
-            <FormField Id="failover" Label="Failover backends" Optional Help="One per line, in the order they take over: line 1 is failover 1. Empty: no failover." For="() => Model.FailoverDestinations">
+            <FormField Id="failover" Label="@T("Failover backends")" Optional Help="@T("One per line, in the order they take over: line 1 is failover 1. Empty: no failover.")" For="() => Model.FailoverDestinations">
                 <InputTextArea id="failover" aria-describedby="failover-help" @bind-Value="Model.FailoverDestinations" rows="2" />
             </FormField>
 
             @if (!string.IsNullOrWhiteSpace(Model.FailoverDestinations) && string.IsNullOrWhiteSpace(Model.HealthCheckPath))
             {
-                <p class="field-help">Tip: set a health check path below. Without one, a backend that stops answering (instead of refusing connections) is only noticed by failing requests, and a stopped backend is tried again every half minute.</p>
+                <p class="field-help">@T("Tip: set a health check path below. Without one, a backend that stops answering (instead of refusing connections) is only noticed by failing requests, and a stopped backend is tried again every half minute.")</p>
             }
 
             @if (_targetChoices.Count > 0)
             {
                 <div class="field add-target">
-                    <label for="add-target">Add a target</label>
+                    <label for="add-target">@T("Add a target")</label>
                     <div class="inline-controls">
                         <InputSelect id="add-target" @bind-Value="Model.AddTarget">
                             @foreach (var (line, text) in _targetChoices)
@@ -123,74 +123,74 @@ else if (Model is not null)
                                 <option value="@line">@text</option>
                             }
                         </InputSelect>
-                        <button type="submit" name="Model.Command" value="add-target" class="button button-secondary" formnovalidate>Add</button>
-                        <button type="submit" name="Model.Command" value="add-target-failover" class="button button-secondary" formnovalidate>Add as failover</button>
+                        <button type="submit" name="Model.Command" value="add-target" class="button button-secondary" formnovalidate>@T("Add")</button>
+                        <button type="submit" name="Model.Command" value="add-target-failover" class="button button-secondary" formnovalidate>@T("Add as failover")</button>
                     </div>
                 </div>
             }
             else
             {
-                <p class="field-help">Tip: name a machine and its ports once under <a href="targets">Targets</a>, then use it here, so a changed address is changed in one place.</p>
+                <p class="field-help">@TM("Tip: name a machine and its ports once under <a href=\"targets\">Targets</a>, then use it here, so a changed address is changed in one place.")</p>
             }
 
             <div class="field checkbox-field">
                 <InputCheckbox id="preserve-host" @bind-Value="Model.PreserveHost" aria-describedby="preserve-host-help" />
-                <label for="preserve-host">Send the original host name to the backend</label>
-                <p class="field-help" id="preserve-host-help">Keep this on for IIS and other servers that host several sites. Off: the backend receives its own address as host name.</p>
+                <label for="preserve-host">@T("Send the original host name to the backend")</label>
+                <p class="field-help" id="preserve-host-help">@T("Keep this on for IIS and other servers that host several sites. Off: the backend receives its own address as host name.")</p>
             </div>
 
             <div class="field checkbox-field">
                 <InputCheckbox id="allow-invalid-cert" @bind-Value="Model.AllowInvalidBackendCertificate" aria-describedby="allow-invalid-cert-help" />
-                <label for="allow-invalid-cert">Accept a self-signed certificate from https:// backends</label>
-                <p class="field-help" id="allow-invalid-cert-help">Only for backends you control on a trusted network, e.g. a local IIS with a self-signed certificate.</p>
+                <label for="allow-invalid-cert">@T("Accept a self-signed certificate from https:// backends")</label>
+                <p class="field-help" id="allow-invalid-cert-help">@T("Only for backends you control on a trusted network, e.g. a local IIS with a self-signed certificate.")</p>
             </div>
         </fieldset>
 
         <fieldset>
             <legend>
-                HTTPS
-                <HelpTip Title="HTTPS">
-                    <p><strong>Redirect</strong>: visitors who use http:// are sent to the same address with https://. Each host name of the route needs a certificate (Certificates page). Let's Encrypt can still check its challenges over http://.</p>
-                    <p><strong>HSTS</strong> tells browsers to use only HTTPS for the host name, for the time set on the Certificates page, even when someone types http://. Browsers remember it, so only switch it on when HTTPS works for good.</p>
-                    <p>With both off, the route also works over plain http://.</p>
+                @T("HTTPS")
+                <HelpTip Title="@T("HTTPS")">
+                    <p>@TM("<strong>Redirect</strong>: visitors who use http:// are sent to the same address with https://. Each host name of the route needs a certificate (Certificates page). Let's Encrypt can still check its challenges over http://.")</p>
+                    <p>@TM("<strong>HSTS</strong> tells browsers to use only HTTPS for the host name, for the time set on the Certificates page, even when someone types http://. Browsers remember it, so only switch it on when HTTPS works for good.")</p>
+                    <p>@T("With both off, the route also works over plain http://.")</p>
                 </HelpTip>
             </legend>
 
             @if (_hostsWithoutCertificate.Count > 0)
             {
-                <p class="field-help">No certificate yet for @string.Join(", ", _hostsWithoutCertificate): add one on the <a href="certificates">Certificates</a> page before redirecting to HTTPS.</p>
+                <p class="field-help">@TM("No certificate yet for {0}: add one on the <a href=\"certificates\">Certificates</a> page before redirecting to HTTPS.", string.Join(", ", _hostsWithoutCertificate))</p>
             }
 
             <div class="field checkbox-field">
                 <InputCheckbox id="redirect-http" @bind-Value="Model.RedirectHttp" aria-describedby="redirect-http-help" />
-                <label for="redirect-http">Redirect http:// to https://</label>
-                <p class="field-help" id="redirect-http-help">A permanent redirect (308) to the same address over HTTPS.</p>
+                <label for="redirect-http">@T("Redirect http:// to https://")</label>
+                <p class="field-help" id="redirect-http-help">@T("A permanent redirect (308) to the same address over HTTPS.")</p>
             </div>
 
             <div class="field checkbox-field">
                 <InputCheckbox id="hsts" @bind-Value="Model.Hsts" aria-describedby="hsts-help" />
-                <label for="hsts">Tell browsers to use HTTPS only (HSTS)</label>
-                <p class="field-help" id="hsts-help">Sends the Strict-Transport-Security header on HTTPS responses.</p>
+                <label for="hsts">@T("Tell browsers to use HTTPS only (HSTS)")</label>
+                <p class="field-help" id="hsts-help">@T("Sends the Strict-Transport-Security header on HTTPS responses.")</p>
             </div>
         </fieldset>
 
         <fieldset>
             <legend>
-                Health check
-                <HelpTip Title="Health check">
-                    <p>With a path, the gateway regularly requests it on each backend and stops sending traffic to a backend that does not answer. Backends that fail real requests are always skipped for a while.</p>
+                @T("Health check")
+                <HelpTip Title="@T("Health check")">
+                    <p>@T("With a path, the gateway regularly requests it on each backend and stops sending traffic to a backend that does not answer. Backends that fail real requests are always skipped for a while.")</p>
                 </HelpTip>
             </legend>
 
-            <FormField Id="health-path" Label="Health check path" Optional Help="e.g. /health. Empty: no active health check." For="() => Model.HealthCheckPath">
+            <FormField Id="health-path" Label="@T("Health check path")" Optional Help="@T("e.g. /health. Empty: no active health check.")" For="() => Model.HealthCheckPath">
                 <InputText id="health-path" aria-describedby="health-path-help" @bind-Value="Model.HealthCheckPath" autocomplete="off" />
             </FormField>
 
             <div class="field-row">
-                <FormField Id="health-interval" Label="Check every (seconds)" For="() => Model.HealthCheckIntervalSeconds">
+                <FormField Id="health-interval" Label="@T("Check every (seconds)")" For="() => Model.HealthCheckIntervalSeconds">
                     <InputNumber id="health-interval" @bind-Value="Model.HealthCheckIntervalSeconds" min="1" max="3600" />
                 </FormField>
-                <FormField Id="health-timeout" Label="Time-out (seconds)" For="() => Model.HealthCheckTimeoutSeconds">
+                <FormField Id="health-timeout" Label="@T("Time-out (seconds)")" For="() => Model.HealthCheckTimeoutSeconds">
                     <InputNumber id="health-timeout" @bind-Value="Model.HealthCheckTimeoutSeconds" min="1" max="3600" />
                 </FormField>
             </div>
@@ -198,21 +198,21 @@ else if (Model is not null)
 
         <fieldset>
             <legend>
-                When no backend answers
-                <HelpTip Title="Error page">
-                    <p>When no backend answers, visitors get a short error in the format their software expects: a web page for browsers, JSON or XML for programs, a SOAP fault for SOAP clients. It never shows addresses or other internal details; those are in the request log.</p>
+                @T("When no backend answers")
+                <HelpTip Title="@T("Error page")">
+                    <p>@T("When no backend answers, visitors get a short error in the format their software expects: a web page for browsers, JSON or XML for programs, a SOAP fault for SOAP clients. It never shows addresses or other internal details; those are in the request log.")</p>
                 </HelpTip>
             </legend>
-            <FormField Id="error-message" Label="Message for visitors" Optional Help="Shown on the error, e.g. Planned maintenance until 14:00. One line, at most 300 characters." For="() => Model.ErrorMessage">
+            <FormField Id="error-message" Label="@T("Message for visitors")" Optional Help="@T("Shown on the error, e.g. Planned maintenance until 14:00. One line, at most 300 characters.")" For="() => Model.ErrorMessage">
                 <InputText id="error-message" aria-describedby="error-message-help" @bind-Value="Model.ErrorMessage" maxlength="300" autocomplete="off" />
             </FormField>
         </fieldset>
 
         <div class="actions">
-            <button type="submit" class="button">@(Model.IsNew ? "Add route" : "Save changes")</button>
-            <a class="button button-secondary" href="routes">Cancel</a>
+            <button type="submit" class="button">@(Model.IsNew ? Text.T("Add route") : Text.T("Save changes"))</button>
+            <a class="button button-secondary" href="routes">@T("Cancel")</a>
         </div>
-        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+        <p class="muted">@T("Saving creates a new configuration version and takes effect immediately, without a restart.")</p>
     </EditForm>
 }
 
@@ -317,7 +317,7 @@ else if (Model is not null)
         var active = await Configurations.GetActiveAsync(CancellationToken.None);
         if (active is null)
         {
-            _errors = ["No configuration is active yet."];
+            _errors = [Text.N("No configuration is active yet.")];
             return;
         }
 
@@ -329,7 +329,7 @@ else if (Model is not null)
         {
             if (index >= 0)
             {
-                _errors = [$"A route named '{route.Name}' already exists. Choose another name."];
+                _errors = [Text.F("A route named '{0}' already exists. Choose another name.", route.Name)];
                 return;
             }
 
@@ -337,7 +337,7 @@ else if (Model is not null)
         }
         else if (index < 0)
         {
-            _errors = [$"Route '{route.Name}' no longer exists; it was deleted in the meantime."];
+            _errors = [Text.F("Route '{0}' no longer exists; it was deleted in the meantime.", route.Name)];
             return;
         }
         else

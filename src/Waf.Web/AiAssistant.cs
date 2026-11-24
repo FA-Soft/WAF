@@ -54,10 +54,10 @@ public sealed class AiAssistant(
 
     /// <summary>Why <paramref name="apiKey"/> cannot be an Anthropic API key; empty when it looks right.</summary>
     public static IReadOnlyList<string> CheckKeyFormat(string? apiKey) =>
-        string.IsNullOrWhiteSpace(apiKey) ? ["Enter the API key."]
-        : apiKey.Any(char.IsWhiteSpace) ? ["The key contains spaces or line breaks; paste it again."]
+        string.IsNullOrWhiteSpace(apiKey) ? [Text.N("Enter the API key.")]
+        : apiKey.Any(char.IsWhiteSpace) ? [Text.N("The key contains spaces or line breaks; paste it again.")]
         : !apiKey.StartsWith("sk-ant-", StringComparison.Ordinal) || apiKey.Length < 20
-            ? ["This does not look like an Anthropic API key (they start with sk-ant-). Create one in the Anthropic Console."]
+            ? [Text.N("This does not look like an Anthropic API key (they start with sk-ant-). Create one in the Anthropic Console.")]
             : [];
 
     /// <summary>Saves the key (encrypted) and turns the AI features on; returns why not otherwise.</summary>
@@ -91,7 +91,7 @@ public sealed class AiAssistant(
         using var provider = await CreateProviderAsync(cancellationToken).ConfigureAwait(false);
         if (provider is null)
         {
-            return "No API key is configured.";
+            return Text.N("No API key is configured.");
         }
 
         try
@@ -132,7 +132,7 @@ public sealed class AiAssistant(
         }
 
         return preview.Changes.Count == 0
-            ? new ProposalReview(null, ["The proposal does not change anything."], [])
+            ? new ProposalReview(null, [Text.N("The proposal does not change anything.")], [])
             : new ProposalReview(preview.Candidate, [], preview.Changes);
     }
 
@@ -150,7 +150,7 @@ public sealed class AiAssistant(
 
         if (Interlocked.CompareExchange(ref _asking, 1, 0) != 0)
         {
-            return AiActionResult.Failed("The assistant is already working on a request. Wait for it to finish, then try again.");
+            return AiActionResult.Failed(Text.N("The assistant is already working on a request. Wait for it to finish, then try again."));
         }
 
         try
@@ -158,13 +158,13 @@ public sealed class AiAssistant(
             using var provider = await CreateProviderAsync(cancellationToken).ConfigureAwait(false);
             if (provider is null)
             {
-                return AiActionResult.Failed("The AI assistant is off: save an API key in the AI assistant settings first.");
+                return AiActionResult.Failed(Text.N("The AI assistant is off: save an API key in the AI assistant settings first."));
             }
 
             var active = await configurations.GetActiveAsync(cancellationToken).ConfigureAwait(false);
             if (active is null)
             {
-                return AiActionResult.Failed("No configuration is active yet.");
+                return AiActionResult.Failed(Text.N("No configuration is active yet."));
             }
 
             prompt = prompt!.Trim();
@@ -235,7 +235,7 @@ public sealed class AiAssistant(
 
         if (active!.Version != proposal!.BaseVersion)
         {
-            return AiActionResult.Failed($"The configuration changed after this proposal was made (it was made for version {proposal.BaseVersion}; version {active.Version} is running now). Ask again.");
+            return AiActionResult.Failed(Text.F("The configuration changed after this proposal was made (it was made for version {0}; version {1} is running now). Ask again.", proposal.BaseVersion, active.Version));
         }
 
         var review = Review(proposal.ProposalJson, active.Configuration);
@@ -268,7 +268,7 @@ public sealed class AiAssistant(
 
         if (active!.Version != proposal!.AppliedVersion)
         {
-            return AiActionResult.Failed($"The configuration changed after this proposal was applied (version {active.Version} is running now). To undo it anyway, restore version {proposal.BaseVersion} on the history page.");
+            return AiActionResult.Failed(Text.F("The configuration changed after this proposal was applied (version {0} is running now). To undo it anyway, restore version {1} on the history page.", active.Version, proposal.BaseVersion));
         }
 
         var result = await configurations.RollbackAsync(proposal.BaseVersion, active.Version, actor, cancellationToken).ConfigureAwait(false);
@@ -289,13 +289,13 @@ public sealed class AiAssistant(
         var proposal = await proposals.GetAsync(id, cancellationToken).ConfigureAwait(false);
         if (proposal is null)
         {
-            return AiActionResult.Failed("This proposal does not exist.");
+            return AiActionResult.Failed(Text.N("This proposal does not exist."));
         }
 
         if (proposal.Status is not (AiProposalStatus.Ready or AiProposalStatus.Invalid)
             || !await proposals.DecideAsync(id, proposal.Status, AiProposalStatus.Discarded, actor.UserName, null, null, cancellationToken).ConfigureAwait(false))
         {
-            return AiActionResult.Failed("Only a proposal that was not applied can be discarded.");
+            return AiActionResult.Failed(Text.N("Only a proposal that was not applied can be discarded."));
         }
 
         await audit.RecordAsync(AuditCategory.Configuration, AuditActions.AiProposalDiscarded, actor,
@@ -315,16 +315,16 @@ public sealed class AiAssistant(
         var proposal = await proposals.GetAsync(id, cancellationToken).ConfigureAwait(false);
         if (proposal is null)
         {
-            return (null, null, "This proposal does not exist.");
+            return (null, null, Text.N("This proposal does not exist."));
         }
 
         if (proposal.Status != expected)
         {
-            return (proposal, null, $"This proposal is {AiProposalText.Status(proposal.Status).ToLowerInvariant()}, so that cannot be done now.");
+            return (proposal, null, Text.F("This proposal is {0}, so that cannot be done now.", AiProposalText.Status(proposal.Status).ToLowerInvariant()));
         }
 
         var active = await configurations.GetActiveAsync(cancellationToken).ConfigureAwait(false);
-        return active is null ? (proposal, null, "No configuration is active yet.") : (proposal, active, null);
+        return active is null ? (proposal, null, Text.N("No configuration is active yet.")) : (proposal, active, null);
     }
 }
 
@@ -333,12 +333,12 @@ public static class AiProposalText
 {
     public static string Status(AiProposalStatus status) => status switch
     {
-        AiProposalStatus.Ready => "Waiting for review",
-        AiProposalStatus.Invalid => "Rejected by the checks",
-        AiProposalStatus.NoChange => "No change proposed",
-        AiProposalStatus.Applied => "Applied",
-        AiProposalStatus.Undone => "Undone",
-        AiProposalStatus.Discarded => "Discarded",
+        AiProposalStatus.Ready => Text.T("Waiting for review"),
+        AiProposalStatus.Invalid => Text.T("Rejected by the checks"),
+        AiProposalStatus.NoChange => Text.T("No change proposed"),
+        AiProposalStatus.Applied => Text.T("Applied"),
+        AiProposalStatus.Undone => Text.T("Undone"),
+        AiProposalStatus.Discarded => Text.T("Discarded"),
         _ => status.ToString(),
     };
 

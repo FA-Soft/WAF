@@ -3,13 +3,13 @@
 @inject NavigationManager Navigation
 @inject RequestLogReader LogReader
 
-<PageTitle>Allow a false positive · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Allow a false positive") · @ProductInfo.Name</PageTitle>
 
-<p><a href="rules#exclusions">← Rules</a></p>
+<p><a href="rules#exclusions">← @T("Rules")</a></p>
 <h1>
-    Allow a false positive
-    <HelpTip Title="Detection exclusions">
-        <p>Attack detection sometimes flags normal traffic, for example a content editor that saves HTML. An exclusion switches detection off for one path (and everything below it), optionally only on some routes and only for some kinds of attack. Rules and rate limits still apply.</p>
+    @T("Allow a false positive")
+    <HelpTip Title="@T("Detection exclusions")">
+        <p>@T("Attack detection sometimes flags normal traffic, for example a content editor that saves HTML. An exclusion switches detection off for one path (and everything below it), optionally only on some routes and only for some kinds of attack. Rules and rate limits still apply.")</p>
     </HelpTip>
 </h1>
 
@@ -20,11 +20,11 @@
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
-            <strong>The exclusion was not saved.</strong> The running configuration is unchanged.
+            <strong>@T("The exclusion was not saved.")</strong> @T("The running configuration is unchanged.")
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
@@ -32,20 +32,20 @@
 
     <EditForm Model="Model" FormName="exclusion-edit" OnValidSubmit="SaveAsync" Enhance class="form">
         <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-danger validation-summary" />
+        <ValidationList Class="alert alert-danger validation-summary" />
         <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
 
         <fieldset>
-            <legend>Where</legend>
-            <FormField Id="path" Label="Path" Help="Detection is switched off for this path and everything below it, e.g. /cms/editor. Keep it as narrow as possible." For="() => Model.PathPrefix">
+            <legend>@T("Where")</legend>
+            <FormField Id="path" Label="@T("Path")" Help="@T("Detection is switched off for this path and everything below it, e.g. /cms/editor. Keep it as narrow as possible.")" For="() => Model.PathPrefix">
                 <InputText id="path" aria-describedby="path-help" @bind-Value="Model.PathPrefix" autocomplete="off" />
             </FormField>
             <RouteScopeEditor Prefix="Model" Choices="Model.RouteChoices" />
         </fieldset>
 
         <fieldset>
-            <legend>Which checks to switch off</legend>
-            <p class="field-help">None ticked: all attack checks. Tick only what caused the false positive.</p>
+            <legend>@T("Which checks to switch off")</legend>
+            <p class="field-help">@T("None ticked: all attack checks. Tick only what caused the false positive.")</p>
             <div class="checkbox-row">
                 @for (var i = 0; i < Model.Categories.Count; i++)
                 {
@@ -57,15 +57,15 @@
             </div>
         </fieldset>
 
-        <FormField Id="reason" Label="Reason" Optional Help="Why this is safe; shown in the list of exclusions." For="() => Model.Reason">
+        <FormField Id="reason" Label="@T("Reason")" Optional Help="@T("Why this is safe; shown in the list of exclusions.")" For="() => Model.Reason">
             <InputText id="reason" aria-describedby="reason-help" @bind-Value="Model.Reason" autocomplete="off" />
         </FormField>
 
         <div class="actions">
-            <button type="submit" class="button">Add exclusion</button>
-            <a class="button button-secondary" href="@(_logEntry is null ? "rules#exclusions" : $"logs/{_logEntry.Id}")">Cancel</a>
+            <button type="submit" class="button">@T("Add exclusion")</button>
+            <a class="button button-secondary" href="@(_logEntry is null ? "rules#exclusions" : $"logs/{_logEntry.Id}")">@T("Cancel")</a>
         </div>
-        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+        <p class="muted">@T("Saving creates a new configuration version and takes effect immediately, without a restart.")</p>
     </EditForm>
 }
 

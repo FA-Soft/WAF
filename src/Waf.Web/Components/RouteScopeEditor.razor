@@ -2,11 +2,11 @@
 @using System.Globalization
 
 <div class="field" role="group" aria-labelledby="scope-label" aria-describedby="scope-help">
-    <span class="label" id="scope-label">Only for these routes <span class="field-optional">(optional)</span></span>
-    <p class="field-help" id="scope-help">None ticked: every request, also requests that match no route.</p>
+    <span class="label" id="scope-label">@T("Only for these routes") <span class="field-optional">@T("(optional)")</span></span>
+    <p class="field-help" id="scope-help">@T("None ticked: every request, also requests that match no route.")</p>
     @if (Choices.Count == 0)
     {
-        <p class="muted">There are no routes yet.</p>
+        <p class="muted">@T("There are no routes yet.")</p>
     }
     else
     {

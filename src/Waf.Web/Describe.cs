@@ -12,18 +12,15 @@ internal static class Describe
     {
         ArgumentNullException.ThrowIfNull(match);
 
-        var parts = new List<string>();
-        if (match.Hosts.Count > 0)
+        var hosts = match.Hosts.Count > 0 ? Join(match.Hosts, Text.T("or")) : null;
+        var path = !string.IsNullOrEmpty(match.PathPrefix) && match.PathPrefix != "/" ? match.PathPrefix : null;
+        var text = (hosts, path) switch
         {
-            parts.Add("for " + Join(match.Hosts, "or"));
-        }
-
-        if (!string.IsNullOrEmpty(match.PathPrefix) && match.PathPrefix != "/")
-        {
-            parts.Add($"under {match.PathPrefix}");
-        }
-
-        var text = parts.Count == 0 ? "Every request" : "Requests " + string.Join(' ', parts);
+            (null, null) => Text.T("Every request"),
+            (_, null) => Text.T("Requests for {0}", hosts),
+            (null, _) => Text.T("Requests under {0}", path),
+            _ => Text.T("Requests for {0} under {1}", hosts, path),
+        };
         return match.Methods.Count > 0 ? $"{text} ({string.Join(", ", match.Methods.Select(m => m.ToUpperInvariant()))})" : text;
     }
 
@@ -45,7 +42,7 @@ internal static class Describe
         return string.Join(", ", destinations.OrderBy(d => d.Failover ?? 0).Select(d =>
         {
             var text = Destination(d, known, addresses);
-            return d.Failover is { } failover ? string.Create(CultureInfo.InvariantCulture, $"{text} · failover {failover}") : text;
+            return d.Failover is { } failover ? Text.T("{0} · failover {1}", text, failover) : text;
         }));
     }
 
@@ -64,7 +61,7 @@ internal static class Describe
 
         return addresses.CurrentAddress(target) is { Length: > 0 } address
             ? $"{label} ({Address(port.Scheme, address, port.Port)})"
-            : $"{label} (not found: no traffic)";
+            : Text.T("{0} (not found: no traffic)", label);
     }
 
     /// <summary>A moment as the admin UI shows it: "2026-11-24 10:42 UTC".</summary>
@@ -86,29 +83,29 @@ internal static class Describe
 
         var field = condition.Field switch
         {
-            ConditionField.ClientIp => "the client IP",
-            ConditionField.Host => "the host",
-            ConditionField.Path => "the path",
-            ConditionField.QueryString => "the query string",
-            ConditionField.Method => "the method",
-            ConditionField.Header => $"the {condition.HeaderName} header",
-            ConditionField.UserAgent => "the user agent",
+            ConditionField.ClientIp => Text.T("the client IP"),
+            ConditionField.Host => Text.T("the host"),
+            ConditionField.Path => Text.T("the path"),
+            ConditionField.QueryString => Text.T("the query string"),
+            ConditionField.Method => Text.T("the method"),
+            ConditionField.Header => Text.T("the {0} header", condition.HeaderName),
+            ConditionField.UserAgent => Text.T("the user agent"),
             _ => condition.Field.ToString(),
         };
 
         var not = condition.Negate;
         var verb = condition.Operator switch
         {
-            ConditionOperator.Equals => not ? "is not" : "is",
-            ConditionOperator.StartsWith => not ? "does not start with" : "starts with",
-            ConditionOperator.EndsWith => not ? "does not end with" : "ends with",
-            ConditionOperator.Contains => not ? "does not contain" : "contains",
-            ConditionOperator.Regex => not ? "does not match the pattern" : "matches the pattern",
-            ConditionOperator.InCidr => not ? "is not in" : "is in",
+            ConditionOperator.Equals => not ? Text.T("is not") : Text.T("is"),
+            ConditionOperator.StartsWith => not ? Text.T("does not start with") : Text.T("starts with"),
+            ConditionOperator.EndsWith => not ? Text.T("does not end with") : Text.T("ends with"),
+            ConditionOperator.Contains => not ? Text.T("does not contain") : Text.T("contains"),
+            ConditionOperator.Regex => not ? Text.T("does not match the pattern") : Text.T("matches the pattern"),
+            ConditionOperator.InCidr => not ? Text.T("is not in") : Text.T("is in"),
             _ => condition.Operator.ToString(),
         };
 
-        return $"{field} {verb} {Join(condition.Values.Select(Shorten), "or")}";
+        return Text.T("{0} {1} {2}", field, verb, Join(condition.Values.Select(Shorten), Text.T("or")));
     }
 
     /// <summary>All conditions of a rule, e.g. "the path starts with /admin and the client IP is not in …".</summary>
@@ -116,8 +113,8 @@ internal static class Describe
     {
         ArgumentNullException.ThrowIfNull(conditions);
 
-        var text = string.Join(" and ", conditions.Select(Condition));
-        return text.Length == 0 ? "always" : char.ToUpperInvariant(text[0]) + text[1..];
+        var text = string.Join($" {Text.T("and")} ", conditions.Select(Condition));
+        return text.Length == 0 ? Text.T("always") : char.ToUpper(text[0], CultureInfo.CurrentCulture) + text[1..];
     }
 
     /// <summary>e.g. "Block", "Block (detection only: logged, not enforced)".</summary>
@@ -127,10 +124,10 @@ internal static class Describe
 
         return rule.Action switch
         {
-            RuleAction.Allow => "Allow (skip further checks)",
-            RuleAction.LogOnly => "Log only",
-            _ when rule.DetectionOnly || globalDetectionOnly => "Block (detection only: logged, not enforced)",
-            _ => "Block",
+            RuleAction.Allow => Text.T("Allow (skip further checks)"),
+            RuleAction.LogOnly => Text.T("Log only"),
+            _ when rule.DetectionOnly || globalDetectionOnly => Text.T("Block (detection only: logged, not enforced)"),
+            _ => Text.T("Block"),
         };
     }
 
@@ -141,21 +138,21 @@ internal static class Describe
 
         var window = limit.WindowSeconds switch
         {
-            1 => "second",
-            60 => "minute",
-            3600 => "hour",
-            86_400 => "day",
-            _ => string.Create(CultureInfo.InvariantCulture, $"{limit.WindowSeconds} seconds"),
+            1 => Text.T("second"),
+            60 => Text.T("minute"),
+            3600 => Text.T("hour"),
+            86_400 => Text.T("day"),
+            _ => Text.T("{0} seconds", limit.WindowSeconds),
         };
 
         var per = limit.Key switch
         {
-            RateLimitKey.ClientIp => "per client IP",
-            RateLimitKey.ClientIpAndRoute => "per client IP and route",
-            _ => "per route for all clients together",
+            RateLimitKey.ClientIp => Text.T("per client IP"),
+            RateLimitKey.ClientIpAndRoute => Text.T("per client IP and route"),
+            _ => Text.T("per route for all clients together"),
         };
 
-        return string.Create(CultureInfo.InvariantCulture, $"{limit.PermitLimit} requests per {window} {per}");
+        return Text.Plural(limit.PermitLimit, "{0} request per {1} {2}", "{0} requests per {1} {2}", window, per);
     }
 
     /// <summary>The attack categories that are switched on, in plain language.</summary>
@@ -169,11 +166,11 @@ internal static class Describe
         }
 
         var enabled = new List<string>();
-        if (settings.SqlInjection) { enabled.Add("SQL injection"); }
-        if (settings.CrossSiteScripting) { enabled.Add("Cross-site scripting"); }
-        if (settings.PathTraversal) { enabled.Add("Path traversal"); }
-        if (settings.CommandInjection) { enabled.Add("Command injection"); }
-        if (settings.BadUserAgents) { enabled.Add("Attack tools"); }
+        if (settings.SqlInjection) { enabled.Add(Text.T("SQL injection")); }
+        if (settings.CrossSiteScripting) { enabled.Add(Text.T("Cross-site scripting")); }
+        if (settings.PathTraversal) { enabled.Add(Text.T("Path traversal")); }
+        if (settings.CommandInjection) { enabled.Add(Text.T("Command injection")); }
+        if (settings.BadUserAgents) { enabled.Add(Text.T("Attack tools")); }
         return enabled;
     }
 
@@ -182,21 +179,28 @@ internal static class Describe
     {
         ArgumentNullException.ThrowIfNull(change);
 
-        var verb = change.Kind switch
+        // Whole phrases per kind and section, so each language can order the words.
+        var name = change.Name;
+        return (change.Section, change.Kind) switch
         {
-            ChangeKind.Added => "Add",
-            ChangeKind.Removed => "Remove",
-            _ => "Change",
-        };
-
-        return change.Section switch
-        {
-            ConfigurationSection.Settings => $"{(change.Kind == ChangeKind.Changed ? "Change" : verb)} setting: {SettingLabel(change.Name)}",
-            ConfigurationSection.Route => $"{verb} route '{change.Name}'",
-            ConfigurationSection.Rule => $"{verb} rule '{change.Name}'",
-            ConfigurationSection.RateLimit => $"{verb} rate limit '{change.Name}'",
-            ConfigurationSection.Target => $"{verb} target '{change.Name}'",
-            _ => $"{verb} certificate for {change.Name}",
+            (ConfigurationSection.Settings, ChangeKind.Added) => Text.T("Add setting: {0}", SettingLabel(name)),
+            (ConfigurationSection.Settings, ChangeKind.Removed) => Text.T("Remove setting: {0}", SettingLabel(name)),
+            (ConfigurationSection.Settings, _) => Text.T("Change setting: {0}", SettingLabel(name)),
+            (ConfigurationSection.Route, ChangeKind.Added) => Text.T("Add route '{0}'", name),
+            (ConfigurationSection.Route, ChangeKind.Removed) => Text.T("Remove route '{0}'", name),
+            (ConfigurationSection.Route, _) => Text.T("Change route '{0}'", name),
+            (ConfigurationSection.Rule, ChangeKind.Added) => Text.T("Add rule '{0}'", name),
+            (ConfigurationSection.Rule, ChangeKind.Removed) => Text.T("Remove rule '{0}'", name),
+            (ConfigurationSection.Rule, _) => Text.T("Change rule '{0}'", name),
+            (ConfigurationSection.RateLimit, ChangeKind.Added) => Text.T("Add rate limit '{0}'", name),
+            (ConfigurationSection.RateLimit, ChangeKind.Removed) => Text.T("Remove rate limit '{0}'", name),
+            (ConfigurationSection.RateLimit, _) => Text.T("Change rate limit '{0}'", name),
+            (ConfigurationSection.Target, ChangeKind.Added) => Text.T("Add target '{0}'", name),
+            (ConfigurationSection.Target, ChangeKind.Removed) => Text.T("Remove target '{0}'", name),
+            (ConfigurationSection.Target, _) => Text.T("Change target '{0}'", name),
+            (_, ChangeKind.Added) => Text.T("Add certificate for {0}", name),
+            (_, ChangeKind.Removed) => Text.T("Remove certificate for {0}", name),
+            _ => Text.T("Change certificate for {0}", name),
         };
     }
 
@@ -222,17 +226,18 @@ internal static class Describe
                 return $"{target.Address}: " + string.Join(", ", target.Ports.Select(p => $"{p.Name} {Address(p.Scheme, target.Address, p.Port)}"));
 
             case ConfigurationSection.Rule when source.Rules.FirstOrDefault(r => Named(r.Name)) is { } rule:
-                return string.Create(CultureInfo.InvariantCulture, $"{Conditions(rule.Conditions)} → {Action(rule, after.Settings.DetectionOnly)} (priority {rule.Priority})")
+                return Text.T("{0} → {1} (priority {2})", Conditions(rule.Conditions), Action(rule, after.Settings.DetectionOnly), rule.Priority)
                     + Scope(rule.Routes);
 
             case ConfigurationSection.RateLimit when source.RateLimits.FirstOrDefault(l => Named(l.Name)) is { } limit:
                 var text = RateLimit(limit);
                 if (limit.Conditions.Count > 0)
                 {
-                    text += ", when " + char.ToLowerInvariant(Conditions(limit.Conditions)[0]) + Conditions(limit.Conditions)[1..];
+                    var conditions = Conditions(limit.Conditions);
+                    text = Text.T("{0}, when {1}", text, char.ToLower(conditions[0], CultureInfo.CurrentCulture) + conditions[1..]);
                 }
 
-                return text + (limit.DetectionOnly ? " (detection only: logged, not enforced)" : string.Empty) + Scope(limit.Routes);
+                return (limit.DetectionOnly ? Text.T("{0} (detection only: logged, not enforced)", text) : text) + Scope(limit.Routes);
 
             default:
                 return string.Empty;
@@ -263,32 +268,32 @@ internal static class Describe
         value.Length <= MaxValueLength ? value : value[..(MaxValueLength - 1)] + "…";
 
     private static string Scope(IList<string> routes) =>
-        routes.Count == 0 ? string.Empty : $"; only on route {string.Join(", ", routes)}";
+        routes.Count == 0 ? string.Empty : Text.Plural(routes.Count, "; only on route {1}", "; only on routes {1}", string.Join(", ", routes));
 
     private static readonly Dictionary<string, string> SettingLabels = new(StringComparer.Ordinal)
     {
-        ["DetectionOnly"] = "Detection-only mode",
-        ["TrustedProxies"] = "Trusted proxies",
-        ["RateLimitMaxTrackedClients"] = "Rate-limit counters kept in memory",
-        ["AttackDetection.Enabled"] = "Attack detection",
-        ["AttackDetection.SqlInjection"] = "SQL injection detection",
-        ["AttackDetection.CrossSiteScripting"] = "Cross-site scripting detection",
-        ["AttackDetection.PathTraversal"] = "Path traversal detection",
-        ["AttackDetection.CommandInjection"] = "Command injection detection",
-        ["AttackDetection.BadUserAgents"] = "Attack tool detection",
-        ["AttackDetection.InspectBody"] = "Inspect request bodies",
-        ["AttackDetection.MaxBodyBytes"] = "Largest body inspected (bytes)",
-        ["AttackDetection.Exclusions"] = "Detection exclusions",
+        ["DetectionOnly"] = Text.N("Detection-only mode"),
+        ["TrustedProxies"] = Text.N("Trusted proxies"),
+        ["RateLimitMaxTrackedClients"] = Text.N("Rate-limit counters kept in memory"),
+        ["AttackDetection.Enabled"] = Text.N("Attack detection"),
+        ["AttackDetection.SqlInjection"] = Text.N("SQL injection detection"),
+        ["AttackDetection.CrossSiteScripting"] = Text.N("Cross-site scripting detection"),
+        ["AttackDetection.PathTraversal"] = Text.N("Path traversal detection"),
+        ["AttackDetection.CommandInjection"] = Text.N("Command injection detection"),
+        ["AttackDetection.BadUserAgents"] = Text.N("Attack tool detection"),
+        ["AttackDetection.InspectBody"] = Text.N("Inspect request bodies"),
+        ["AttackDetection.MaxBodyBytes"] = Text.N("Largest body inspected (bytes)"),
+        ["AttackDetection.Exclusions"] = Text.N("Detection exclusions"),
     };
 
     private static string SettingLabel(string path) =>
-        SettingLabels.TryGetValue(path, out var label) ? label : path.Replace(".", " › ", StringComparison.Ordinal);
+        SettingLabels.TryGetValue(path, out var label) ? Text.T(label) : path.Replace(".", " › ", StringComparison.Ordinal);
 
     private static string SettingValue(string? json) => json switch
     {
-        null => "(not set)",
-        "true" => "on",
-        "false" => "off",
+        null => Text.T("(not set)"),
+        "true" => Text.T("on"),
+        "false" => Text.T("off"),
         _ => json,
     };
 

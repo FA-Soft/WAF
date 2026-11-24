@@ -2,33 +2,33 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>Delete target @TargetName · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Delete target {0}", TargetName) · @ProductInfo.Name</PageTitle>
 
-<p><a href="targets">← Targets</a></p>
-<h1>Delete target '@TargetName'?</h1>
+<p><a href="targets">← @T("Targets")</a></p>
+<h1>@T("Delete target '{0}'?", TargetName)</h1>
 
 @if (_target is null)
 {
-    <div class="alert alert-danger" role="alert">Target '@TargetName' does not exist (any more). <a href="targets">Back to the targets</a>.</div>
+    <div class="alert alert-danger" role="alert">@T("Target '{0}' does not exist (any more).", TargetName) <a href="targets">@T("Back to the targets")</a>.</div>
 }
 else
 {
     <dl class="details">
-        <dt>Address</dt><dd>@_target.Address</dd>
-        <dt>Ports</dt><dd>@string.Join(", ", _target.Ports.Select(p => $"{p.Name} {Describe.Address(p.Scheme, _target.Address, p.Port)}"))</dd>
+        <dt>@T("Address")</dt><dd>@_target.Address</dd>
+        <dt>@T("Ports")</dt><dd>@string.Join(", ", _target.Ports.Select(p => $"{p.Name} {Describe.Address(p.Scheme, _target.Address, p.Port)}"))</dd>
     </dl>
 
     @if (_references.Count > 0)
     {
         <div class="alert alert-warning" role="alert">
-            <strong>This target cannot be deleted yet</strong>, because it is used by:
+            @TM("<strong>This target cannot be deleted yet</strong>, because it is used by:")
             <ul>
                 @foreach (var reference in _references)
                 {
                     <li>@reference</li>
                 }
             </ul>
-            <p>Change these routes to another target or address first, or delete them.</p>
+            <p>@T("Change these routes to another target or address first, or delete them.")</p>
         </div>
     }
     else
@@ -36,22 +36,22 @@ else
         @if (_errors.Count > 0)
         {
             <div class="alert alert-danger" role="alert">
-                <strong>The target was not deleted.</strong>
+                <strong>@T("The target was not deleted.")</strong>
                 <ul>
                     @foreach (var error in _errors)
                     {
-                        <li>@error</li>
+                        <li>@Message(error)</li>
                     }
                 </ul>
             </div>
         }
 
-        <p>No route uses it. The deletion is stored as a new configuration version, so it can be undone by restoring the previous version.</p>
+        <p>@T("No route uses it. The deletion is stored as a new configuration version, so it can be undone by restoring the previous version.")</p>
         <form method="post" @formname="target-delete" @onsubmit="DeleteAsync" data-enhance class="actions">
             <AntiforgeryToken />
             <input type="hidden" name="BaseVersion" value="@_baseVersion" />
-            <button type="submit" class="button button-danger">Delete target</button>
-            <a class="button button-secondary" href="targets">Cancel</a>
+            <button type="submit" class="button button-danger">@T("Delete target")</button>
+            <a class="button button-secondary" href="targets">@T("Cancel")</a>
         </form>
     }
 }
@@ -86,7 +86,7 @@ else
         var target = TargetResolver.Find(configuration.Targets, TargetName);
         if (target is null)
         {
-            _errors = [$"Target '{TargetName}' no longer exists."];
+            _errors = [Text.F("Target '{0}' no longer exists.", TargetName)];
             return;
         }
 

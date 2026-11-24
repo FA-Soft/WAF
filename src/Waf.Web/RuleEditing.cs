@@ -88,12 +88,12 @@ public sealed class ConditionFormModel
 
         if (Field == ConditionField.Header && string.IsNullOrWhiteSpace(HeaderName))
         {
-            yield return $"Condition {number}: enter the name of the header, e.g. X-Api-Key.";
+            yield return Text.F("Condition {0}: enter the name of the header, e.g. X-Api-Key.", number);
         }
 
         if (ValueList.Count == 0)
         {
-            yield return $"Condition {number}: enter at least one value.";
+            yield return Text.F("Condition {0}: enter at least one value.", number);
         }
     }
 }
@@ -111,30 +111,30 @@ internal static class ConditionLabels
 {
     public static readonly (ConditionField Value, string Label)[] Fields =
     [
-        (ConditionField.Path, "the path"),
-        (ConditionField.ClientIp, "the client IP"),
-        (ConditionField.Host, "the host name"),
-        (ConditionField.QueryString, "the query string"),
-        (ConditionField.Method, "the method"),
-        (ConditionField.UserAgent, "the user agent"),
-        (ConditionField.Header, "a header"),
+        (ConditionField.Path, Text.N("the path")),
+        (ConditionField.ClientIp, Text.N("the client IP")),
+        (ConditionField.Host, Text.N("the host name")),
+        (ConditionField.QueryString, Text.N("the query string")),
+        (ConditionField.Method, Text.N("the method")),
+        (ConditionField.UserAgent, Text.N("the user agent")),
+        (ConditionField.Header, Text.N("a header")),
     ];
 
     public static readonly (ConditionOperator Value, string Label)[] Operators =
     [
-        (ConditionOperator.StartsWith, "starts with"),
-        (ConditionOperator.Equals, "is"),
-        (ConditionOperator.EndsWith, "ends with"),
-        (ConditionOperator.Contains, "contains"),
-        (ConditionOperator.Regex, "matches the pattern"),
-        (ConditionOperator.InCidr, "is in the IP list"),
+        (ConditionOperator.StartsWith, Text.N("starts with")),
+        (ConditionOperator.Equals, Text.N("is")),
+        (ConditionOperator.EndsWith, Text.N("ends with")),
+        (ConditionOperator.Contains, Text.N("contains")),
+        (ConditionOperator.Regex, Text.N("matches the pattern")),
+        (ConditionOperator.InCidr, Text.N("is in the IP list")),
     ];
 
     public static readonly (RuleAction Value, string Label)[] Actions =
     [
-        (RuleAction.Block, "Block the request (403)"),
-        (RuleAction.Allow, "Allow it and skip the other checks"),
-        (RuleAction.LogOnly, "Only log it"),
+        (RuleAction.Block, Text.N("Block the request (403)")),
+        (RuleAction.Allow, Text.N("Allow it and skip the other checks")),
+        (RuleAction.LogOnly, Text.N("Only log it")),
     ];
 }
 

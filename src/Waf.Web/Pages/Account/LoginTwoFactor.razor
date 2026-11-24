@@ -4,35 +4,35 @@
 @inject AdminSignIn SignIn
 @inject NavigationManager Navigation
 
-<PageTitle>Two-factor sign-in · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Two-factor sign-in") · @ProductInfo.Name</PageTitle>
 
-<h1>Two-factor sign-in</h1>
+<h1>@T("Two-factor sign-in")</h1>
 
-<p>Enter the 6-digit code that your authenticator app shows for @AdminIdentity.AuthenticatorIssuer.</p>
+<p>@T("Enter the 6-digit code that your authenticator app shows for {0}.", AdminIdentity.AuthenticatorIssuer)</p>
 
 @if (_attempt is { Step: SignInStep.Failed })
 {
-    <div class="alert alert-danger" role="alert">The code is not correct. Codes change every 30 seconds; use the current one.</div>
+    <div class="alert alert-danger" role="alert">@T("The code is not correct. Codes change every 30 seconds; use the current one.")</div>
 }
 else if (_attempt?.Message is { } message)
 {
-    <div class="alert alert-danger" role="alert">@message</div>
+    <div class="alert alert-danger" role="alert">@Message(message)</div>
 }
 
 <EditForm Model="Model" FormName="two-factor" OnValidSubmit="VerifyAsync" Enhance class="form">
     <DataAnnotationsValidator />
     <input type="hidden" name="Model.ReturnUrl" value="@Model!.ReturnUrl" />
-    <FormField Id="code" Label="Code" For="() => Model.Code">
+    <FormField Id="code" Label="@T("Code")" For="() => Model.Code">
         <input id="code" name="Model.Code" inputmode="numeric" autocomplete="one-time-code" maxlength="9" />
     </FormField>
     <div class="actions">
-        <button type="submit" class="button">Sign in</button>
+        <button type="submit" class="button">@T("Sign in")</button>
     </div>
 </EditForm>
 
 <p class="muted">
-    No access to your authenticator app?
-    <a href="@($"{AdminIdentity.LoginRecoveryPath.TrimStart('/')}?returnUrl={Uri.EscapeDataString(Model!.ReturnUrl ?? "/")}")">Use a recovery code</a>.
+    @T("No access to your authenticator app?")
+    <a href="@($"{AdminIdentity.LoginRecoveryPath.TrimStart('/')}?returnUrl={Uri.EscapeDataString(Model!.ReturnUrl ?? "/")}")">@T("Use a recovery code")</a>
 </p>
 
 @code {

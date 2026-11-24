@@ -1,32 +1,32 @@
 @page "/audit"
 @inject AuditLogStore AuditLog
 
-<PageTitle>Audit log · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Audit log") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Audit log
-    <HelpTip Title="Audit log">
-        <p>Who changed what, and when: every configuration version, sign-ins and sign-outs, changes to passwords and two-factor sign-in, backups, downloads and log cleanups. Entries are never changed or removed. Times are in UTC.</p>
-        <p>Every configuration version has an entry here, with the routes, rules and settings it changed. Single failed sign-in attempts are in the <a href="account/history">login history</a>.</p>
+    @T("Audit log")
+    <HelpTip Title="@T("Audit log")">
+        <p>@T("Who changed what, and when: every configuration version, sign-ins and sign-outs, changes to passwords and two-factor sign-in, backups, downloads and log cleanups. Entries are never changed or removed. Times are in UTC.")</p>
+        <p>@TM("Every configuration version has an entry here, with the routes, rules and settings it changed. Single failed sign-in attempts are in the <a href=\"account/history\">login history</a>.")</p>
     </HelpTip>
 </h1>
 
-<form method="get" action="audit" class="log-filter" role="search" aria-label="Filter the audit log">
+<form method="get" action="audit" class="log-filter" role="search" aria-label="@T("Filter the audit log")">
     <div class="field-row">
         <div class="field">
-            <label for="category">What</label>
+            <label for="category">@T("What")</label>
             <select id="category" name="category">
-                <option value="" selected="@(_category is null)">Everything</option>
+                <option value="" selected="@(_category is null)">@T("Everything")</option>
                 @foreach (var (value, label) in Categories)
                 {
-                    <option value="@value" selected="@(value == _category)">@label</option>
+                    <option value="@value" selected="@(value == _category)">@T(label)</option>
                 }
             </select>
         </div>
         <div class="field">
-            <label for="user">Who</label>
+            <label for="user">@T("Who")</label>
             <select id="user" name="user">
-                <option value="" selected="@(_user is null)">Anyone</option>
+                <option value="" selected="@(_user is null)">@T("Anyone")</option>
                 @foreach (var name in _users)
                 {
                     <option value="@name" selected="@(string.Equals(name, _user, StringComparison.OrdinalIgnoreCase))">@name</option>
@@ -34,22 +34,22 @@
             </select>
         </div>
         <div class="field">
-            <label for="version">Configuration version</label>
+            <label for="version">@T("Configuration version")</label>
             <input id="version" name="version" type="number" min="1" value="@_version" />
         </div>
     </div>
     <div class="actions">
-        <button type="submit" class="button">Apply</button>
+        <button type="submit" class="button">@T("Apply")</button>
         @if (IsFiltered)
         {
-            <a class="button button-secondary" href="audit">Clear filters</a>
+            <a class="button button-secondary" href="audit">@T("Clear filters")</a>
         }
     </div>
 </form>
 
 @if (_page.Items.Count == 0)
 {
-    <p class="muted">@(IsFiltered ? "No entries match the filter." : "Nothing recorded yet.")</p>
+    <p class="muted">@(IsFiltered ? Text.T("No entries match the filter.") : Text.T("Nothing recorded yet."))</p>
 }
 else
 {
@@ -57,11 +57,11 @@ else
         <table>
             <thead>
                 <tr>
-                    <th scope="col">Time (UTC)</th>
-                    <th scope="col">Who</th>
-                    <th scope="col">What</th>
-                    <th scope="col">Description</th>
-                    <th scope="col">Version</th>
+                    <th scope="col">@T("Time (UTC)")</th>
+                    <th scope="col">@T("Who")</th>
+                    <th scope="col">@T("What")</th>
+                    <th scope="col">@T("Description")</th>
+                    <th scope="col">@T("Version")</th>
                 </tr>
             </thead>
             <tbody>
@@ -70,16 +70,16 @@ else
                     <tr id="@($"entry-{entry.Id}")">
                         <td class="nowrap">@entry.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss", Culture)</td>
                         <td>
-                            @entry.UserName
+                            @Message(entry.UserName)
                             <div class="muted">@Where(entry)</div>
                         </td>
                         <td><span class="badge @Badge(entry.Category)">@Label(entry.Category)</span></td>
                         <td>
-                            @entry.Summary
+                            @Message(entry.Summary)
                             @if (!string.IsNullOrEmpty(entry.Details))
                             {
                                 <details>
-                                    <summary>Details</summary>
+                                    <summary>@T("Details")</summary>
                                     <pre class="audit-details">@entry.Details</pre>
                                 </details>
                             }
@@ -99,14 +99,14 @@ else
 
 @if (_page.HasNewer || _page.HasOlder)
 {
-    <nav class="pager" aria-label="Pages">
+    <nav class="pager" aria-label="@T("Pages")">
         @if (_page.HasNewer)
         {
-            <a class="button button-secondary" href="@Url(("after", _page.Items[0].Id))">← Newer</a>
+            <a class="button button-secondary" href="@Url(("after", _page.Items[0].Id))">← @T("Newer")</a>
         }
         @if (_page.HasOlder)
         {
-            <a class="button button-secondary" href="@Url(("before", _page.Items[^1].Id))">Older →</a>
+            <a class="button button-secondary" href="@Url(("before", _page.Items[^1].Id))">@T("Older") →</a>
         }
     </nav>
 }
@@ -117,10 +117,10 @@ else
 
     private static readonly (AuditCategory Value, string Label)[] Categories =
     [
-        (AuditCategory.Configuration, "Configuration changes"),
-        (AuditCategory.SignIn, "Sign-ins and sign-outs"),
-        (AuditCategory.Security, "Account and security"),
-        (AuditCategory.Maintenance, "Backups, downloads and cleanup"),
+        (AuditCategory.Configuration, Text.N("Configuration changes")),
+        (AuditCategory.SignIn, Text.N("Sign-ins and sign-outs")),
+        (AuditCategory.Security, Text.N("Account and security")),
+        (AuditCategory.Maintenance, Text.N("Backups, downloads and cleanup")),
     ];
 
     private AuditPage _page = new([], false, false);

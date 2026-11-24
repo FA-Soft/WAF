@@ -229,7 +229,7 @@ internal static class TargetEditing
         {
             if (existing is not null)
             {
-                return $"A target named '{target.Name}' already exists. Choose another name.";
+                return Text.F("A target named '{0}' already exists. Choose another name.", target.Name);
             }
 
             configuration.Targets.Add(target);
@@ -239,12 +239,12 @@ internal static class TargetEditing
         var original = TargetResolver.Find(configuration.Targets, model.OriginalName);
         if (original is null)
         {
-            return $"Target '{model.OriginalName}' no longer exists; it was deleted in the meantime.";
+            return Text.F("Target '{0}' no longer exists; it was deleted in the meantime.", model.OriginalName);
         }
 
         if (existing is not null && !ReferenceEquals(existing, original))
         {
-            return $"A target named '{target.Name}' already exists. Choose another name.";
+            return Text.F("A target named '{0}' already exists. Choose another name.", target.Name);
         }
 
         configuration.Targets[configuration.Targets.IndexOf(original)] = target;

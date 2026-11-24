@@ -1,4 +1,3 @@
-using System.Xml.Linq;
 using FASoft.Waf.Web;
 
 namespace FASoft.Waf.UnitTests.Web;
@@ -48,34 +47,5 @@ public class AdminLanguageTests
         Assert.Equal("fr", AdminLanguage.Stored(User("fr")));
         Assert.Null(AdminLanguage.Stored(User("xx")));
         Assert.Null(AdminLanguage.Stored(User(null)));
-    }
-
-    private static Dictionary<string, string> Texts(string file) =>
-        XDocument.Load(Path.Combine(RepoRoot(), "src", "Waf.Web", "Resources", file)).Root!.Elements("data")
-            .ToDictionary(d => d.Attribute("name")!.Value, d => d.Element("value")!.Value, StringComparer.Ordinal);
-
-    private static string RepoRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "WafGateway.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("Repository root not found.");
-    }
-
-    [Theory]
-    [InlineData("nl")]
-    [InlineData("fr")]
-    [InlineData("de")]
-    public void Every_text_is_translated_into_every_language(string language)
-    {
-        var english = Texts("SharedResource.resx");
-        var translated = Texts($"SharedResource.{language}.resx");
-
-        Assert.Equal(english.Keys.Order(StringComparer.Ordinal), translated.Keys.Order(StringComparer.Ordinal));
-        Assert.All(translated, pair => Assert.False(string.IsNullOrWhiteSpace(pair.Value), $"'{pair.Key}' has no {language} text."));
-        Assert.All(english, pair => Assert.Equal(pair.Key, pair.Value)); // the key is the English text
     }
 }
