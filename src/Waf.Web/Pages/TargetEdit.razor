@@ -1,0 +1,193 @@
+@page "/targets/new"
+@page "/targets/{TargetName}/edit"
+@using System.Globalization
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>@(IsNew ? "Add a target" : $"Edit target {TargetName}") · @ProductInfo.Name</PageTitle>
+
+<p><a href="targets">← Targets</a></p>
+<h1>@(IsNew ? "Add a target" : $"Edit target '{TargetName}'")</h1>
+
+@if (_notFound)
+{
+    <div class="alert alert-danger" role="alert">Target '@TargetName' does not exist (any more). <a href="targets">Back to the targets</a>.</div>
+}
+else if (Model is not null)
+{
+    @if (_errors.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert" tabindex="-1">
+            <strong>The target was not saved.</strong> The running configuration is unchanged.
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <EditForm Model="Model" FormName="target-edit" OnSubmit="HandleAsync" Enhance class="form">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-danger validation-summary" />
+        <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
+        <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
+        <input type="hidden" name="Model.OriginalName" value="@Model.OriginalName" />
+
+        <fieldset>
+            <legend>The machine</legend>
+            <FormField Id="name" Label="Name" Help="A short, unique name, e.g. nas or iis. Renaming it renames it in its routes too." For="() => Model.Name">
+                <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
+            </FormField>
+            <FormField Id="address" Label="Address" Help="IP address or host name, e.g. 192.168.1.20 or nas.local." For="() => Model.Address">
+                <InputText id="address" aria-describedby="address-help" @bind-Value="Model.Address" autocomplete="off" />
+            </FormField>
+            <FormField Id="description" Label="Description" Optional Help="A note for yourself, e.g. where the machine is." For="() => Model.Description">
+                <InputText id="description" aria-describedby="description-help" @bind-Value="Model.Description" autocomplete="off" />
+            </FormField>
+        </fieldset>
+
+        <fieldset>
+            <legend>
+                Ports
+                <HelpTip Title="Ports">
+                    <p>Each port gets a label, unique for this machine, such as <em>web</em> or <em>admin</em>. Routes use the label (nas · web), so a changed port number is changed here once.</p>
+                </HelpTip>
+            </legend>
+
+            @for (var i = 0; i < Model.Ports.Count; i++)
+            {
+                var port = Model.Ports[i];
+                var name = $"Model.Ports[{i.ToString(CultureInfo.InvariantCulture)}]";
+                var id = $"port-{i}";
+                <div class="condition" role="group" aria-label="@($"Port {i + 1}")">
+                    <div class="condition-head">
+                        <strong>Port @(i + 1)</strong>
+                        @if (Model.Ports.Count > 1 || !port.IsEmpty)
+                        {
+                            <button type="submit" class="link-button" name="Model.Command" value="@($"remove-port-{i}")" formnovalidate>Remove</button>
+                        }
+                    </div>
+                    <input type="hidden" name="@($"{name}.OriginalName")" value="@port.OriginalName" />
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="@($"{id}-name")">Label</label>
+                            <input id="@($"{id}-name")" name="@($"{name}.Name")" value="@port.Name" placeholder="e.g. web" autocomplete="off" />
+                        </div>
+                        <div class="field">
+                            <label for="@($"{id}-port")">Port</label>
+                            <input id="@($"{id}-port")" name="@($"{name}.Port")" type="number" min="1" max="65535" value="@port.Port" />
+                        </div>
+                    </div>
+                    <div class="checkbox-row">
+                        <label><input type="checkbox" name="@($"{name}.Https")" value="true" checked="@port.Https" /> HTTPS (the machine answers with TLS on this port)</label>
+                    </div>
+                </div>
+            }
+
+            <button type="submit" class="button button-secondary" name="Model.Command" value="add-port" formnovalidate>Add another port</button>
+        </fieldset>
+
+        @if (!Model.IsNew && _usedBy.Count > 0)
+        {
+            <p class="muted">Used by: @string.Join(", ", _usedBy). Saving changes where these routes forward to, at once.</p>
+        }
+
+        <div class="actions">
+            <button type="submit" class="button">@(Model.IsNew ? "Add target" : "Save changes")</button>
+            <a class="button button-secondary" href="targets">Cancel</a>
+        </div>
+        <p class="muted">Saving creates a new configuration version and takes effect immediately, without a restart.</p>
+    </EditForm>
+}
+
+@code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    /// <summary>The target being edited; null when adding one.</summary>
+    [Parameter]
+    public string? TargetName { get; set; }
+
+    [SupplyParameterFromForm(FormName = "target-edit")]
+    private TargetFormModel? Model { get; set; }
+
+    private IReadOnlyList<string> _errors = [];
+    private IReadOnlyList<string> _usedBy = [];
+    private bool _notFound;
+
+    private bool IsNew => TargetName is null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        if (!IsNew && active is not null)
+        {
+            _usedBy = TargetEditing.RouteNames(active.Configuration, TargetName!);
+        }
+
+        if (Model is not null)
+        {
+            return; // posted form
+        }
+
+        var version = active?.Version ?? 0;
+        if (IsNew)
+        {
+            Model = TargetFormModel.ForNewTarget(version);
+            return;
+        }
+
+        var target = active is null ? null : TargetResolver.Find(active.Configuration.Targets, TargetName);
+        if (target is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        Model = TargetFormModel.FromTarget(target, version);
+    }
+
+    private async Task HandleAsync(EditContext editContext)
+    {
+        if (Model!.TryApplyCommand())
+        {
+            return; // only the form changed; nothing is saved
+        }
+
+        if (await editContext.ValidateAsync())
+        {
+            await SaveAsync();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        var model = Model!;
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        if (active is null)
+        {
+            _errors = ["No configuration is active yet."];
+            return;
+        }
+
+        var configuration = ConfigurationEditing.Clone(active.Configuration);
+        if (TargetEditing.Apply(configuration, model) is { } error)
+        {
+            _errors = [error];
+            return;
+        }
+
+        var name = model.Name.Trim();
+        var verb = model.IsNew ? "added" : "changed";
+        var result = await Configurations.ActivateIfCurrentAsync(model.BaseVersion, configuration, AdminActor.From(HttpContext), $"Target '{name}' {verb}.", CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"targets?saved={Uri.EscapeDataString($"Target '{name}' {verb} (version {result.Version!.Version}).")}");
+    }
+}

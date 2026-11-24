@@ -27,13 +27,35 @@ internal static class Describe
         return match.Methods.Count > 0 ? $"{text} ({string.Join(", ", match.Methods.Select(m => m.ToUpperInvariant()))})" : text;
     }
 
-    /// <summary>e.g. "http://10.0.0.5:8080" or a list for several destinations.</summary>
-    public static string Destinations(IEnumerable<ProxyDestinationOptions> destinations)
+    /// <summary>
+    /// e.g. "http://10.0.0.5:8080", or "nas · web (http://192.168.1.20:5000)" for a target destination (just the label
+    /// when <paramref name="targets"/> is not given or does not know it); a list for several destinations.
+    /// </summary>
+    public static string Destinations(IEnumerable<ProxyDestinationOptions> destinations, IEnumerable<BackendTarget>? targets = null)
     {
         ArgumentNullException.ThrowIfNull(destinations);
 
+        var known = targets?.ToList() ?? [];
         return string.Join(", ", destinations.Select(d =>
-            string.Create(CultureInfo.InvariantCulture, $"{d.Scheme.ToLowerInvariant()}://{(d.Address.Contains(':', StringComparison.Ordinal) ? $"[{d.Address}]" : d.Address)}:{d.Port}")));
+        {
+            if (!d.UsesTarget)
+            {
+                return Address(d.Scheme, d.Address, d.Port);
+            }
+
+            var label = TargetResolver.Label(d.Target, d.TargetPort);
+            return TargetResolver.Find(known, d.Target) is { } target && TargetResolver.FindPort(target, d.TargetPort) is { } port
+                ? $"{label} ({Address(port.Scheme, target.Address, port.Port)})"
+                : label;
+        }));
+    }
+
+    /// <summary>e.g. "http://10.0.0.5:8080" or "http://[fd00::5]:8080".</summary>
+    public static string Address(string scheme, string address, int port)
+    {
+        ArgumentNullException.ThrowIfNull(scheme);
+        ArgumentNullException.ThrowIfNull(address);
+        return string.Create(CultureInfo.InvariantCulture, $"{scheme.ToLowerInvariant()}://{(address.Contains(':', StringComparison.Ordinal) ? $"[{address}]" : address)}:{port}");
     }
 
     /// <summary>e.g. "the path starts with /admin" or "the client IP is not in 203.0.113.0/24".</summary>
@@ -152,6 +174,7 @@ internal static class Describe
             ConfigurationSection.Route => $"{verb} route '{change.Name}'",
             ConfigurationSection.Rule => $"{verb} rule '{change.Name}'",
             ConfigurationSection.RateLimit => $"{verb} rate limit '{change.Name}'",
+            ConfigurationSection.Target => $"{verb} target '{change.Name}'",
             _ => $"{verb} certificate for {change.Name}",
         };
     }
@@ -172,7 +195,10 @@ internal static class Describe
                 return $"{SettingValue(change.Before)} → {SettingValue(change.After)}";
 
             case ConfigurationSection.Route when source.Routes.FirstOrDefault(r => Named(r.Name)) is { } route:
-                return $"{Match(route.Match)} → {Destinations(route.Destinations)}";
+                return $"{Match(route.Match)} → {Destinations(route.Destinations, source.Targets)}";
+
+            case ConfigurationSection.Target when source.Targets.FirstOrDefault(t => Named(t.Name)) is { } target:
+                return $"{target.Address}: " + string.Join(", ", target.Ports.Select(p => $"{p.Name} {Address(p.Scheme, target.Address, p.Port)}"));
 
             case ConfigurationSection.Rule when source.Rules.FirstOrDefault(r => Named(r.Name)) is { } rule:
                 return string.Create(CultureInfo.InvariantCulture, $"{Conditions(rule.Conditions)} → {Action(rule, after.Settings.DetectionOnly)} (priority {rule.Priority})")

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Options;
 using FASoft.Waf.Core;
+using FASoft.Waf.Core.Routing;
 using FASoft.Waf.Core.Hosting;
 using FASoft.Waf.Core.Net;
 using FASoft.Waf.Core.Tls;
@@ -97,7 +98,7 @@ internal static partial class GatewayApplication
         AddRequestLog(builder, storagePaths);
         builder.Services.AddSingleton<InMemoryAcmeChallengeStore>();
         builder.Services.AddSingleton<IAcmeChallengeStore>(sp => sp.GetRequiredService<InMemoryAcmeChallengeStore>());
-        builder.Services.AddWafProxy(gatewayConfiguration.Routes, configTag);
+        builder.Services.AddWafProxy(TargetResolver.Resolve(gatewayConfiguration), configTag);
 
         var endpoints = builder.Configuration
             .GetSection(GatewayEndpointOptions.SectionName)

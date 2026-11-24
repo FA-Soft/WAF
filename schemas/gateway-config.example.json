@@ -25,11 +25,19 @@
       "MaxDatabaseSizeMb": 1024
     }
   },
+  "Targets": [
+    {
+      "Name": "iis",
+      "Description": "IIS on this machine",
+      "Address": "127.0.0.1",
+      "Ports": [ { "Name": "web", "Port": 8080, "Scheme": "http" } ]
+    }
+  ],
   "Routes": [
     {
       "Name": "website",
       "Match": { "Hosts": [ "www.example.com", "example.com" ] },
-      "Destinations": [ { "Scheme": "http", "Address": "127.0.0.1", "Port": 8080 } ]
+      "Destinations": [ { "Target": "iis", "TargetPort": "web" } ]
     },
     {
       "Name": "api",

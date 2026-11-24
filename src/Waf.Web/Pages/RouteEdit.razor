@@ -31,7 +31,7 @@ else if (Model is not null)
         </div>
     }
 
-    <EditForm Model="Model" FormName="route-edit" OnValidSubmit="SaveAsync" Enhance class="form">
+    <EditForm Model="Model" FormName="route-edit" OnSubmit="HandleAsync" Enhance class="form">
         <DataAnnotationsValidator />
         <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
         <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
@@ -96,9 +96,29 @@ else if (Model is not null)
                 </HelpTip>
             </legend>
 
-            <FormField Id="destinations" Label="Backends" Help="One address per line: http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http)." For="() => Model.Destinations">
+            <FormField Id="destinations" Label="Backends" Help="One per line: an address such as http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http), or a target and port label such as nas/web (see Targets)." For="() => Model.Destinations">
                 <InputTextArea id="destinations" aria-describedby="destinations-help" @bind-Value="Model.Destinations" rows="3" />
             </FormField>
+
+            @if (_targetChoices.Count > 0)
+            {
+                <div class="field add-target">
+                    <label for="add-target">Add a target</label>
+                    <div class="inline-controls">
+                        <InputSelect id="add-target" @bind-Value="Model.AddTarget">
+                            @foreach (var (line, text) in _targetChoices)
+                            {
+                                <option value="@line">@text</option>
+                            }
+                        </InputSelect>
+                        <button type="submit" name="Model.Command" value="add-target" class="button button-secondary" formnovalidate>Add</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p class="field-help">Tip: name a machine and its ports once under <a href="targets">Targets</a>, then use it here, so a changed address is changed in one place.</p>
+            }
 
             <div class="field checkbox-field">
                 <InputCheckbox id="preserve-host" @bind-Value="Model.PreserveHost" aria-describedby="preserve-host-help" />
@@ -185,8 +205,16 @@ else if (Model is not null)
         : [.. hosts.Split(['\n', '\r', ',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(host => !_certificateHosts.Any(c => string.Equals(c, host, StringComparison.OrdinalIgnoreCase) || CertificateNames.Matches(c, host)))];
 
-    protected override async Task OnParametersSetAsync() =>
-        _certificateHosts = [.. (await Configurations.GetActiveAsync(CancellationToken.None))?.Configuration.Certificates.Select(c => c.HostName) ?? []];
+    /// <summary>"nas/web" with "nas · web (http://192.168.1.20:5000)" for every port of every target.</summary>
+    private IReadOnlyList<(string Line, string Text)> _targetChoices = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var configuration = (await Configurations.GetActiveAsync(CancellationToken.None))?.Configuration;
+        _certificateHosts = [.. configuration?.Certificates.Select(c => c.HostName) ?? []];
+        _targetChoices = [.. (configuration?.Targets ?? []).SelectMany(t => t.Ports.Select(p =>
+            (RouteFormModel.TargetLine(t.Name, p.Name), $"{TargetResolver.Label(t.Name, p.Name)} ({Describe.Address(p.Scheme, t.Address, p.Port)})")))];
+    }
 
     /// <summary>The route being edited; null when adding a route.</summary>
     [Parameter]
@@ -242,6 +270,19 @@ else if (Model is not null)
         }
 
         Model = RouteFormModel.FromRoute(route, version);
+    }
+
+    private async Task HandleAsync(EditContext editContext)
+    {
+        if (Model!.TryApplyCommand())
+        {
+            return; // only the form changed; nothing is saved
+        }
+
+        if (await editContext.ValidateAsync())
+        {
+            await SaveAsync();
+        }
     }
 
     private async Task SaveAsync()

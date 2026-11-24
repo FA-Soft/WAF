@@ -141,6 +141,45 @@
       },
       "additionalProperties": false
     },
+    "Targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Address": {
+            "type": "string"
+          },
+          "Ports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Name": {
+                  "type": "string"
+                },
+                "Port": {
+                  "type": "integer"
+                },
+                "Scheme": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "Routes": {
       "type": "array",
       "items": {
@@ -186,6 +225,18 @@
                 },
                 "Port": {
                   "type": "integer"
+                },
+                "Target": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "TargetPort": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "additionalProperties": false

@@ -80,7 +80,7 @@ The WAF owns ports 80 and 443. If IIS or another web server runs on the same mac
 
 ![Admin UI dashboard showing the firewall state, the active configuration version, routes and rules](docs/images/admin-dashboard.png)
 
-The [admin guide](docs/admin-guide.md) walks through the admin UI task by task. Its pages: a **dashboard** (firewall state, active configuration version, routes, rules, rate limits and attack detection in plain language), the **Request log** (see [Logging](#logging)), **Routes** (list, add, edit, enable/disable and delete routes), **Rules** (rules with any number of conditions, priority, action, per-rule and global detection-only mode, and IP block/allow lists where you paste addresses and CIDR ranges one per line), **Rate limits** (limit, window, what is counted, routes and conditions), **Certificates** (upload your own PFX or PEM certificates, choose their host names, see expiry warnings), **Templates and presets** (templates open the route, rule or rate-limit editor pre-filled for common cases such as a load-balanced site, an API key header or login attempts; one-click presets such as "Block common attacks", "Lock a path to your IP addresses" and "Protect a login page" first show a preview of exactly what will change, and applying one twice changes nothing), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) the **configuration history** (open any version to see what it changed, compare it with the running configuration and restore it), the **Audit log**, **Backup and import** (export the configuration as JSON, import a file with a preview of the changes, download a full backup of every version and restore it), **Remote access**, the **AI assistant**, and **Your account** (password, two-factor sign-in, sessions, login history). Every change made in the UI is checked, stored as a new configuration version and applied immediately, without a restart; if someone else changed the configuration in the meantime, the change is refused instead of overwriting theirs. The forms work without JavaScript: buttons such as "Add another condition" re-show the form without saving. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
+The [admin guide](docs/admin-guide.md) walks through the admin UI task by task. Its pages: a **dashboard** (firewall state, active configuration version, routes, rules, rate limits and attack detection in plain language), the **Request log** (see [Logging](#logging)), **Routes** (list, add, edit, enable/disable and delete routes), **Targets** (name a machine and its ports once, so routes forward to "nas · web" instead of an address), **Rules** (rules with any number of conditions, priority, action, per-rule and global detection-only mode, and IP block/allow lists where you paste addresses and CIDR ranges one per line), **Rate limits** (limit, window, what is counted, routes and conditions), **Certificates** (upload your own PFX or PEM certificates, choose their host names, see expiry warnings), **Templates and presets** (templates open the route, rule or rate-limit editor pre-filled for common cases such as a load-balanced site, an API key header or login attempts; one-click presets such as "Block common attacks", "Lock a path to your IP addresses" and "Protect a login page" first show a preview of exactly what will change, and applying one twice changes nothing), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) the **configuration history** (open any version to see what it changed, compare it with the running configuration and restore it), the **Audit log**, **Backup and import** (export the configuration as JSON, import a file with a preview of the changes, download a full backup of every version and restore it), **Remote access**, the **AI assistant**, and **Your account** (password, two-factor sign-in, sessions, login history). Every change made in the UI is checked, stored as a new configuration version and applied immediately, without a restart; if someone else changed the configuration in the meantime, the change is refused instead of overwriting theirs. The forms work without JavaScript: buttons such as "Add another condition" re-show the form without saving. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
 
 **Light and dark theme.** The switch at the top right (**System**, **Light**, **Dark**) sets the UI's colors. **System** (the default) follows the device's light or dark setting. A choice of Light or Dark is stored with your account (in `identity.db`), so it applies again at your next sign-in and on every device you sign in from; a change also reaches your other open sessions at their next page. The sign-in page itself follows the device's setting.
 
@@ -131,7 +131,8 @@ The admin UI is exempt from user-defined WAF rules and from the fail-closed 503 
 
 ## Configuration concepts
 
-- **Routes:** match by host, path and/or method, then forward to a destination IP/hostname and port.
+- **Routes:** match by host, path and/or method, then forward to a destination IP/hostname and port, or to a target.
+- **Targets:** a named machine (`nas`) with labelled ports (`web` → 5000, `admin` → 5001). Routes forward to "nas · web"; when the machine's address or a port changes, it is changed in one place (see [Targets](#targets)).
 - **Rules:** each has a name, conditions, an action (Allow, Block or LogOnly), a priority and an enabled flag. Rules can run in detection-only mode, per rule or globally.
 - **Certificates:** Let's Encrypt (HTTP-01, with a staging switch) or your own PFX/PEM, per hostname (see [HTTPS and certificates](#https-and-certificates)).
 - **Versions and rollback:** every change is stored as a configuration version. An invalid change never replaces the last working configuration, and any version can be restored.
@@ -160,12 +161,43 @@ Routes are normally managed in the admin UI. On a fresh install they can be seed
 ```
 
 - **Match:** all given conditions must match; leave one out to match anything. `Hosts` accepts `*.example.com`. `PathPrefix` matches whole path segments (`/api` matches `/api` and `/api/users`, not `/apix`); the most specific route wins, and the path is forwarded unchanged. Requests that match no route get 404.
-- **Destinations:** IP address or host name, port, `http` or `https`. Several destinations share the load; WebSockets are supported.
+- **Destinations:** IP address or host name, port, `http` or `https`, or a target and port label (see [Targets](#targets)). Several destinations share the load; WebSockets are supported.
 - **PreserveHost** (default `true`): the backend receives the client's original `Host` header, as IIS host bindings need.
 - **AllowInvalidBackendCertificate** (default `false`): accept a self-signed certificate from an HTTPS backend you control.
 - **Https** (both default `false`): `RedirectHttp` sends plain HTTP requests to HTTPS, `Hsts` adds the Strict-Transport-Security header; see [Redirect to HTTPS and HSTS](#redirect-to-https-and-hsts). With both off the route also works over plain HTTP.
 - **HealthCheck:** with a `Path`, each destination is probed and taken out of rotation while it fails. Passive checks (failed requests) are always on.
 - **Forwarded headers:** `X-Forwarded-For`, `-Proto` and `-Host` are always set by the gateway; values sent by clients are overwritten and a client `Forwarded` header is removed. `X-Forwarded-For` carries the resolved client IP (see below).
+
+### Targets
+
+![Targets page with a machine and its labelled ports](docs/images/admin-targets.png)
+
+A **target** names a machine behind the gateway and its ports, under **Targets** in the admin UI or in `Gateway:Targets`:
+
+```json
+"Gateway": {
+  "Targets": [
+    {
+      "Name": "nas",
+      "Description": "Synology in the cupboard",
+      "Address": "192.168.1.20",
+      "Ports": [
+        { "Name": "web", "Port": 5000, "Scheme": "http" },
+        { "Name": "admin", "Port": 5001, "Scheme": "https" }
+      ]
+    }
+  ],
+  "Routes": [
+    { "Name": "files", "Match": { "Hosts": ["files.example.com"] }, "Destinations": [ { "Target": "nas", "TargetPort": "web" } ] }
+  ]
+}
+```
+
+- **Name and port labels:** letters, digits, `-`, `_` and `.`; target names are unique, port labels unique per target. `Address` is an IP address or host name; each port has a number and `http` or `https`.
+- **In routes:** a destination names `Target` and `TargetPort` instead of `Address`, `Port` and `Scheme` (not both). In the route editor, write it as `nas/web` in the backends, or pick it under **Add a target**. Lists show it as "nas · web (http://192.168.1.20:5000)".
+- **One place to change:** a new address or port number for the target is one configuration version, and every route that uses it forwards to the new address at once, without a restart. Renaming a target or a port label in the editor renames it in its routes too.
+- **Checks:** a route that names an unknown target or port is refused with a message that names it, and a target that routes still use cannot be deleted (the page lists them).
+- The request log shows the label with the address it stood for at the time, e.g. `nas · web (http://192.168.1.20:5000/)`. Targets are part of versions, exports, backups, the configuration diff and the audit log; the AI assistant sees them and may propose changes to them.
 
 ### HTTPS and certificates
 
@@ -264,7 +296,7 @@ The assistant uses Claude Opus 5.5 (`claude-opus-5-5`) with high effort, through
 
 1. **Ask.** On the **AI assistant** page, describe one change in your own words, for example: *"Only the office network 203.0.113.0/24 may open /admin."* Your request and the configuration summary are sent to Anthropic (recorded in the audit log), one request at a time.
 2. **Strict checks.** The model answers in a fixed format (structured output): a short summary and only the sections it changes. Every proposal is stored, and checked before you see an Approve button:
-   - it may only change routes, rules, rate limits and the settings for detection mode, trusted proxies, attack detection, log retention and HSTS; certificates, Let's Encrypt and other settings are refused;
+   - it may only change targets, routes, rules, rate limits and the settings for detection mode, trusted proxies, attack detection, log retention and HSTS; certificates, Let's Encrypt and other settings are refused;
    - each section it contains replaces that section; the result is read as strictly as an imported file, against the same JSON schema (unknown properties, wrong value types, unknown enumeration values and `null`s are errors, with their location) and the full configuration validation;
    - secret values the model saw as a placeholder are filled in from the running configuration, and only when they stay in the same rule or rate limit, at the same condition and header;
    - a proposal that changes nothing is refused too.

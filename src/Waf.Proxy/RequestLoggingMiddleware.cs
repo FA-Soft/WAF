@@ -62,6 +62,9 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
     public const int MaxPathLength = 2048;
     public const int MaxDetailLength = 1000;
 
+    /// <summary>Longest destination stored (the events.db column): the address, with the target label when there is one.</summary>
+    public const int MaxDestinationLength = 300;
+
     public async Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -87,7 +90,8 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
     internal static RequestLogEntry CreateEntry(HttpContext context, RequestLogFeature feature, bool failed, TimeSpan elapsed)
     {
         var route = HttpContextWafRequest.GetRouteName(context);
-        var destination = context.Features.Get<IReverseProxyFeature>()?.ProxiedDestination?.Model.Config.Address;
+        var proxied = context.Features.Get<IReverseProxyFeature>()?.ProxiedDestination?.Model.Config;
+        var destination = proxied is null ? null : YarpConfigMapper.DescribeDestination(proxied);
         var status = failed && !context.Response.HasStarted ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
 
         var action = feature.Event switch
@@ -113,7 +117,7 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
             feature.Event,
             feature.RuleName,
             Truncate(feature.Detail, MaxDetailLength),
-            destination,
+            Truncate(destination, MaxDestinationLength),
             status,
             Math.Round(elapsed.TotalMilliseconds, 3));
     }

@@ -6,6 +6,7 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 - [Dashboard](#dashboard)
 - [Request log](#request-log)
 - [Routes](#routes)
+- [Targets](#targets)
 - [Rules](#rules)
 - [Rate limits](#rate-limits)
 - [Certificates](#certificates)
@@ -77,6 +78,20 @@ The HTTPS options of a route: redirect http:// to https://, and HSTS.
 Deleting a route is refused while rules or rate limits still refer to it.
 
 ![Deleting a route that is still in use](images/admin-route-delete.png)
+
+## Targets
+
+Named machines with labelled ports, and the routes that use them.
+
+![Targets list](images/admin-targets.png)
+
+Editing a target: name, address and its ports.
+
+![Editing a target](images/admin-target-edit.png)
+
+In the route editor, a target is picked under "Add a target" or written as `nas/web` in the backends.
+
+![A route forwarding to a target](images/admin-route-target.png)
 
 ## Rules
 

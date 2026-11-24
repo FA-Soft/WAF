@@ -39,9 +39,41 @@ internal sealed class RouteFormModel : IValidatableObject
     public bool MethodHead { get; set; }
     public bool MethodOptions { get; set; }
 
-    /// <summary>Backend addresses, one per line, e.g. http://10.0.0.5:8080.</summary>
-    [Required(ErrorMessage = "Enter at least one backend address, e.g. http://10.0.0.5:8080.")]
+    /// <summary>Backends, one per line: an address (http://10.0.0.5:8080) or a target and port label (nas/web).</summary>
+    [Required(ErrorMessage = "Enter at least one backend, e.g. http://10.0.0.5:8080 or a target such as nas/web.")]
     public string Destinations { get; set; } = string.Empty;
+
+    /// <summary>Set by the editor's extra button ("add-target"); null for Save.</summary>
+    public string? Command { get; set; }
+
+    /// <summary>The target line chosen in "Add a target", e.g. <c>nas/web</c>.</summary>
+    public string? AddTarget { get; set; }
+
+    /// <summary>
+    /// Handles "Add a target": appends the chosen target line to <see cref="Destinations"/> (once). Returns true when
+    /// the request was this command, so the form is shown again instead of saved.
+    /// </summary>
+    public bool TryApplyCommand()
+    {
+        if (Command != "add-target")
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(AddTarget) && RouteFormModel.TryParseTarget(AddTarget, out var target, out var port))
+        {
+            var line = TargetLine(target, port);
+            var lines = SplitLines(Destinations).ToList();
+            if (!lines.Contains(line, StringComparer.OrdinalIgnoreCase))
+            {
+                Destinations = string.Join(Environment.NewLine, lines.Append(line));
+            }
+        }
+
+        Command = null;
+        AddTarget = null;
+        return true;
+    }
 
     public bool PreserveHost { get; set; }
 
@@ -190,6 +222,14 @@ internal sealed class RouteFormModel : IValidatableObject
     {
         destination = new ProxyDestinationOptions();
         var value = text.Trim();
+        if (TryParseTarget(value, out var target, out var port))
+        {
+            // Whether the target and port exist is checked with the whole configuration when saving.
+            destination = new ProxyDestinationOptions { Target = target, TargetPort = port };
+            error = string.Empty;
+            return true;
+        }
+
         if (!value.Contains("://", StringComparison.Ordinal))
         {
             value = "http://" + value;
@@ -228,9 +268,39 @@ internal sealed class RouteFormModel : IValidatableObject
         return true;
     }
 
+    /// <summary>
+    /// A target line: <c>nas/web</c> (target, then port label), or <c>nas · web</c> as the lists show it. Never an
+    /// address: addresses either have <c>://</c> or no slash (a path after an address is refused anyway).
+    /// </summary>
+    public static bool TryParseTarget(string text, out string target, out string port)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        target = port = string.Empty;
+        if (text.Contains("://", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var parts = text.Split(['/', '·'], StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !ProxyRouteValidator.IsValidName(parts[0]) || !ProxyRouteValidator.IsValidName(parts[1]))
+        {
+            return false;
+        }
+
+        (target, port) = (parts[0], parts[1]);
+        return true;
+    }
+
+    /// <summary>How a target line is written in the editor: <c>nas/web</c>.</summary>
+    public static string TargetLine(string target, string port) => $"{target}/{port}";
+
     public static string FormatDestination(ProxyDestinationOptions destination)
     {
         ArgumentNullException.ThrowIfNull(destination);
+        if (destination.UsesTarget)
+        {
+            return TargetLine(destination.Target ?? string.Empty, destination.TargetPort ?? string.Empty);
+        }
 
         var host = StrictIpAddress.TryParse(destination.Address, out var ip) && ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6
             ? $"[{destination.Address}]"

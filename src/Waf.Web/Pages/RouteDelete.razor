@@ -15,7 +15,7 @@ else
 {
     <dl class="details">
         <dt>Handles</dt><dd>@Describe.Match(_route.Match)</dd>
-        <dt>Forwards to</dt><dd>@Describe.Destinations(_route.Destinations)</dd>
+        <dt>Forwards to</dt><dd>@Describe.Destinations(_route.Destinations, _targets)</dd>
     </dl>
 
     @if (_references.Count > 0)
@@ -61,6 +61,7 @@ else
     public HttpContext? HttpContext { get; set; }
 
     private ProxyRouteOptions? _route;
+    private IReadOnlyList<BackendTarget> _targets = [];
     private IReadOnlyList<string> _references = [];
     private IReadOnlyList<string> _errors = [];
     private long _baseVersion;
@@ -76,6 +77,7 @@ else
         var active = await Configurations.GetActiveAsync(CancellationToken.None);
         _baseVersion = active?.Version ?? 0;
         _route = active?.Configuration.Routes.FirstOrDefault(r => string.Equals(r.Name, RouteName, StringComparison.OrdinalIgnoreCase));
+        _targets = [.. active?.Configuration.Targets ?? []];
         _references = active is null || _route is null ? [] : ConfigurationEditing.RouteReferences(active.Configuration, _route.Name);
     }
 

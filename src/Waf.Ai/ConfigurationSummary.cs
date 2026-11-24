@@ -9,7 +9,7 @@ namespace FASoft.Waf.Ai;
 /// left out until it is added here on purpose.
 /// </summary>
 /// <remarks>
-/// Included: routes (host names, paths, methods, backend addresses, HTTPS options), rules and rate limits (with the
+/// Included: targets (names, addresses, port labels), routes (host names, paths, methods, backend addresses, HTTPS options), rules and rate limits (with the
 /// values of secret conditions such as API keys replaced), detection-only mode, attack detection, trusted proxies, log
 /// retention and HSTS settings, and which host names have a certificate from which source. Left out: secret condition
 /// values, the Let's Encrypt contact e-mail, certificate files, paths and thumbprints, and anything outside the
@@ -62,6 +62,13 @@ public static class ConfigurationSummary
             ["RateLimits"] = full["RateLimits"]?.DeepClone() ?? new JsonArray(),
             ["Certificates"] = certificates,
         };
+
+        // Targets (names, addresses, port labels) only when there are any, like in the configuration JSON itself.
+        if (full["Targets"] is JsonArray targets)
+        {
+            summary.Insert(2, "Targets", targets.DeepClone());
+        }
+
         return summary.ToJsonString(Indented);
     }
 }
