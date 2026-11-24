@@ -43,7 +43,13 @@ internal sealed class RouteFormModel : IValidatableObject
     [Required(ErrorMessage = "Enter at least one backend, e.g. http://10.0.0.5:8080 or a target such as nas/web.")]
     public string Destinations { get; set; } = string.Empty;
 
-    /// <summary>Set by the editor's extra button ("add-target"); null for Save.</summary>
+    /// <summary>
+    /// Failover backends, one per line, in the order they take over (line 1 is failover 1): they only get traffic while
+    /// none of <see cref="Destinations"/> is healthy.
+    /// </summary>
+    public string? FailoverDestinations { get; set; }
+
+    /// <summary>Set by the editor's extra buttons ("add-target", "add-target-failover"); null for Save.</summary>
     public string? Command { get; set; }
 
     /// <summary>The target line chosen in "Add a target", e.g. <c>nas/web</c>.</summary>
@@ -55,7 +61,7 @@ internal sealed class RouteFormModel : IValidatableObject
     /// </summary>
     public bool TryApplyCommand()
     {
-        if (Command != "add-target")
+        if (Command is not ("add-target" or "add-target-failover"))
         {
             return false;
         }
@@ -63,10 +69,19 @@ internal sealed class RouteFormModel : IValidatableObject
         if (!string.IsNullOrWhiteSpace(AddTarget) && RouteFormModel.TryParseTarget(AddTarget, out var target, out var port))
         {
             var line = TargetLine(target, port);
-            var lines = SplitLines(Destinations).ToList();
+            var failover = Command == "add-target-failover";
+            var lines = SplitLines(failover ? FailoverDestinations : Destinations).ToList();
             if (!lines.Contains(line, StringComparer.OrdinalIgnoreCase))
             {
-                Destinations = string.Join(Environment.NewLine, lines.Append(line));
+                var text = string.Join(Environment.NewLine, lines.Append(line));
+                if (failover)
+                {
+                    FailoverDestinations = text;
+                }
+                else
+                {
+                    Destinations = text;
+                }
             }
         }
 
@@ -113,12 +128,37 @@ internal sealed class RouteFormModel : IValidatableObject
         }
 
         var line = 0;
+        var primaries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var destination in SplitLines(Destinations))
         {
             line++;
-            if (!TryParseDestination(destination, out _, out var error))
+            if (!TryParseDestination(destination, out var parsed, out var error))
             {
                 yield return new ValidationResult($"Backend line {line} ('{destination}'): {error}", [nameof(Destinations)]);
+            }
+            else
+            {
+                primaries.Add(FormatDestination(parsed));
+            }
+        }
+
+        line = 0;
+        foreach (var destination in SplitLines(FailoverDestinations))
+        {
+            line++;
+            if (line > ProxyRouteValidator.MaxFailover)
+            {
+                yield return new ValidationResult($"At most {ProxyRouteValidator.MaxFailover} failover backends.", [nameof(FailoverDestinations)]);
+                break;
+            }
+
+            if (!TryParseDestination(destination, out var parsed, out var error))
+            {
+                yield return new ValidationResult($"Failover line {line} ('{destination}'): {error}", [nameof(FailoverDestinations)]);
+            }
+            else if (primaries.Contains(FormatDestination(parsed)))
+            {
+                yield return new ValidationResult($"Failover line {line} ('{destination}') is already a backend above; a failover is another address or target.", [nameof(FailoverDestinations)]);
             }
         }
 
@@ -156,7 +196,9 @@ internal sealed class RouteFormModel : IValidatableObject
             MethodDelete = methods.Contains("DELETE"),
             MethodHead = methods.Contains("HEAD"),
             MethodOptions = methods.Contains("OPTIONS"),
-            Destinations = string.Join(Environment.NewLine, route.Destinations.Select(FormatDestination)),
+            Destinations = string.Join(Environment.NewLine, route.Destinations.Where(d => !d.IsFailover).Select(FormatDestination)),
+            // In failover order; equal numbers keep their order.
+            FailoverDestinations = string.Join(Environment.NewLine, route.Destinations.Where(d => d.IsFailover).OrderBy(d => d.Failover).Select(FormatDestination)),
             PreserveHost = route.PreserveHost,
             AllowInvalidBackendCertificate = route.AllowInvalidBackendCertificate,
             RedirectHttp = route.Https.RedirectHttp,
@@ -207,6 +249,16 @@ internal sealed class RouteFormModel : IValidatableObject
         {
             if (TryParseDestination(line, out var destination, out _))
             {
+                route.Destinations.Add(destination);
+            }
+        }
+
+        var failover = 0;
+        foreach (var line in SplitLines(FailoverDestinations))
+        {
+            if (TryParseDestination(line, out var destination, out _))
+            {
+                destination.Failover = ++failover;
                 route.Destinations.Add(destination);
             }
         }

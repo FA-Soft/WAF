@@ -93,6 +93,7 @@ public static class TargetResolver
             Port = port.Port,
             Target = target.Name,
             TargetPort = port.Name,
+            Failover = destination.Failover,
         };
     }
 

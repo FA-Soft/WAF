@@ -249,6 +249,12 @@
                     "string",
                     "null"
                   ]
+                },
+                "Failover": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
                 }
               },
               "additionalProperties": false

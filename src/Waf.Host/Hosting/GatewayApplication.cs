@@ -109,6 +109,7 @@ internal static partial class GatewayApplication
         AddRequestLog(builder, storagePaths);
         builder.Services.AddSingleton<InMemoryAcmeChallengeStore>();
         builder.Services.AddSingleton<IAcmeChallengeStore>(sp => sp.GetRequiredService<InMemoryAcmeChallengeStore>());
+        builder.Services.AddSingleton(builder.Configuration.GetSection(FailoverOptions.SectionName).Get<FailoverOptions>() ?? new FailoverOptions());
         builder.Services.AddWafProxy(TargetResolver.Resolve(gatewayConfiguration), configTag);
 
         var endpoints = builder.Configuration

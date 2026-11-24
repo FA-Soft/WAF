@@ -89,7 +89,8 @@ The badge at the top right always shows what the firewall is doing:
 
 The dashboard shows the active configuration version and who made it, your routes, rules, rate limits and attack
 detection in plain language, the request log's counters, and warnings: certificates that expire within 30 days,
-dropped log entries, two-factor sign-in still off, or an `appsettings.json` that was edited after the first start.
+dropped log entries, two-factor sign-in still off, a route running on its failover backend, a target that is not
+found, or an `appsettings.json` that was edited after the first start.
 
 ## 4. Put a site behind the gateway
 
@@ -127,6 +128,10 @@ A route says which requests go to which backend. **Routes → Add a route**:
   https:// backends** only for a backend of your own on a trusted network.
 - **Health check** (optional): a path such as `/health`, probed regularly; a destination that fails is skipped until
   it recovers.
+- **Failover backends** (optional): backends that only get traffic while none of the backends above works, for
+  example a second network address of the same machine, or a spare machine. One per line: the first line takes over
+  first. When the primary is back and has stayed healthy for 30 seconds, traffic returns to it. Set a health check
+  path as well, so a backend that stops answering is noticed quickly.
 - **Send the original host name to the backend** (on by default): the backend sees the visitor's `Host` header, as IIS
   host bindings expect.
 
@@ -306,6 +311,7 @@ log, and a running gateway applies it within seconds.
 | **Remote access locks you out** | `wafctl admin unregister-url` turns it off; `wafctl admin allow-ip <address>` adds your address to the allowlist. |
 | **The service does not start** | Look at the service log: the Windows Event Log, or `journalctl -u wafgateway -n 50`. The most common cause is another program on port 80 or 443; the installer names it. |
 | **Let's Encrypt fails** | Check that the host name points to the gateway and that port 80 is reachable from the internet. The reason is on the Certificates page. Then **Request certificates now**. |
+| **A route is "On failover"** | None of its primary backends is healthy, so a failover backend answers. Check the primary machine and its service; the request log shows which backend served each request. Traffic returns by itself 30 seconds after the primary is healthy again. |
 | **A legitimate request is blocked** | Open it in the request log and choose **Allow this (false positive)**. |
 
 `wafctl status` shows the data folder, the active configuration, the admin accounts and remote access. `wafctl config

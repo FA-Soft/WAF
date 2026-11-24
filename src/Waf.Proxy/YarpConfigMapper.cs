@@ -25,16 +25,45 @@ public static class YarpConfigMapper
     /// <summary>Destination metadata key: the target label ("nas · web") of a destination that uses a target.</summary>
     public const string TargetMetadataKey = "WafTarget";
 
+    /// <summary>Destination metadata key: the failover number of a failover destination ("1", "2", …).</summary>
+    public const string FailoverMetadataKey = "WafFailover";
+
+    /// <summary>Cluster metadata key: "true" when the route has failover destinations.</summary>
+    public const string HasFailoverMetadataKey = "WafHasFailover";
+
     /// <summary>
     /// How a destination appears in the request log: its address, preceded by the target label when it has one
-    /// (<c>nas · web (http://192.168.1.20:5000/)</c>).
+    /// (<c>nas · web (http://192.168.1.20:5000/)</c>), followed by its failover number when it is one
+    /// (<c>http://10.0.0.6:8080/ · failover 1</c>).
     /// </summary>
-    public static string DescribeDestination(DestinationConfig destination)
+    /// <param name="destination">The destination.</param>
+    /// <param name="withFailover">False: leave out the failover number.</param>
+    public static string DescribeDestination(DestinationConfig destination, bool withFailover = true)
     {
         ArgumentNullException.ThrowIfNull(destination);
-        return destination.Metadata?.TryGetValue(TargetMetadataKey, out var label) == true
+        var text = destination.Metadata?.TryGetValue(TargetMetadataKey, out var label) == true
             ? $"{label} ({destination.Address})"
             : destination.Address;
+        return withFailover && FailoverOf(destination) is { } failover
+            ? string.Create(CultureInfo.InvariantCulture, $"{text} · failover {failover}")
+            : text;
+    }
+
+    /// <summary>The failover number of a destination; null for a primary.</summary>
+    public static int? FailoverOf(DestinationConfig destination)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        return destination.Metadata?.TryGetValue(FailoverMetadataKey, out var value) == true
+            && int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var failover)
+            ? failover
+            : null;
+    }
+
+    /// <summary>True for a cluster (route) with failover destinations.</summary>
+    public static bool HasFailover(ClusterConfig cluster)
+    {
+        ArgumentNullException.ThrowIfNull(cluster);
+        return cluster.Metadata?.ContainsKey(HasFailoverMetadataKey) == true;
     }
 
     /// <param name="routes">The routes to translate; disabled routes are left out.</param>
@@ -130,13 +159,22 @@ public static class YarpConfigMapper
                 continue; // a target without an address right now: no traffic for it (no destinations at all: 503)
             }
 
+            var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (destination.UsesTarget)
+            {
+                // "nas · web" for a target destination, shown in the request log next to the address.
+                metadata[TargetMetadataKey] = TargetResolver.Label(destination.Target, destination.TargetPort);
+            }
+
+            if (destination.Failover is { } failover)
+            {
+                metadata[FailoverMetadataKey] = failover.ToString(CultureInfo.InvariantCulture);
+            }
+
             destinations[string.Create(CultureInfo.InvariantCulture, $"{route.Name}-{i + 1}")] = new DestinationConfig
             {
                 Address = ToDestinationUrl(destination),
-                // "nas · web" for a target destination, shown in the request log next to the address.
-                Metadata = destination.UsesTarget
-                    ? new Dictionary<string, string> { [TargetMetadataKey] = TargetResolver.Label(destination.Target, destination.TargetPort) }
-                    : null,
+                Metadata = metadata.Count > 0 ? metadata : null,
             };
         }
 
@@ -156,6 +194,10 @@ public static class YarpConfigMapper
         {
             ClusterId = route.Name,
             Destinations = destinations,
+            // Routes with failover destinations get the "primary, then failover" choice and a short connect time-out.
+            Metadata = route.Destinations.Any(d => d.IsFailover)
+                ? new Dictionary<string, string> { [HasFailoverMetadataKey] = "true" }
+                : null,
             HttpClient = new HttpClientConfig
             {
                 DangerousAcceptAnyServerCertificate = route.AllowInvalidBackendCertificate,

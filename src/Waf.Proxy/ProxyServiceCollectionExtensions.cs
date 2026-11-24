@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using FASoft.Waf.Core.Routing;
+using Yarp.ReverseProxy.Forwarder;
 
 namespace FASoft.Waf.Proxy;
 
@@ -30,10 +32,26 @@ public static class ProxyServiceCollectionExtensions
         var (yarpRoutes, clusters) = YarpConfigMapper.Map(list, configTag);
         services.AddReverseProxy().LoadFromMemory(yarpRoutes, clusters);
         services.AddSingleton<ProxyRouteUpdater>();
+
+        // Failover: the host may register its own FailoverOptions (Gateway:Failover) first.
+        services.TryAddSingleton(new FailoverOptions());
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<FailoverMonitor>();
+        services.AddSingleton<IRouteFailoverMonitor>(sp => sp.GetRequiredService<FailoverMonitor>());
+        services.Replace(ServiceDescriptor.Singleton<IForwarderHttpClientFactory, FailoverHttpClientFactory>());
         return services;
     }
 
-    /// <summary>Maps the proxy endpoints (load balancing and passive health checks included).</summary>
+    /// <summary>
+    /// Maps the proxy endpoints: the failover choice and connect retry, then YARP's load balancing and passive health
+    /// checks (YARP's default pipeline).
+    /// </summary>
     public static ReverseProxyConventionBuilder MapWafProxy(this IEndpointRouteBuilder endpoints) =>
-        endpoints.MapReverseProxy();
+        endpoints.MapReverseProxy(proxy =>
+        {
+            proxy.UseMiddleware<FailoverMiddleware>();
+            proxy.UseSessionAffinity();
+            proxy.UseLoadBalancing();
+            proxy.UsePassiveHealthChecks();
+        });
 }

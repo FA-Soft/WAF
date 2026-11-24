@@ -1,5 +1,6 @@
 @page "/"
 @inject ITargetAddressMonitor Addresses
+@inject IRouteFailoverMonitor Failover
 @inject WafEngineHolder Engines
 @inject ConfigurationStore Store
 @inject IRequestLogMonitor RequestLog
@@ -15,6 +16,13 @@
 {
     <div class="alert alert-warning" role="status">
         <strong>Target '@lost.TargetName' is not found</strong> (MAC address @lost.MacAddress@(lost.LastSeen is { } seen ? $", last seen {seen.UtcDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)}Z" : string.Empty)): its routes get no traffic until it is back. <a href="targets">Targets</a>
+    </div>
+}
+
+@foreach (var failover in Failover.Statuses)
+{
+    <div class="alert alert-warning" role="status">
+        <strong>Route '@failover.RouteName' is on failover @failover.Failover</strong> since @Describe.Time(failover.Since): no primary backend is healthy, so its traffic goes to @failover.Destinations. It returns once a primary is healthy again. <a href="routes">Routes</a>
     </div>
 }
 

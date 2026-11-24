@@ -63,7 +63,7 @@ Log retention: size, entries, the last cleanup and the age and size limits.
 
 ## Routes
 
-The list of routes: which requests go to which backends.
+The list of routes: which requests go to which backends. Route "api" runs on its failover backend because its primaries do not answer.
 
 ![Routes list](images/admin-routes.png)
 
@@ -74,6 +74,10 @@ Editing a route: host names, path prefix, methods, backends and health check.
 The HTTPS options of a route: redirect http:// to https://, and HSTS.
 
 ![HTTPS options of a route](images/admin-route-https.png)
+
+The failover backends of a route, one per line in the order they take over; "Add as failover" adds a target there.
+
+![Failover backends of a route](images/admin-route-failover.png)
 
 Deleting a route is refused while rules or rate limits still refer to it.
 
