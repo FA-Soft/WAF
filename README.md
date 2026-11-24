@@ -11,7 +11,7 @@ A self-hosted **Web Application Firewall and reverse proxy** written in C#, mana
 
 Built for personal use (one administrator, a modest number of sites), but designed to production-grade standards: secure by default, fail-closed, observable and maintainable.
 
-> **Status: in design.** This README describes the planned design and behavior. Commands, ports and file names below are the intended interface and may change while the project is built. "WAF Gateway" is a working title.
+**Documentation:** this README (what it does, installation, every setting, building from source) · the [admin guide](docs/admin-guide.md) (running it day to day) · [screenshots](docs/images.md) · [security review](docs/security-review.md) · [performance](docs/performance.md) · [SECURITY.md](SECURITY.md). Packages for Windows and Linux are on the [releases](https://github.com/FA-Soft/WAF/releases) page.
 
 ## Highlights
 
@@ -53,11 +53,12 @@ Blocked requests get a generic message without rule names. The admin listener is
 
 | Target | Architecture |
 |---|---|
-| Windows 11 | x64 |
-| Windows Server (optionally with IIS on the same machine) | x64 |
-| Ubuntu Server on Raspberry Pi | linux-arm64 |
+| Windows 10 and 11 | x64 (`win-x64`) |
+| Windows Server 2016 or later (optionally with IIS on the same machine) | x64 (`win-x64`) |
+| Ubuntu Server 22.04 or later on a Raspberry Pi (64-bit OS) | ARM64 (`linux-arm64`) |
+| Ubuntu or another Linux with systemd | x64 (`linux-x64`) |
 
-[Releases](https://github.com/FA-Soft/WAF/releases) are self-contained single-file builds, so no .NET runtime needs to be installed: `WafGateway-win-x64.zip`, `wafgateway-linux-arm64.tar.gz` (Raspberry Pi) and `wafgateway-linux-x64.tar.gz`, each with its installer. Linux x64 and Docker are optional, lower-priority targets.
+[Releases](https://github.com/FA-Soft/WAF/releases) are self-contained single-file builds, so no .NET runtime needs to be installed: `WafGateway-win-x64.zip`, `wafgateway-linux-arm64.tar.gz` (Raspberry Pi) and `wafgateway-linux-x64.tar.gz`, each with its installer, `LICENSE` and `THIRD-PARTY-NOTICES.md`, plus `SHA256SUMS.txt` to check the downloads. There is no Docker image.
 
 Built on **.NET 11**, ASP.NET Core 11, EF Core 11 (SQLite) and Blazor.
 
@@ -79,7 +80,7 @@ The WAF owns ports 80 and 443. If IIS or another web server runs on the same mac
 
 ![Admin UI dashboard showing the firewall state, the active configuration version, routes and rules](docs/images/admin-dashboard.png)
 
-The admin UI currently offers a **dashboard** (firewall state, active configuration version, routes, rules, rate limits and attack detection in plain language), **Routes** (list, add, edit, enable/disable and delete routes), **Rules** (rules with any number of conditions, priority, action, per-rule and global detection-only mode, and IP block/allow lists where you paste addresses and CIDR ranges one per line), **Rate limits** (limit, window, what is counted, routes and conditions), **Certificates** (upload your own PFX or PEM certificates, choose their host names, see expiry warnings), **Templates and presets** (templates open the route, rule or rate-limit editor pre-filled for common cases such as a load-balanced site, an API key header or login attempts; one-click presets such as "Block common attacks", "Lock a path to your IP addresses" and "Protect a login page" first show a preview of exactly what will change, and applying one twice changes nothing), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) the **configuration history** (open any version to see what it changed, compare it with the running configuration and restore it) and **Backup and import** (export the configuration as JSON, import a file with a preview of the changes, download a full backup of every version and restore it). Every change made in the UI is checked, stored as a new configuration version and applied immediately, without a restart; if someone else changed the configuration in the meantime, the change is refused instead of overwriting theirs. The forms work without JavaScript: buttons such as "Add another condition" re-show the form without saving. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
+The [admin guide](docs/admin-guide.md) walks through the admin UI task by task. Its pages: a **dashboard** (firewall state, active configuration version, routes, rules, rate limits and attack detection in plain language), the **Request log** (see [Logging](#logging)), **Routes** (list, add, edit, enable/disable and delete routes), **Rules** (rules with any number of conditions, priority, action, per-rule and global detection-only mode, and IP block/allow lists where you paste addresses and CIDR ranges one per line), **Rate limits** (limit, window, what is counted, routes and conditions), **Certificates** (upload your own PFX or PEM certificates, choose their host names, see expiry warnings), **Templates and presets** (templates open the route, rule or rate-limit editor pre-filled for common cases such as a load-balanced site, an API key header or login attempts; one-click presets such as "Block common attacks", "Lock a path to your IP addresses" and "Protect a login page" first show a preview of exactly what will change, and applying one twice changes nothing), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) the **configuration history** (open any version to see what it changed, compare it with the running configuration and restore it), the **Audit log**, **Backup and import** (export the configuration as JSON, import a file with a preview of the changes, download a full backup of every version and restore it), **Remote access**, the **AI assistant**, and **Your account** (password, two-factor sign-in, sessions, login history). Every change made in the UI is checked, stored as a new configuration version and applied immediately, without a restart; if someone else changed the configuration in the meantime, the change is refused instead of overwriting theirs. The forms work without JavaScript: buttons such as "Add another condition" re-show the form without saving. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
 
 **Light and dark theme.** The switch at the top right (**System**, **Light**, **Dark**) sets the UI's colors. **System** (the default) follows the device's light or dark setting. A choice of Light or Dark is stored with your account (in `identity.db`), so it applies again at your next sign-in and on every device you sign in from; a change also reaches your other open sessions at their next page. The sign-in page itself follows the device's setting.
 
@@ -89,11 +90,11 @@ The admin UI currently offers a **dashboard** (firewall state, active configurat
 - **While remote access is on:** HTTPS only, mandatory 2FA, brute-force protection and lockout, an optional IP/CIDR allowlist, idle timeouts, login history, and a generic 404 before login.
 - **First run:** the admin account can only be created from the local machine, or with a one-time token printed to the service log.
 
-**Signing in.** Every page of the admin UI needs a signed-in admin account; only the sign-in page, the first-run page, the stylesheet and /healthz are open. On a fresh install, opening the admin UI leads to **Create the admin account**. On the gateway's own machine (a loopback connection, not passed on by a proxy) only a user name and password are asked. From anywhere else the page also asks for the **setup token**: at startup the gateway writes it to the service log (Windows Event Log or journalctl -u wafgateway), in a warning that starts with "No admin account exists yet". The token is random, works once and is replaced at every restart; as soon as the account exists, the first-run page is closed for good. Passwords need at least 12 characters (no other rules: a few unrelated words make a strong password). Change your password, turn on two-factor sign-in and see the login history under your user name at the top right.
+**Signing in.** Every page of the admin UI needs a signed-in admin account; only the sign-in pages, the first-run page, static files (stylesheet, logo, icon) and /healthz are open. On a fresh install, opening the admin UI leads to **Create the admin account**. On the gateway's own machine (a loopback connection, not passed on by a proxy) only a user name and password are asked. From anywhere else the page also asks for the **setup token**: at startup the gateway writes it to the service log (Windows Event Log or journalctl -u wafgateway), in a warning that starts with "No admin account exists yet". The token is random, works once and is replaced at every restart; as soon as the account exists, the first-run page is closed for good. Passwords need at least 12 characters (no other rules: a few unrelated words make a strong password). Change your password, turn on two-factor sign-in and see the login history under your user name at the top right.
 
 ![Sign-in page of the admin UI](docs/images/admin-login.png)
 
-Accounts are stored in identity.db in the data folder, apart from the configuration, so they are not part of exports, backups or restores. The keys that protect the sign-in cookie are kept in the keys folder next to it (on Windows encrypted for the service account), so a restart does not sign you out. **Forgot the password?** Stop the gateway, delete identity.db, and start it again: the first-run page is back, with a new setup token. Locked out after too many attempts? Wait 15 minutes.
+Accounts are stored in identity.db in the data folder, apart from the configuration, so they are not part of exports, backups or restores. The keys that protect the sign-in cookie are kept in the keys folder next to it (on Windows encrypted for the service account), so a restart does not sign you out. **Forgot the password?** Run `wafctl admin reset-password` on the gateway's machine (see [Recovery tool](#recovery-tool)): it sets a new password, unlocks the account and ends all sessions. Locked out after too many attempts? Wait 15 minutes, or reset the password.
 
 **Two-factor sign-in (2FA).** Under **Your account → Two-factor sign-in**, scan the QR code with an authenticator app (Microsoft Authenticator, Google Authenticator, 1Password and the like; time-based 6-digit codes) or type the key shown under it, then enter the first code. You get 10 **recovery codes**, shown once: each one signs you in once if you lose your phone, and new ones can be made with your password. From then on, signing in asks for the code after the password. Turning 2FA off needs your password. On the local machine 2FA is optional, and the dashboard reminds you while it is off; remote access requires it.
 
@@ -228,11 +229,11 @@ By default the client IP is the address of the TCP connection, and any `X-Forwar
 
 For requests from a trusted proxy, `X-Forwarded-For` is read from right to left and the first address that is not a trusted proxy is the client IP. Entries further left were written by the client and are ignored, so they cannot be spoofed. An invalid entry (e.g. `unknown`) stops at the last valid address. The resolved client IP is what rules, rate limiting, logging and backends see.
 
-Invalid routes stop the gateway at startup with a message that names the route and the problem.
+On a first start, invalid routes in `appsettings.json` stop the gateway with a message that names the route and the problem. Later starts run the last-known-good configuration from `config.db` (see *Where the configuration lives*).
 
 ### Full configuration model and JSON schema
 
-The complete configuration (`Settings`, `Routes`, `Rules`, `Certificates`) has one model, used by `appsettings.json` (under `Gateway`), export/import, the web UI and the AI assistant:
+The complete configuration (`Settings`, `Routes`, `Rules`, `RateLimits`, `Certificates`) has one model, used by `appsettings.json` (under `Gateway`), export/import, the web UI and the AI assistant:
 
 - [`schemas/gateway-config.schema.json`](schemas/gateway-config.schema.json): JSON schema, generated from the C# model. Add `"$schema": "./gateway-config.schema.json"` to a configuration file for completion and validation in your editor.
 - [`schemas/gateway-config.example.json`](schemas/gateway-config.example.json): a complete, valid example with routes, rules (IP allowlist, required API key, detection-only rule) and certificates.
@@ -318,8 +319,7 @@ The **request log** page shows it, newest first: filter by time range, what happ
 Windows 10/11 and Windows Server 2016 or later, x64. Download `WafGateway-win-x64.zip` from the [releases](https://github.com/FA-Soft/WAF/releases) (or build the package yourself), extract it, and run the installer in Windows PowerShell **as Administrator**:
 
 ```powershell
-.\deploy\windows\Build-Package.ps1   # creates artifacts\windows\WafGateway-win-x64 (self-contained) and the zip
-
+# In the extracted folder (or build the package yourself: .\deploy\windows\Build-Package.ps1 in the repository)
 .\Install.ps1                      # install the service, data folder ACLs, firewall rules for 80/443, start it
 .\Install.ps1 -OpenAdminPort       # also open the remote admin port in Windows Firewall
 .\Install.ps1 -MoveIisBindings     # explicitly rebind IIS sites away from 80/443 (backs up applicationHost.config first)
@@ -483,14 +483,14 @@ wafctl admin unregister-url                  # turn remote admin access off
 wafctl status                                # data folder, active configuration, admin accounts, remote access
 ```
 
-- **Local privileges only.** `wafctl` needs no network and no sign-in: it works directly on the data folder (`config.db`, `identity.db`). Run it as Administrator on Windows. On Linux, run it as the service account (for example `sudo -u wafgateway wafctl status`), so files it writes stay readable for the service. It finds the data folder the same way the service does (the same appsettings and environment variables); `--data-dir <path>` points it elsewhere.
+- **Local privileges only.** `wafctl` needs no network and no sign-in: it works directly on the data folder (`config.db`, `identity.db`). Run it as Administrator on Windows. On Linux, run it with `sudo` (`sudo wafctl status`): the installed `wafctl` switches to the service account, so files it writes stay the service's. It finds the data folder the same way the service does (the same appsettings and environment variables); `--data-dir <path>` points it elsewhere.
 - **Configuration changes are normal versions.** `rules disable-all`, `mode …` and `config restore-last-good` check the result like the admin UI does, store it as a new configuration version and make it the active one. A running gateway applies it within about two seconds; a stopped one uses it at the next start. Nothing is changed when there is nothing to do.
 - **Accounts.** `admin reset-password` asks for the new password twice without showing it (or reads one line with `--password-stdin` for scripts); the same rules as in the admin UI apply. With several admin accounts, choose one with `--user <name>`.
 - **Remote admin access** settings (registered URL and allowlist) are stored on this machine only, next to the admin account, and are never part of configuration exports or backups.
 - **Audited.** Every change is recorded in the audit log, with the operating-system user and source `wafctl`.
 - Exit codes: 0 done (or nothing to do), 1 failed, 2 wrong usage.
 
-## Repository layout (planned)
+## Repository layout
 
 ```
 src/Waf.Core      Domain models, interfaces, configuration schema
@@ -502,8 +502,11 @@ src/Waf.Web       Blazor UI, identity, log viewer, sample library
 src/Waf.Host      Startup, Kestrel, service hosting
 src/Waf.Cli       wafctl
 tests/            Unit, integration and benchmark projects; Waf.LoadTests (waf-loadtest, load tests of a package)
-docs/             Security review, performance results, screenshots; docs/brand: logo, mark, icon and favicon (SVG)
+docs/             Admin guide, security review, performance results, screenshots; docs/brand: logo, mark, icons
+schemas/          JSON schema of the configuration, with a complete example
 SECURITY.md       How to report a vulnerability
+LICENSE           Proprietary license (FA-Soft)
+THIRD-PARTY-NOTICES.md  Licenses of the components the release packages include
 deploy/windows    Install.ps1 (service, firewall, IIS), Build-Package.ps1, Test-Install.ps1, Smoke-Test.ps1
 deploy/linux      install.sh, wafgateway.service (systemd), build-package.sh, test-install.sh, smoke-test.sh
 Publish.props     Release build settings for the publish profiles
@@ -555,7 +558,9 @@ tests/Waf.LoadTests/bin/Release/net11.0/waf-loadtest suite --gateway "$PWD/artif
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds and tests every push to `main` and every pull request on Windows and Ubuntu, then publishes self-contained single-file builds for `win-x64` and `linux-arm64` with the publish profiles as a smoke check. A *Security scan* job reports vulnerable and deprecated packages and checks the installer scripts with ShellCheck and PSScriptAnalyzer; a *Load test* job runs `waf-loadtest` against the `linux-x64` package and puts the report on the run's summary page. Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) proposes package and action updates weekly. Each run's summary page shows a test report per OS (passed/failed/skipped per test assembly, failure details and code coverage), and failed tests appear as annotations. Test results (TRX, Cobertura coverage) and the builds are also uploaded as workflow artifacts.
 
-## Roadmap
+## Development milestones
+
+The first release completes all ten milestones:
 
 | Milestone | Scope |
 |---|---|
@@ -574,7 +579,7 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds a
 
 - Fail-closed by design; there is no fail-open mode.
 - Secrets, authorization headers and full request bodies are not logged by default.
-- Private keys of uploaded certificates are stored encrypted at rest (ASP.NET Core Data Protection, keys protected with DPAPI on Windows) and are only included in a full backup when "Include secrets" is chosen; the AI API key is encrypted the same way, but never leaves the machine, not even in a backup with secrets. The same applies today to the values of header conditions (such as API keys) in exports and backups.
+- Private keys of uploaded certificates are stored encrypted at rest (ASP.NET Core Data Protection, keys protected with DPAPI on Windows) and are only included in a full backup when "Include secrets" is chosen; the AI API key is encrypted the same way, but never leaves the machine, not even in a backup with secrets. Values of header conditions (such as API keys) are left out of exports and backups unless "Include secrets" is chosen.
 - Forwarded client-IP headers are trusted only from addresses on the trusted-proxy list.
 - The admin UI listens on loopback only and answers only to `localhost`, `127.0.0.1` and `[::1]` (against DNS rebinding); remote admin access is opt-in, HTTPS only (with HSTS) and needs two-factor sign-in.
 - The [security review](docs/security-review.md) lists what was checked (headers, secrets, fail-closed behavior, admin exposure), the findings and what is accepted. Every build runs the .NET security analyzers and a NuGet vulnerability audit; CI also scans the installer scripts and reports vulnerable packages, and Dependabot proposes updates.
@@ -583,10 +588,14 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds a
 
 ## Contributing
 
-The project is at an early stage. Issues and ideas are welcome. Please open an issue before starting larger changes.
+WAF Gateway is proprietary software of FA-Soft. Contributions are accepted only by arrangement with FA-Soft; report problems and ideas as issues, and vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+Conventions for the code:
 
 **Namespaces start with `FASoft.`** Every class, record, struct, interface, enum and Razor component lives in a namespace that starts with `FASoft.`, e.g. `FASoft.Waf.Data` for `src/Waf.Data`. Project and assembly names stay `Waf.*`. `Directory.Build.props` sets the root namespace to `FASoft.<project name>`, so new files and Razor components get the right namespace by default. `NamespaceConventionTests` fails the build for any namespace, or file without a namespace, that does not follow the rule.
 
 ## License
 
-To be decided. Add a `LICENSE` file before publishing.
+Proprietary: Copyright © 2026 FA-Soft, all rights reserved. Using, copying or distributing WAF Gateway needs the written permission of FA-Soft; see [LICENSE](LICENSE).
+
+The release packages include third-party components (the .NET runtime, ASP.NET Core, Entity Framework Core, YARP, SQLite, the Anthropic SDK and others) under their own licenses (MIT, Apache-2.0, public domain), listed with their license texts in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), which every package contains. `LicenseTests` fails the build when a shipped package is missing from that list.
