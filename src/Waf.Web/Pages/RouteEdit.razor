@@ -196,6 +196,18 @@ else if (Model is not null)
             </div>
         </fieldset>
 
+        <fieldset>
+            <legend>
+                When no backend answers
+                <HelpTip Title="Error page">
+                    <p>When no backend answers, visitors get a short error in the format their software expects: a web page for browsers, JSON or XML for programs, a SOAP fault for SOAP clients. It never shows addresses or other internal details; those are in the request log.</p>
+                </HelpTip>
+            </legend>
+            <FormField Id="error-message" Label="Message for visitors" Optional Help="Shown on the error, e.g. Planned maintenance until 14:00. One line, at most 300 characters." For="() => Model.ErrorMessage">
+                <InputText id="error-message" aria-describedby="error-message-help" @bind-Value="Model.ErrorMessage" maxlength="300" autocomplete="off" />
+            </FormField>
+        </fieldset>
+
         <div class="actions">
             <button type="submit" class="button">@(Model.IsNew ? "Add route" : "Save changes")</button>
             <a class="button button-secondary" href="routes">Cancel</a>

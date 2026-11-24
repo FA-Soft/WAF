@@ -117,6 +117,10 @@ event, or at shutdown. The request log (`events.db`) still records every request
   - `X-Forwarded-For/Proto/Host` are always overwritten, and a client's `Forwarded` header is removed.
   - The client IP comes from forwarded headers only when the request comes from a trusted proxy.
   - The `Server` header is not sent.
+  - Error responses when no backend answers (502, 503, 504, and SOAP Faults) never contain backend addresses,
+    ports, route or target names, or exception texts; those go to the request log only. They are not cached
+    (`no-store`), and the HTML page has no scripts and a `default-src 'none'` Content Security Policy. Tests:
+    `BackendErrorTests` (unit and integration, every format).
   - Only TLS 1.2 and 1.3 are accepted.
   - A host name without a certificate gets no TLS handshake, so no default certificate is ever served.
 - **Service accounts.**

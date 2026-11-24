@@ -41,6 +41,12 @@ public sealed class ProxyRouteOptions
 
     /// <summary>HTTPS enforcement: redirect plain HTTP and send HSTS. Both off by default (plain HTTP routes work).</summary>
     public RouteHttpsOptions Https { get; set; } = new();
+
+    /// <summary>
+    /// Optional short text for visitors when no backend answers, e.g. "Planned maintenance until 14:00". Shown in the
+    /// error response, in every format.
+    /// </summary>
+    public string? ErrorMessage { get; set; }
 }
 
 /// <summary>How a route enforces HTTPS.</summary>

@@ -44,7 +44,7 @@ Request pipeline for public traffic:
 4. WAF, judging each request with one consistent, hot-swappable engine snapshot:
    rules (a `Block` rule gives `403`; an explicit `Allow` rule skips the remaining checks), then rate limits (`429`), then attack detection (`403`). If evaluation fails for any reason, the request gets `503`: it is never forwarded unchecked.
 5. HTTPS per route: plain HTTP gets a `308` redirect to HTTPS where the route asks for it, and HTTPS responses carry the HSTS header where enabled (see [Redirect to HTTPS and HSTS](#redirect-to-https-and-hsts))
-6. [YARP](https://github.com/microsoft/reverse-proxy) reverse proxy with health checks and forwarded headers
+6. [YARP](https://github.com/microsoft/reverse-proxy) reverse proxy with health checks and forwarded headers; when no backend answers, a clear error in the client's format (see [When no backend answers](#when-no-backend-answers))
 7. Asynchronous event logging (every block, detection-only match and fail-closed refusal is reported as a security event)
 
 Blocked requests get a generic message without rule names. The admin listener is handled before this pipeline: it is never subject to rules, rate limits, detection or the 503 state, and its `/healthz` reports `Degraded` (with the reason) while the WAF engine is unavailable. If the WAF engine cannot be built at startup, the gateway still starts: the admin UI stays reachable to fix the configuration, and public traffic is refused.
@@ -166,6 +166,7 @@ Routes are normally managed in the admin UI. On a fresh install they can be seed
 - **AllowInvalidBackendCertificate** (default `false`): accept a self-signed certificate from an HTTPS backend you control.
 - **Https** (both default `false`): `RedirectHttp` sends plain HTTP requests to HTTPS, `Hsts` adds the Strict-Transport-Security header; see [Redirect to HTTPS and HSTS](#redirect-to-https-and-hsts). With both off the route also works over plain HTTP.
 - **HealthCheck:** with a `Path`, each destination is probed and taken out of rotation while it fails. Passive checks (failed requests) are always on.
+- **ErrorMessage** (optional): one line of at most 300 characters for visitors when no backend answers, e.g. `"Planned maintenance until 14:00"`; see [When no backend answers](#when-no-backend-answers).
 - **Failover:** a destination with `"Failover": 1` (2, 3, …) only gets traffic while no primary destination is healthy; see [Failover](#failover).
 - **Forwarded headers:** `X-Forwarded-For`, `-Proto` and `-Host` are always set by the gateway; values sent by clients are overwritten and a client `Forwarded` header is removed. `X-Forwarded-For` carries the resolved client IP (see below).
 
@@ -188,6 +189,27 @@ A route can have **failover destinations**: a second network address of the same
 - **Visible:** the Routes page shows "On failover 1 since 2026-11-24 10:42 UTC" and the dashboard warns. The request log names the destination that served each request, e.g. `http://10.0.1.5:8080/ · failover 1`. Switching to the failover and back is written to the service log (event IDs 900 and 901; 902 when nothing is healthy, 903 when a request was sent to the next destination).
 - **In the route editor:** the backends go in **Backends**, the failovers in **Failover backends**, one per line, in the order they take over. **Add as failover** adds a target there.
 - **Host settings** (`Gateway:Failover`, normally left out): `HoldTime` (default `00:00:30`), `ConnectTimeout` (`00:00:05`, for routes with failover destinations) and `RefusedPeriod` (`00:00:30`, how long a destination that refused a connection gets no traffic).
+
+#### When no backend answers
+
+When a route matches but no backend gives an answer, the client gets a short error with the right status, in the format it expects, instead of an empty response:
+
+| Case | Status |
+|---|---|
+| No healthy backend (also after failover), or a target that is not found | `503`, with `Retry-After: 30` |
+| The connection was refused or reset, or the backend's answer was invalid | `502` |
+| The backend did not answer in time | `504` |
+
+- **Format**, from the request:
+  - a SOAP request gets a SOAP Fault: SOAP 1.2 (`env:Receiver`) for `application/soap+xml`, SOAP 1.1 (`soap:Server`) for `text/xml` with a `SOAPAction` header. As SOAP over HTTP requires, Faults come with HTTP **500**. The gateway's status (502, 503 or 504), its meaning, the request ID and the time are in the Fault's detail element (`gw:gatewayError`, namespace `urn:fa-soft:waf-gateway:error`);
+  - otherwise the `Accept` header decides, then the request's `Content-Type`: JSON (`application/json`, `*/*+json`) gets `application/problem+json` and XML (`application/xml`, `text/xml`, `*/*+xml`) gets `application/problem+xml` (RFC 9457), with `type`, `title`, `status`, `detail`, `requestId` and `time`;
+  - anything else, browsers included, gets a short HTML page: "This site is temporarily unavailable. Please try again in a few minutes.", with the logo, the status, the request ID and the time. It has no scripts and follows the visitor's light or dark setting.
+- **The route's message** (`ErrorMessage`, "Message for visitors" in the route editor) is shown in every format: in the page, as `message` in JSON and XML, and in the Fault.
+- **Nothing internal:** no backend address, port, route or target name, or exception text. Those are in the request log ("No backend available", "Backend error: …", "Backend timeout", and the backend tried); search it for the request ID shown on the error. Responses have `Cache-Control: no-store`, and `HEAD` requests get the headers only.
+- **The dashboard** counts these errors per route since the gateway started.
+- A failure after the response has started (halfway through a download) just ends the connection. The gateway's own answers (403 blocked, 429 rate limited, 503 fail-closed, 404 no route) are unchanged short texts.
+
+![The error page a browser gets when no backend answers](docs/images/error-page.png)
 
 ### Targets
 

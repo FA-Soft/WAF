@@ -12,6 +12,9 @@ public static class ProxyRouteValidator
     /// <summary>The highest failover number (failover 1 is tried first).</summary>
     public const int MaxFailover = 99;
 
+    /// <summary>The longest visitor message of a route (<see cref="ProxyRouteOptions.ErrorMessage"/>).</summary>
+    public const int MaxErrorMessageLength = 300;
+
     public static IReadOnlyList<string> Validate(IReadOnlyList<ProxyRouteOptions> routes)
     {
         ArgumentNullException.ThrowIfNull(routes);
@@ -40,6 +43,11 @@ public static class ProxyRouteValidator
             ValidateMatch(label, route.Match, errors);
             ValidateDestinations(label, route.Destinations, errors);
             ValidateHealthCheck(label, route.HealthCheck, errors);
+
+            if (route.ErrorMessage is { } message && (message.Length > MaxErrorMessageLength || message.Any(char.IsControl)))
+            {
+                errors.Add($"{label}: the message for visitors must be one line of at most {MaxErrorMessageLength} characters.");
+            }
         }
 
         return errors;

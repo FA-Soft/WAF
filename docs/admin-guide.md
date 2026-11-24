@@ -132,6 +132,9 @@ A route says which requests go to which backend. **Routes → Add a route**:
   example a second network address of the same machine, or a spare machine. One per line: the first line takes over
   first. When the primary is back and has stayed healthy for 30 seconds, traffic returns to it. Set a health check
   path as well, so a backend that stops answering is noticed quickly.
+- **Message for visitors** (optional): a line such as "Planned maintenance until 14:00", shown when no backend
+  answers. Visitors then get a short error page ("This site is temporarily unavailable"); programs get the same error
+  as JSON, XML or a SOAP fault. It never shows your internal addresses; the request log has the details.
 - **Send the original host name to the backend** (on by default): the backend sees the visitor's `Host` header, as IIS
   host bindings expect.
 
@@ -311,6 +314,7 @@ log, and a running gateway applies it within seconds.
 | **Remote access locks you out** | `wafctl admin unregister-url` turns it off; `wafctl admin allow-ip <address>` adds your address to the allowlist. |
 | **The service does not start** | Look at the service log: the Windows Event Log, or `journalctl -u wafgateway -n 50`. The most common cause is another program on port 80 or 443; the installer names it. |
 | **Let's Encrypt fails** | Check that the host name points to the gateway and that port 80 is reachable from the internet. The reason is on the Certificates page. Then **Request certificates now**. |
+| **Visitors see "This site is temporarily unavailable"** | No backend of the route answered. The dashboard counts these errors per route; in the request log (**Server errors (5xx)**) each request shows the reason ("No backend available", "Backend error", "Backend timeout") and the backend that was tried; search for the request ID from the error page to find one. Check that the backend machine and its service run. |
 | **A route is "On failover"** | None of its primary backends is healthy, so a failover backend answers. Check the primary machine and its service; the request log shows which backend served each request. Traffic returns by itself 30 seconds after the primary is healthy again. |
 | **A legitimate request is blocked** | Open it in the request log and choose **Allow this (false positive)**. |
 

@@ -39,16 +39,19 @@ public static class ProxyServiceCollectionExtensions
         services.AddSingleton<FailoverMonitor>();
         services.AddSingleton<IRouteFailoverMonitor>(sp => sp.GetRequiredService<FailoverMonitor>());
         services.Replace(ServiceDescriptor.Singleton<IForwarderHttpClientFactory, FailoverHttpClientFactory>());
+        services.AddSingleton<BackendErrorCounter>();
+        services.AddSingleton<IBackendErrorStatistics>(sp => sp.GetRequiredService<BackendErrorCounter>());
         return services;
     }
 
     /// <summary>
-    /// Maps the proxy endpoints: the failover choice and connect retry, then YARP's load balancing and passive health
-    /// checks (YARP's default pipeline).
+    /// Maps the proxy endpoints: clear error responses when no backend answers, the failover choice and connect retry,
+    /// then YARP's load balancing and passive health checks (YARP's default pipeline).
     /// </summary>
     public static ReverseProxyConventionBuilder MapWafProxy(this IEndpointRouteBuilder endpoints) =>
         endpoints.MapReverseProxy(proxy =>
         {
+            proxy.UseMiddleware<BackendErrorMiddleware>();
             proxy.UseMiddleware<FailoverMiddleware>();
             proxy.UseSessionAffinity();
             proxy.UseLoadBalancing();

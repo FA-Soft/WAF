@@ -18,6 +18,7 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 - [Remote access](#remote-access)
 - [Your account](#your-account)
 - [Light and dark theme](#light-and-dark-theme)
+- [When no backend answers](#when-no-backend-answers)
 
 ## Signing in
 
@@ -238,3 +239,11 @@ The switch at the top right: **System** (the default) follows the device's setti
 ![Dashboard in the dark theme](images/admin-dashboard-dark.png)
 
 ![Request log in the dark theme](images/admin-logs-dark.png)
+
+## When no backend answers
+
+Not part of the admin UI: what a visitor's browser shows when no backend of a route answers (here a 502). Programs get the same error as JSON, XML or a SOAP Fault. The page follows the visitor's light or dark setting:
+
+![Error page](images/error-page.png)
+
+![Error page in the dark theme](images/error-page-dark.png)
