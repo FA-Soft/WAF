@@ -1,0 +1,43 @@
+@*
+    The form's validation messages in the language of the UI, as a list (instead of ValidationSummary, which shows the
+    English texts of the model's attributes as they are).
+*@
+@implements IDisposable
+
+@if (EditContext is not null && EditContext.GetValidationMessages().Any())
+{
+    <ul class="@Class" role="alert">
+        @foreach (var message in EditContext.GetValidationMessages())
+        {
+            <li class="validation-message">@Message(message)</li>
+        }
+    </ul>
+}
+
+@code {
+    [CascadingParameter]
+    private EditContext? EditContext { get; set; }
+
+    /// <summary>The list's CSS classes.</summary>
+    [Parameter]
+    public string Class { get; set; } = "validation-errors";
+
+    protected override void OnParametersSet()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationStateChanged -= Changed;
+            EditContext.OnValidationStateChanged += Changed;
+        }
+    }
+
+    private void Changed(object? sender, ValidationStateChangedEventArgs e) => StateHasChanged();
+
+    public void Dispose()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationStateChanged -= Changed;
+        }
+    }
+}

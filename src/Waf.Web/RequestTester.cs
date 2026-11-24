@@ -84,22 +84,22 @@ internal static class RequestTester
         {
             if (match.Action == RuleAction.LogOnly)
             {
-                details.Add($"Rule '{match.RuleName}' matched and would be logged.");
+                details.Add(Text.T("Rule '{0}' matched and would be logged.", match.RuleName));
             }
             else if (match.DetectionOnly)
             {
-                details.Add($"Rule '{match.RuleName}' would block this request, but it is in detection-only mode: logged, not blocked.");
+                details.Add(Text.T("Rule '{0}' would block this request, but it is in detection-only mode: logged, not blocked.", match.RuleName));
             }
         }
 
         if (decision.IsBlocked)
         {
-            return new TestRequestResult(true, $"Blocked (403) by rule '{decision.DecidingRule!.RuleName}'.", details);
+            return new TestRequestResult(true, Text.T("Blocked (403) by rule '{0}'.", decision.DecidingRule!.RuleName), details);
         }
 
         if (decision.DecidingRule is not null)
         {
-            return new TestRequestResult(false, $"Allowed by rule '{decision.DecidingRule.RuleName}'. Attack detection and rate limits are skipped for this request.", details);
+            return new TestRequestResult(false, Text.T("Allowed by rule '{0}'. Attack detection and rate limits are skipped for this request.", decision.DecidingRule.RuleName), details);
         }
 
         var body = string.IsNullOrEmpty(model.Body) ? null : new RequestBody(model.ContentType ?? "text/plain", Encoding.UTF8.GetBytes(model.Body));
@@ -107,28 +107,28 @@ internal static class RequestTester
         if (finding is not null)
         {
             var where = finding.Name is null ? finding.Location.ToString() : $"{finding.Location} '{finding.Name}'";
-            var text = $"{Category(finding.Category)} detected in {where} (signature {finding.SignatureId}): {finding.Snippet}";
+            var text = Text.T("{0} detected in {1} (signature {2}): {3}", Category(finding.Category), where, finding.SignatureId, finding.Snippet);
             if (engine.DetectionOnly)
             {
                 details.Add(text);
-                return new TestRequestResult(false, "Allowed: an attack was detected, but detection-only mode is on, so it would only be logged.", details);
+                return new TestRequestResult(false, Text.T("Allowed: an attack was detected, but detection-only mode is on, so it would only be logged."), details);
             }
 
             details.Add(text);
-            return new TestRequestResult(true, $"Blocked (403): {Category(finding.Category).ToLowerInvariant()} detected.", details);
+            return new TestRequestResult(true, Text.T("Blocked (403): {0} detected.", Category(finding.Category).ToLowerInvariant()), details);
         }
 
-        details.Add("Rate limits are not counted in a test; a real client could still get 429 when sending too many requests.");
-        return new TestRequestResult(false, model.Route is null or "" ? "Allowed by the firewall. No route matches, so the gateway would answer 404." : "Allowed: the request would be forwarded.", details);
+        details.Add(Text.T("Rate limits are not counted in a test; a real client could still get 429 when sending too many requests."));
+        return new TestRequestResult(false, model.Route is null or "" ? Text.T("Allowed by the firewall. No route matches, so the gateway would answer 404.") : Text.T("Allowed: the request would be forwarded."), details);
     }
 
     private static string Category(AttackCategory category) => category switch
     {
-        AttackCategory.SqlInjection => "SQL injection",
-        AttackCategory.CrossSiteScripting => "Cross-site scripting",
-        AttackCategory.PathTraversal => "Path traversal",
-        AttackCategory.CommandInjection => "Command injection",
-        AttackCategory.BadUserAgent => "Attack tool",
+        AttackCategory.SqlInjection => Text.T("SQL injection"),
+        AttackCategory.CrossSiteScripting => Text.T("Cross-site scripting"),
+        AttackCategory.PathTraversal => Text.T("Path traversal"),
+        AttackCategory.CommandInjection => Text.T("Command injection"),
+        AttackCategory.BadUserAgent => Text.T("Attack tool"),
         _ => category.ToString(),
     };
 

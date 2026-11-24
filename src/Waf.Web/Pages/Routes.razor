@@ -4,44 +4,44 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>Routes · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Routes") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Routes
-    <HelpTip Title="Routes">
-        <p>A route decides which backend receives a request, based on the host name, the path and the method. Requests that match no route get 404. When several routes match, the most specific path wins.</p>
+    @T("Routes")
+    <HelpTip Title="@T("Routes")">
+        <p>@T("A route decides which backend receives a request, based on the host name, the path and the method. Requests that match no route get 404. When several routes match, the most specific path wins.")</p>
     </HelpTip>
 </h1>
 
 @if (!string.IsNullOrEmpty(Saved))
 {
-    <div class="alert alert-ok" role="status">@Saved</div>
+    <div class="alert alert-ok" role="status">@Message(Saved)</div>
 }
 
 @if (_errors.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>The change was not applied.</strong>
+        <strong>@T("The change was not applied.")</strong>
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
 }
 
-<p class="actions"><a class="button" href="routes/new">Add a route</a> <a class="button button-secondary" href="library#routes">From a template</a></p>
+<p class="actions">@TM("<a class=\"button\" href=\"routes/new\">Add a route</a> <a class=\"button button-secondary\" href=\"library#routes\">From a template</a>")</p>
 
 @if (_active is not null && _active.Configuration.Routes.Count == 0)
 {
-    <p>No routes yet: every public request gets 404. Add a route to forward traffic to a backend.</p>
+    <p>@T("No routes yet: every public request gets 404. Add a route to forward traffic to a backend.")</p>
 }
 else if (_active is not null)
 {
     <table>
         <thead>
-            <tr><th scope="col">Name</th><th scope="col">Handles</th><th scope="col">Forwards to</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+            <tr><th scope="col">@T("Name")</th><th scope="col">@T("Handles")</th><th scope="col">@T("Forwards to")</th><th scope="col">@T("Status")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr>
         </thead>
         <tbody>
             @foreach (var route in _active.Configuration.Routes)
@@ -53,31 +53,31 @@ else if (_active is not null)
                         @Describe.Match(route.Match)
                         @if (route.Https.RedirectHttp || route.Https.Hsts)
                         {
-                            <div class="muted">@(route.Https.RedirectHttp && route.Https.Hsts ? "HTTPS only, with HSTS" : route.Https.RedirectHttp ? "HTTPS only" : "HSTS on HTTPS")</div>
+                            <div class="muted">@(route.Https.RedirectHttp && route.Https.Hsts ? Text.T("HTTPS only, with HSTS") : route.Https.RedirectHttp ? Text.T("HTTPS only") : Text.T("HSTS on HTTPS"))</div>
                         }
                     </td>
                     <td>@Describe.Destinations(route.Destinations, _active.Configuration.Targets, Addresses)</td>
                     <td>
                         @if (route.Enabled && _onFailover.TryGetValue(name, out var failover))
                         {
-                            <span class="badge badge-warning" title="@($"No primary backend is healthy; traffic goes to {failover.Destinations}.")">On failover @failover.Failover since @Describe.Time(failover.Since)</span>
+                            <span class="badge badge-warning" title="@T("No primary backend is healthy; traffic goes to {0}.", failover.Destinations)">@T("On failover {0} since {1}", failover.Failover, Describe.Time(failover.Since))</span>
                         }
                         else if (route.Enabled)
                         {
-                            <span class="badge badge-ok">Enabled</span>
+                            <span class="badge badge-ok">@T("Enabled")</span>
                         }
                         else
                         {
-                            <span class="badge badge-muted">Disabled</span>
+                            <span class="badge badge-muted">@T("Disabled")</span>
                         }
                     </td>
                     <td><div class="row-actions">
-                        <a href="@($"routes/{Uri.EscapeDataString(name)}/edit")">Edit</a>
+                        <a href="@($"routes/{Uri.EscapeDataString(name)}/edit")">@T("Edit")</a>
                         <form method="post" @formname="@($"toggle-{name}")" @onsubmit="() => ToggleAsync(name)" data-enhance>
                             <AntiforgeryToken />
-                            <button type="submit" class="link-button">@(route.Enabled ? "Disable" : "Enable")</button>
+                            <button type="submit" class="link-button">@(route.Enabled ? Text.T("Disable") : Text.T("Enable"))</button>
                         </form>
-                        <a href="@($"routes/{Uri.EscapeDataString(name)}/delete")">Delete</a>
+                        <a href="@($"routes/{Uri.EscapeDataString(name)}/delete")">@T("Delete")</a>
                     </div></td>
                 </tr>
             }
@@ -112,7 +112,7 @@ else if (_active is not null)
         var route = configuration.Routes.FirstOrDefault(r => r.Name == name);
         if (route is null)
         {
-            _errors = [$"Route '{name}' no longer exists."];
+            _errors = [Text.F("Route '{0}' no longer exists.", name)];
             return;
         }
 

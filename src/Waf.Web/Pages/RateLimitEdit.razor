@@ -3,14 +3,14 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>@(LimitName is null ? "Add a rate limit" : $"Edit rate limit {LimitName}") · @ProductInfo.Name</PageTitle>
+<PageTitle>@(LimitName is null ? Text.T("Add a rate limit") : Text.T("Edit rate limit {0}", LimitName)) · @ProductInfo.Name</PageTitle>
 
-<p><a href="rate-limits">← Rate limits</a></p>
-<h1>@(LimitName is null ? "Add a rate limit" : $"Edit rate limit '{LimitName}'")</h1>
+<p><a href="rate-limits">← @T("Rate limits")</a></p>
+<h1>@(LimitName is null ? Text.T("Add a rate limit") : Text.T("Edit rate limit '{0}'", LimitName))</h1>
 
 @if (_notFound)
 {
-    <div class="alert alert-danger" role="alert">Rate limit '@LimitName' does not exist (any more). <a href="rate-limits">Back to the rate limits</a>.</div>
+    <div class="alert alert-danger" role="alert">@T("Rate limit '{0}' does not exist (any more).", LimitName) <a href="rate-limits">@T("Back to the rate limits")</a>.</div>
 }
 else if (Model is not null)
 {
@@ -19,11 +19,11 @@ else if (Model is not null)
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
-            <strong>The rate limit was not saved.</strong> The running configuration is unchanged.
+            <strong>@T("The rate limit was not saved.")</strong> @T("The running configuration is unchanged.")
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
@@ -31,15 +31,15 @@ else if (Model is not null)
 
     <EditForm Model="Model" FormName="rate-limit-edit" OnSubmit="HandleAsync" Enhance class="form">
         <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-danger validation-summary" />
+        <ValidationList Class="alert alert-danger validation-summary" />
         <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
         <input type="hidden" name="Model.IsNew" value="@(Model.IsNew ? "true" : "false")" />
 
         <fieldset>
-            <legend>Rate limit</legend>
+            <legend>@T("Rate limit")</legend>
             @if (Model.IsNew)
             {
-                <FormField Id="name" Label="Name" Help="A short, unique name, e.g. login-attempts or per-client." For="() => Model.Name">
+                <FormField Id="name" Label="@T("Name")" Help="@T("A short, unique name, e.g. login-attempts or per-client.")" For="() => Model.Name">
                     <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
                 </FormField>
             }
@@ -49,18 +49,18 @@ else if (Model is not null)
                 <input type="hidden" name="Model.Name" value="@Model.Name" />
             }
 
-            <FormField Id="description" Label="Description" Optional Help="Why this limit exists; shown in the list and the logs." For="() => Model.Description">
+            <FormField Id="description" Label="@T("Description")" Optional Help="@T("Why this limit exists; shown in the list and the logs.")" For="() => Model.Description">
                 <InputText id="description" aria-describedby="description-help" @bind-Value="Model.Description" autocomplete="off" />
             </FormField>
 
             <div class="field-row">
-                <FormField Id="permit" Label="At most (requests)" For="() => Model.PermitLimit">
+                <FormField Id="permit" Label="@T("At most (requests)")" For="() => Model.PermitLimit">
                     <InputNumber id="permit" @bind-Value="Model.PermitLimit" min="1" />
                 </FormField>
-                <FormField Id="window" Label="Per" For="() => Model.WindowAmount">
+                <FormField Id="window" Label="@T("Per")" For="() => Model.WindowAmount">
                     <InputNumber id="window" @bind-Value="Model.WindowAmount" min="1" />
                 </FormField>
-                <FormField Id="unit" Label="Unit" For="() => Model.WindowUnitSeconds">
+                <FormField Id="unit" Label="@T("Unit")" For="() => Model.WindowUnitSeconds">
                     <InputSelect id="unit" @bind-Value="Model.WindowUnitSeconds">
                         @foreach (var (seconds, label) in RateLimitFormModel.WindowUnits)
                         {
@@ -70,36 +70,36 @@ else if (Model is not null)
                 </FormField>
             </div>
 
-            <FormField Id="key" Label="Counted" Help="Per client IP is usual. Per route for all clients together protects a backend from being overloaded." For="() => Model.Key">
+            <FormField Id="key" Label="@T("Counted")" Help="@T("Per client IP is usual. Per route for all clients together protects a backend from being overloaded.")" For="() => Model.Key">
                 <InputSelect id="key" aria-describedby="key-help" @bind-Value="Model.Key">
-                    <option value="@RateLimitKey.ClientIp">per client IP</option>
-                    <option value="@RateLimitKey.ClientIpAndRoute">per client IP and route</option>
-                    <option value="@RateLimitKey.Route">per route, for all clients together</option>
+                    <option value="@RateLimitKey.ClientIp">@T("per client IP")</option>
+                    <option value="@RateLimitKey.ClientIpAndRoute">@T("per client IP and route")</option>
+                    <option value="@RateLimitKey.Route">@T("per route, for all clients together")</option>
                 </InputSelect>
             </FormField>
 
             <div class="field checkbox-field">
                 <InputCheckbox id="enabled" @bind-Value="Model.Enabled" />
-                <label for="enabled">Enabled</label>
-                <p class="field-help">A disabled limit is kept but not applied.</p>
+                <label for="enabled">@T("Enabled")</label>
+                <p class="field-help">@T("A disabled limit is kept but not applied.")</p>
             </div>
 
             <div class="field checkbox-field">
                 <InputCheckbox id="detection-only" @bind-Value="Model.DetectionOnly" aria-describedby="detection-only-help" />
-                <label for="detection-only">Detection only: log instead of rejecting</label>
-                <p class="field-help" id="detection-only-help">See how often the limit would be hit before enforcing it.</p>
+                <label for="detection-only">@T("Detection only: log instead of rejecting")</label>
+                <p class="field-help" id="detection-only-help">@T("See how often the limit would be hit before enforcing it.")</p>
             </div>
 
             <RouteScopeEditor Prefix="Model" Choices="Model.RouteChoices" />
         </fieldset>
 
-        <ConditionListEditor Prefix="Model" Conditions="Model.Conditions" Legend="Only count requests where (optional)" />
+        <ConditionListEditor Prefix="Model" Conditions="Model.Conditions" Legend="@T("Only count requests where (optional)")" />
 
         <div class="actions">
-            <button type="submit" class="button">@(Model.IsNew ? "Add rate limit" : "Save changes")</button>
-            <a class="button button-secondary" href="rate-limits">Cancel</a>
+            <button type="submit" class="button">@(Model.IsNew ? Text.T("Add rate limit") : Text.T("Save changes"))</button>
+            <a class="button button-secondary" href="rate-limits">@T("Cancel")</a>
         </div>
-        <p class="muted">Saving creates a new configuration version and takes effect immediately. Counters of all limits start again after a change.</p>
+        <p class="muted">@T("Saving creates a new configuration version and takes effect immediately. Counters of all limits start again after a change.")</p>
     </EditForm>
 }
 
@@ -168,13 +168,13 @@ else if (Model is not null)
 
         if (model.IsNew && index >= 0)
         {
-            _errors = [$"A rate limit named '{limit.Name}' already exists. Choose another name."];
+            _errors = [Text.F("A rate limit named '{0}' already exists. Choose another name.", limit.Name)];
             return;
         }
 
         if (!model.IsNew && index < 0)
         {
-            _errors = [$"Rate limit '{limit.Name}' no longer exists; it was deleted in the meantime."];
+            _errors = [Text.F("Rate limit '{0}' no longer exists; it was deleted in the meantime.", limit.Name)];
             return;
         }
 

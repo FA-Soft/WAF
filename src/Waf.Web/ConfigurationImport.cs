@@ -25,7 +25,7 @@ internal static class ConfigurationImport
     {
         if (string.IsNullOrWhiteSpace(json))
         {
-            return new ImportPreview(null, ["Choose a configuration file or paste its contents."], [], 0, null);
+            return new ImportPreview(null, [Text.N("Choose a configuration file or paste its contents.")], [], 0, null);
         }
 
         // Parse reports validation errors too, but a file without secrets only becomes valid after they are filled in.

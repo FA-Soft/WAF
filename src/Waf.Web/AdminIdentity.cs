@@ -56,8 +56,8 @@ public static class AdminIdentity
     public const int MinPasswordLength = AdminAccountPolicy.MinPasswordLength;
 
     /// <summary>Help text of password fields.</summary>
-    public static readonly string PasswordHelp =
-        $"At least {MinPasswordLength} characters. A few unrelated words make a strong password that is easy to type.";
+    public static string PasswordHelp =>
+        Text.T("At least {0} characters. A few unrelated words make a strong password that is easy to type.", MinPasswordLength);
 
     public static IServiceCollection AddAdminIdentity(this IServiceCollection services, StoragePaths paths)
     {

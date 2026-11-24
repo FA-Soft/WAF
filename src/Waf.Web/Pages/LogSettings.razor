@@ -6,19 +6,19 @@
 @inject NavigationManager Navigation
 @inject AuditLogStore Audit
 
-<PageTitle>Log retention · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Log retention") · @ProductInfo.Name</PageTitle>
 
-<p><a href="logs">← Request log</a></p>
+<p><a href="logs">← @T("Request log")</a></p>
 <h1>
-    Log retention
-    <HelpTip Title="Log retention">
-        <p>The request log is kept in events.db in the data folder. A background job checks it every minute and removes the oldest entries when they are older than the age limit, or when the log grows close to its size limit. The file never grows beyond the size limit; space of removed entries is reused for new ones.</p>
+    @T("Log retention")
+    <HelpTip Title="@T("Log retention")">
+        <p>@T("The request log is kept in events.db in the data folder. A background job checks it every minute and removes the oldest entries when they are older than the age limit, or when the log grows close to its size limit. The file never grows beyond the size limit; space of removed entries is reused for new ones.")</p>
     </HelpTip>
 </h1>
 
 @if (!string.IsNullOrEmpty(Saved))
 {
-    <div class="alert alert-ok" role="status">@Saved</div>
+    <div class="alert alert-ok" role="status">@Message(Saved)</div>
 }
 
 @if (_cleaned is { } cleaned)
@@ -26,47 +26,47 @@
     <div class="alert @(cleaned.Error is null ? "alert-ok" : "alert-danger")" role="status">
         @if (cleaned.Error is null)
         {
-            <span>Cleanup finished: @cleaned.Deleted.ToString("N0", CultureInfo.CurrentCulture) entries removed.</span>
+            <span>@Plural(cleaned.Deleted, "Cleanup finished: {0} entry removed.", "Cleanup finished: {0} entries removed.")</span>
         }
         else
         {
-            <span>Cleanup failed: @cleaned.Error</span>
+            <span>@T("Cleanup failed: {0}", Message(cleaned.Error))</span>
         }
     </div>
 }
 
-<section class="cards" aria-label="Request log size">
+<section class="cards" aria-label="@T("Request log size")">
     <div class="card">
-        <h2>Size on disk</h2>
+        <h2>@T("Size on disk")</h2>
         @if (_info is { } info)
         {
             <p class="metric">@Megabytes(info.FileBytes)</p>
-            <p class="muted">of at most @_settings.MaxDatabaseSizeMb.ToString("N0", CultureInfo.CurrentCulture) MB (@Percent(info.FileBytes))</p>
-            <meter class="size-meter" min="0" max="1" low="@RequestLogMaintenance.LowWatermark" high="@RequestLogMaintenance.HighWatermark" optimum="0" value="@Math.Clamp(Fraction(info.FileBytes), 0, 1).ToString("0.###", Culture)" aria-label="Share of the size limit in use">@Percent(info.FileBytes)</meter>
+            <p class="muted">@T("of at most {0} MB ({1})", _settings.MaxDatabaseSizeMb.ToString("N0", CultureInfo.CurrentCulture), Percent(info.FileBytes))</p>
+            <meter class="size-meter" min="0" max="1" low="@RequestLogMaintenance.LowWatermark" high="@RequestLogMaintenance.HighWatermark" optimum="0" value="@Math.Clamp(Fraction(info.FileBytes), 0, 1).ToString("0.###", Culture)" aria-label="@T("Share of the size limit in use")">@Percent(info.FileBytes)</meter>
         }
         else
         {
-            <p class="metric">0 MB</p>
-            <p class="muted">No requests have been logged yet.</p>
+            <p class="metric">@T("0 MB")</p>
+            <p class="muted">@T("No requests have been logged yet.")</p>
         }
     </div>
     <div class="card">
-        <h2>Entries</h2>
+        <h2>@T("Entries")</h2>
         <p class="metric">@((_info?.Entries ?? 0).ToString("N0", CultureInfo.CurrentCulture))</p>
         <p class="muted">
             @if (_info?.Oldest is { } oldest)
             {
-                <span>oldest from @oldest.UtcDateTime.ToString("yyyy-MM-dd HH:mm", Culture) UTC</span>
+                <span>@T("oldest from {0} UTC", oldest.UtcDateTime.ToString("yyyy-MM-dd HH:mm", Culture))</span>
             }
         </p>
     </div>
     <div class="card">
-        <h2>Last cleanup</h2>
+        <h2>@T("Last cleanup")</h2>
         @if (Retention.LastRun is { } last)
         {
-            <p class="metric">@last.Deleted.ToString("N0", CultureInfo.CurrentCulture) removed</p>
+            <p class="metric">@Plural(last.Deleted, "{0} removed", "{0} removed")</p>
             <p class="muted">
-                @last.FinishedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture) UTC: @last.DeletedByAge.ToString("N0", CultureInfo.CurrentCulture) by age, @last.DeletedBySize.ToString("N0", CultureInfo.CurrentCulture) by size
+                @T("{0} UTC: {1} by age, {2} by size", last.FinishedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture), last.DeletedByAge.ToString("N0", CultureInfo.CurrentCulture), last.DeletedBySize.ToString("N0", CultureInfo.CurrentCulture))
             </p>
             @if (last.Error is not null)
             {
@@ -75,12 +75,12 @@
         }
         else
         {
-            <p class="metric">Not yet</p>
-            <p class="muted">The first run starts shortly after the gateway starts, then every minute.</p>
+            <p class="metric">@T("Not yet")</p>
+            <p class="muted">@T("The first run starts shortly after the gateway starts, then every minute.")</p>
         }
         <form method="post" @formname="cleanup-now" @onsubmit="CleanUpAsync" data-enhance>
             <AntiforgeryToken />
-            <button type="submit" class="button button-secondary">Clean up now</button>
+            <button type="submit" class="button button-secondary">@T("Clean up now")</button>
         </form>
     </div>
 </section>
@@ -88,11 +88,11 @@
 @if (_errors.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>The settings were not saved.</strong> The running configuration is unchanged.
+        <strong>@T("The settings were not saved.")</strong> @T("The running configuration is unchanged.")
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
@@ -102,21 +102,21 @@
 {
     <EditForm Model="Model" FormName="log-retention" OnValidSubmit="SaveAsync" Enhance class="form">
         <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-danger validation-summary" />
+        <ValidationList Class="alert alert-danger validation-summary" />
         <input type="hidden" name="Model.BaseVersion" value="@Model.BaseVersion" />
         <fieldset>
-            <legend>Limits</legend>
-            <FormField Id="max-age" Label="Keep entries for (days)" Help="Older entries are removed. 0 keeps entries regardless of age; the size limit still applies." For="() => Model.MaxAgeDays">
+            <legend>@T("Limits")</legend>
+            <FormField Id="max-age" Label="@T("Keep entries for (days)")" Help="@T("Older entries are removed. 0 keeps entries regardless of age; the size limit still applies.")" For="() => Model.MaxAgeDays">
                 <InputNumber id="max-age" aria-describedby="max-age-help" @bind-Value="Model.MaxAgeDays" min="0" max="@LogRetentionSettings.MaxMaxAgeDays" />
             </FormField>
-            <FormField Id="max-size" Label="Maximum size (MB)" Help="@SizeHelp" For="() => Model.MaxDatabaseSizeMb">
+            <FormField Id="max-size" Label="@T("Maximum size (MB)")" Help="@SizeHelp" For="() => Model.MaxDatabaseSizeMb">
                 <InputNumber id="max-size" aria-describedby="max-size-help" @bind-Value="Model.MaxDatabaseSizeMb" min="@LogRetentionSettings.MinDatabaseSizeMb" max="@LogRetentionSettings.MaxDatabaseSizeLimitMb" />
             </FormField>
         </fieldset>
         <div class="actions">
-            <button type="submit" class="button">Save</button>
+            <button type="submit" class="button">@T("Save")</button>
         </div>
-        <p class="muted">Saving creates a new configuration version. New limits apply at the next cleanup (within a minute), or press "Clean up now".</p>
+        <p class="muted">@T("Saving creates a new configuration version. New limits apply at the next cleanup (within a minute), or press \"Clean up now\".")</p>
     </EditForm>
 }
 
@@ -126,8 +126,12 @@
 
     private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
 
-    private static readonly string SizeHelp =
-        $"When the log reaches {RequestLogMaintenance.HighWatermark:P0} of this, the oldest entries are removed until it is at {RequestLogMaintenance.LowWatermark:P0}. At least {LogRetentionSettings.MinDatabaseSizeMb} MB. Rough guide: 1 MB holds about 4,000 requests.";
+    private static string SizeHelp => T(
+        "When the log reaches {0} of this, the oldest entries are removed until it is at {1}. At least {2} MB. Rough guide: 1 MB holds about {3} requests.",
+        RequestLogMaintenance.HighWatermark.ToString("P0", CultureInfo.CurrentCulture),
+        RequestLogMaintenance.LowWatermark.ToString("P0", CultureInfo.CurrentCulture),
+        LogRetentionSettings.MinDatabaseSizeMb,
+        4000.ToString("N0", CultureInfo.CurrentCulture));
 
     private LogDatabaseInfo? _info;
     private LogRetentionSettings _settings = new();

@@ -2,44 +2,44 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>Rate limits · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Rate limits") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Rate limits
-    <HelpTip Title="Rate limits">
-        <p>A rate limit allows at most a number of requests per time window, counted per client IP, per client IP and route, or per route for all clients together. Requests over the limit get 429 Too Many Requests. Rejected requests count too, so a client that keeps hammering stays limited until it slows down.</p>
+    @T("Rate limits")
+    <HelpTip Title="@T("Rate limits")">
+        <p>@T("A rate limit allows at most a number of requests per time window, counted per client IP, per client IP and route, or per route for all clients together. Requests over the limit get 429 Too Many Requests. Rejected requests count too, so a client that keeps hammering stays limited until it slows down.")</p>
     </HelpTip>
 </h1>
 
 @if (!string.IsNullOrEmpty(Saved))
 {
-    <div class="alert alert-ok" role="status">@Saved</div>
+    <div class="alert alert-ok" role="status">@Message(Saved)</div>
 }
 
 @if (_errors.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>The change was not applied.</strong>
+        <strong>@T("The change was not applied.")</strong>
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
 }
 
-<p class="actions"><a class="button" href="rate-limits/new">Add a rate limit</a> <a class="button button-secondary" href="library#rate-limits">From a template</a></p>
+<p class="actions">@TM("<a class=\"button\" href=\"rate-limits/new\">Add a rate limit</a> <a class=\"button button-secondary\" href=\"library#rate-limits\">From a template</a>")</p>
 
 @if (_active is not null && _active.Configuration.RateLimits.Count == 0)
 {
-    <p>No rate limits yet. A good start is a general limit per client IP (e.g. 600 per minute) and a strict one for login pages (e.g. 5 POST requests to /login per minute).</p>
+    <p>@T("No rate limits yet. A good start is a general limit per client IP (e.g. 600 per minute) and a strict one for login pages (e.g. 5 POST requests to /login per minute).")</p>
 }
 else if (_active is not null)
 {
     <table>
         <thead>
-            <tr><th scope="col">Name</th><th scope="col">Limit</th><th scope="col">For</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+            <tr><th scope="col">@T("Name")</th><th scope="col">@T("Limit")</th><th scope="col">@T("For")</th><th scope="col">@T("Status")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr>
         </thead>
         <tbody>
             @foreach (var limit in _active.Configuration.RateLimits)
@@ -55,30 +55,30 @@ else if (_active is not null)
                     </td>
                     <td>@Describe.RateLimit(limit)@(limit.DetectionOnly || _active.Configuration.Settings.DetectionOnly ? " (detection only)" : null)</td>
                     <td>
-                        @(limit.Conditions.Count == 0 ? "All requests" : Describe.Conditions(limit.Conditions))
+                        @(limit.Conditions.Count == 0 ? Text.T("All requests") : Describe.Conditions(limit.Conditions))
                         @if (limit.Routes.Count > 0)
                         {
-                            <span class="muted cell-note">Only on route @string.Join(", ", limit.Routes)</span>
+                            <span class="muted cell-note">@Plural(limit.Routes.Count, "Only on route {1}", "Only on routes {1}", string.Join(", ", limit.Routes))</span>
                         }
                     </td>
                     <td>
                         @if (limit.Enabled)
                         {
-                            <span class="badge badge-ok">Enabled</span>
+                            <span class="badge badge-ok">@T("Enabled")</span>
                         }
                         else
                         {
-                            <span class="badge badge-muted">Disabled</span>
+                            <span class="badge badge-muted">@T("Disabled")</span>
                         }
                     </td>
                     <td>
                         <div class="row-actions">
-                            <a href="@($"rate-limits/{Uri.EscapeDataString(name)}/edit")">Edit</a>
+                            <a href="@($"rate-limits/{Uri.EscapeDataString(name)}/edit")">@T("Edit")</a>
                             <form method="post" @formname="@($"toggle-limit-{name}")" @onsubmit="() => ToggleAsync(name)" data-enhance>
                                 <AntiforgeryToken />
-                                <button type="submit" class="link-button">@(limit.Enabled ? "Disable" : "Enable")</button>
+                                <button type="submit" class="link-button">@(limit.Enabled ? Text.T("Disable") : Text.T("Enable"))</button>
                             </form>
-                            <a href="@($"rate-limits/{Uri.EscapeDataString(name)}/delete")">Delete</a>
+                            <a href="@($"rate-limits/{Uri.EscapeDataString(name)}/delete")">@T("Delete")</a>
                         </div>
                     </td>
                 </tr>
@@ -107,7 +107,7 @@ else if (_active is not null)
         var limit = configuration.RateLimits.FirstOrDefault(l => l.Name == name);
         if (limit is null)
         {
-            _errors = [$"Rate limit '{name}' no longer exists."];
+            _errors = [Text.F("Rate limit '{0}' no longer exists.", name)];
             return;
         }
 

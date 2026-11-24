@@ -2,18 +2,20 @@
 @if (Entry is not null)
 {
     <div class="alert alert-info" role="status">
-        <strong>Pre-filled from <a href="@($"logs/{Entry.Id}")">request @Entry.Id</a>:</strong>
-        @Entry.Method @Entry.Host@Entry.Path from @Entry.ClientIp@(Entry.RuleName is null ? "" : $" ({Entry.RuleName})").
+        <strong>@T("Pre-filled from") <a href="@($"logs/{Entry.Id}")">@T("request {0}", Entry.Id)</a>:</strong>
+        @(Entry.RuleName is null
+            ? T("{0} {1}{2} from {3}.", Entry.Method, Entry.Host, Entry.Path, Entry.ClientIp)
+            : T("{0} {1}{2} from {3} ({4}).", Entry.Method, Entry.Host, Entry.Path, Entry.ClientIp, Entry.RuleName))
         @if (Message is not null)
         {
             <span>@Message</span>
         }
-        Check the form; nothing changes until you save.
+        @T("Check the form; nothing changes until you save.")
     </div>
 }
 else if (Missing)
 {
-    <div class="alert alert-warning" role="status">The log entry no longer exists; the form is not pre-filled.</div>
+    <div class="alert alert-warning" role="status">@T("The log entry no longer exists; the form is not pre-filled.")</div>
 }
 
 @code {

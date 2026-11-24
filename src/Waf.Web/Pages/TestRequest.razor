@@ -2,12 +2,12 @@
 @inject WafEngineHolder Engines
 @inject ConfigurationStore Store
 
-<PageTitle>Test a request · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Test a request") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Test a request
-    <HelpTip Title="Test a request">
-        <p>Describe a request and see what the firewall would do with it, without sending anything. Rules and attack detection run exactly as for real traffic; rate limits are not counted.</p>
+    @T("Test a request")
+    <HelpTip Title="@T("Test a request")">
+        <p>@T("Describe a request and see what the firewall would do with it, without sending anything. Rules and attack detection run exactly as for real traffic; rate limits are not counted.")</p>
     </HelpTip>
 </h1>
 
@@ -15,7 +15,7 @@
     <DataAnnotationsValidator />
 
     <div class="field-row">
-        <FormField Id="request-method" Label="Method" Help="GET to read a page, POST to send a form." For="() => Model!.Method">
+        <FormField Id="request-method" Label="@T("Method")" Help="@T("GET to read a page, POST to send a form.")" For="() => Model!.Method">
             <InputSelect id="request-method" aria-describedby="request-method-help" @bind-Value="Model!.Method">
                 @foreach (var method in Methods)
                 {
@@ -24,27 +24,27 @@
             </InputSelect>
         </FormField>
 
-        <FormField Id="host" Label="Host name" Help="The site name in the address, e.g. www.example.com." For="() => Model!.Host">
+        <FormField Id="host" Label="@T("Host name")" Help="@T("The site name in the address, e.g. www.example.com.")" For="() => Model!.Host">
             <InputText id="host" aria-describedby="host-help" @bind-Value="Model!.Host" autocomplete="off" />
         </FormField>
     </div>
 
-    <FormField Id="path" Label="Path" Help="The part of the address after the host name, starting with /." For="() => Model!.Path">
+    <FormField Id="path" Label="@T("Path")" Help="@T("The part of the address after the host name, starting with /.")" For="() => Model!.Path">
         <InputText id="path" aria-describedby="path-help" @bind-Value="Model!.Path" autocomplete="off" />
     </FormField>
 
-    <FormField Id="query" Label="Query string" Optional Help="Everything after the ?, e.g. q=shoes&page=2." For="() => Model!.Query">
+    <FormField Id="query" Label="@T("Query string")" Optional Help="@T("Everything after the ?, e.g. q=shoes&page=2.")" For="() => Model!.Query">
         <InputText id="query" aria-describedby="query-help" @bind-Value="Model!.Query" autocomplete="off" />
     </FormField>
 
     <div class="field-row">
-        <FormField Id="client-ip" Label="Client IP address" Help="Where the request comes from, e.g. 203.0.113.10." For="() => Model!.ClientIp">
+        <FormField Id="client-ip" Label="@T("Client IP address")" Help="@T("Where the request comes from, e.g. 203.0.113.10.")" For="() => Model!.ClientIp">
             <InputText id="client-ip" aria-describedby="client-ip-help" @bind-Value="Model!.ClientIp" autocomplete="off" />
         </FormField>
 
-        <FormField Id="route" Label="Route" Help="The route this request would match. Some rules only apply to certain routes." For="() => Model!.Route">
+        <FormField Id="route" Label="@T("Route")" Help="@T("The route this request would match. Some rules only apply to certain routes.")" For="() => Model!.Route">
             <InputSelect id="route" aria-describedby="route-help" @bind-Value="Model!.Route">
-                <option value="">(no route)</option>
+                <option value="">@T("(no route)")</option>
                 @foreach (var route in _routes)
                 {
                     <option value="@route">@route</option>
@@ -53,27 +53,27 @@
         </FormField>
     </div>
 
-    <FormField Id="headers" Label="Headers" Optional Help="One per line, e.g. User-Agent: curl/8.4. Cookie and Referer are inspected too." For="() => Model!.Headers">
+    <FormField Id="headers" Label="@T("Headers")" Optional Help="@T("One per line, e.g. User-Agent: curl/8.4. Cookie and Referer are inspected too.")" For="() => Model!.Headers">
         <InputTextArea id="headers" aria-describedby="headers-help" @bind-Value="Model!.Headers" rows="3" />
     </FormField>
 
     <details class="advanced">
-        <summary>Request body</summary>
-        <FormField Id="content-type" Label="Content type" Optional Help="e.g. application/x-www-form-urlencoded or application/json." For="() => Model!.ContentType">
+        <summary>@T("Request body")</summary>
+        <FormField Id="content-type" Label="@T("Content type")" Optional Help="@T("e.g. application/x-www-form-urlencoded or application/json.")" For="() => Model!.ContentType">
             <InputText id="content-type" aria-describedby="content-type-help" @bind-Value="Model!.ContentType" autocomplete="off" />
         </FormField>
-        <FormField Id="body" Label="Body" Optional Help="Only inspected when body inspection is switched on in the settings." For="() => Model!.Body">
+        <FormField Id="body" Label="@T("Body")" Optional Help="@T("Only inspected when body inspection is switched on in the settings.")" For="() => Model!.Body">
             <InputTextArea id="body" aria-describedby="body-help" @bind-Value="Model!.Body" rows="4" />
         </FormField>
     </details>
 
-    <button type="submit" class="button">Test</button>
+    <button type="submit" class="button">@T("Test")</button>
 </EditForm>
 
 @if (_result is not null)
 {
     <section class="result @(_result.Blocked ? "result-blocked" : "result-allowed")" aria-live="polite" aria-labelledby="result-heading">
-        <h2 id="result-heading">@(_result.Blocked ? "Blocked" : "Allowed")</h2>
+        <h2 id="result-heading">@(_result.Blocked ? Text.T("Blocked") : Text.T("Allowed"))</h2>
         <p>@_result.Summary</p>
         @if (_result.Details.Count > 0)
         {
@@ -88,7 +88,7 @@
 }
 else if (_unavailable)
 {
-    <div class="alert alert-danger" role="alert">The firewall is not running, so the request cannot be tested. Public traffic is currently refused.</div>
+    <div class="alert alert-danger" role="alert">@T("The firewall is not running, so the request cannot be tested. Public traffic is currently refused.")</div>
 }
 
 @code {

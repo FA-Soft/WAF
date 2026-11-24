@@ -8,28 +8,27 @@
 @inject SignInHistory History
 @inject NavigationManager Navigation
 
-<PageTitle>Create the admin account · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Create the admin account") · @ProductInfo.Name</PageTitle>
 
-<h1>Create the admin account</h1>
+<h1>@T("Create the admin account")</h1>
 
-<p>No admin account exists yet. The account you create here signs in to this admin UI.</p>
+<p>@T("No admin account exists yet. The account you create here signs in to this admin UI.")</p>
 
 @if (!_local)
 {
     <div class="alert alert-info" role="note">
-        You are not on the gateway's own machine. Enter the one-time setup token: the gateway printed it to its
-        service log at startup (look for "No admin account exists yet"). It is used up once the account exists.
+        @T("You are not on the gateway's own machine. Enter the one-time setup token: the gateway printed it to its service log at startup (look for \"No admin account exists yet\"). It is used up once the account exists.")
     </div>
 }
 
 @if (_errors.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>The account was not created.</strong>
+        <strong>@T("The account was not created.")</strong>
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
@@ -39,21 +38,21 @@
     <DataAnnotationsValidator />
     @if (!_local)
     {
-        <FormField Id="setup-token" Label="Setup token" Help="From the service log of the gateway." For="() => Model!.SetupToken">
+        <FormField Id="setup-token" Label="@T("Setup token")" Help="@T("From the service log of the gateway.")" For="() => Model!.SetupToken">
             <input id="setup-token" type="password" name="Model.SetupToken" autocomplete="off" aria-describedby="setup-token-help" />
         </FormField>
     }
-    <FormField Id="user-name" Label="User name" Help="Letters, digits and - . _ @@ +" For="() => Model!.UserName">
+    <FormField Id="user-name" Label="@T("User name")" Help="@T("Letters, digits and - . _ @ +")" For="() => Model!.UserName">
         <InputText id="user-name" @bind-Value="Model!.UserName" autocomplete="username" aria-describedby="user-name-help" />
     </FormField>
-    <FormField Id="password" Label="Password" Help="@AdminIdentity.PasswordHelp" For="() => Model!.Password">
+    <FormField Id="password" Label="@T("Password")" Help="@AdminIdentity.PasswordHelp" For="() => Model!.Password">
         <input id="password" type="password" name="Model.Password" autocomplete="new-password" aria-describedby="password-help" />
     </FormField>
-    <FormField Id="confirm-password" Label="Password again" For="() => Model!.ConfirmPassword">
+    <FormField Id="confirm-password" Label="@T("Password again")" For="() => Model!.ConfirmPassword">
         <input id="confirm-password" type="password" name="Model.ConfirmPassword" autocomplete="new-password" />
     </FormField>
     <div class="actions">
-        <button type="submit" class="button">Create account and sign in</button>
+        <button type="submit" class="button">@T("Create account and sign in")</button>
     </div>
 </EditForm>
 
@@ -84,8 +83,8 @@
         if (!Setup.IsAllowed(HttpContext, model.SetupToken))
         {
             _errors = [Setup.IsRequired
-                ? "The setup token is not correct. Copy it from the service log of the gateway."
-                : "An admin account already exists. Sign in instead."];
+                ? Text.N("The setup token is not correct. Copy it from the service log of the gateway.")
+                : Text.N("An admin account already exists. Sign in instead.")];
             return;
         }
 

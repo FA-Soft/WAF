@@ -6,13 +6,13 @@
 }
 @if (engine is null)
 {
-    <span class="badge badge-danger" title="@Engines.UnavailableReason">Unavailable: public traffic is refused</span>
+    <span class="badge badge-danger" title="@Message(Engines.UnavailableReason)">@T("Unavailable: public traffic is refused")</span>
 }
 else if (engine.DetectionOnly)
 {
-    <span class="badge badge-warning" title="Blocks are logged, not enforced.">Detection only</span>
+    <span class="badge badge-warning" title="@T("Blocks are logged, not enforced.")">@T("Detection only")</span>
 }
 else
 {
-    <span class="badge badge-ok">Protecting</span>
+    <span class="badge badge-ok">@T("Protecting")</span>
 }

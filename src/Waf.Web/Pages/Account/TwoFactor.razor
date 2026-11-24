@@ -4,13 +4,13 @@
 @inject NavigationManager Navigation
 @inject AuditLogStore Audit
 
-<PageTitle>Two-factor sign-in · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Two-factor sign-in") · @ProductInfo.Name</PageTitle>
 
-<p><a href="account">← Your account</a></p>
+<p><a href="account">← @T("Your account")</a></p>
 <h1>
-    Two-factor sign-in
-    <HelpTip Title="Two-factor sign-in">
-        <p>With two-factor sign-in, signing in needs your password and a 6-digit code from an authenticator app on your phone (for example Microsoft Authenticator, Google Authenticator or 1Password). Someone who learns your password still cannot sign in. Remote access to the admin UI requires it.</p>
+    @T("Two-factor sign-in")
+    <HelpTip Title="@T("Two-factor sign-in")">
+        <p>@T("With two-factor sign-in, signing in needs your password and a 6-digit code from an authenticator app on your phone (for example Microsoft Authenticator, Google Authenticator or 1Password). Someone who learns your password still cannot sign in. Remote access to the admin UI requires it.")</p>
     </HelpTip>
 </h1>
 
@@ -19,7 +19,7 @@
     <div class="alert alert-danger" role="alert">
         @foreach (var error in _errors)
         {
-            <p>@error</p>
+            <p>@Message(error)</p>
         }
     </div>
 }
@@ -28,7 +28,7 @@
 {
     <div class="alert alert-warning" role="status">
         <strong>@_codesTitle</strong>
-        <p>Save these recovery codes somewhere safe, apart from your phone (print them, or keep them in a password manager). Each one signs you in once if you lose your phone. They are shown only now.</p>
+        <p>@T("Save these recovery codes somewhere safe, apart from your phone (print them, or keep them in a password manager). Each one signs you in once if you lose your phone. They are shown only now.")</p>
         <ol class="recovery-codes">
             @foreach (var recoveryCode in codes)
             {
@@ -40,51 +40,53 @@
 
 @if (_enabled)
 {
-    <p><span class="badge badge-ok">On</span> Signing in needs your password and a code from your authenticator app.</p>
-    <p>Recovery codes left: <strong>@_recoveryCodesLeft</strong>@(_recoveryCodesLeft <= 3 ? " — make new ones soon." : ".")</p>
+    <p><span class="badge badge-ok">@T("On")</span> @T("Signing in needs your password and a code from your authenticator app.")</p>
+    <p>@(_recoveryCodesLeft <= 3
+        ? TM("Recovery codes left: <strong>{0}</strong> — make new ones soon.", _recoveryCodesLeft)
+        : TM("Recovery codes left: <strong>{0}</strong>.", _recoveryCodesLeft))</p>
 
     <EditForm Model="Codes" FormName="new-recovery-codes" OnValidSubmit="NewRecoveryCodesAsync" Enhance class="form">
         <DataAnnotationsValidator />
         <fieldset>
-            <legend>New recovery codes</legend>
-            <p class="muted">Replaces all recovery codes; the old ones stop working.</p>
-            <FormField Id="codes-password" Label="Password" For="() => Codes!.Password">
+            <legend>@T("New recovery codes")</legend>
+            <p class="muted">@T("Replaces all recovery codes; the old ones stop working.")</p>
+            <FormField Id="codes-password" Label="@T("Password")" For="() => Codes!.Password">
                 <input id="codes-password" type="password" name="Codes.Password" autocomplete="current-password" />
             </FormField>
-            <button type="submit" class="button button-secondary">Make new recovery codes</button>
+            <button type="submit" class="button button-secondary">@T("Make new recovery codes")</button>
         </fieldset>
     </EditForm>
 
     <EditForm Model="Disable" FormName="disable-two-factor" OnValidSubmit="DisableAsync" Enhance class="form">
         <DataAnnotationsValidator />
         <fieldset>
-            <legend>Turn off</legend>
-            <p class="muted">Signing in then needs only your password. The authenticator app entry and the recovery codes stop working.</p>
-            <FormField Id="disable-password" Label="Password" For="() => Disable!.Password">
+            <legend>@T("Turn off")</legend>
+            <p class="muted">@T("Signing in then needs only your password. The authenticator app entry and the recovery codes stop working.")</p>
+            <FormField Id="disable-password" Label="@T("Password")" For="() => Disable!.Password">
                 <input id="disable-password" type="password" name="Disable.Password" autocomplete="current-password" />
             </FormField>
-            <button type="submit" class="button button-danger">Turn off two-factor sign-in</button>
+            <button type="submit" class="button button-danger">@T("Turn off two-factor sign-in")</button>
         </fieldset>
     </EditForm>
 }
 else
 {
-    <p><span class="badge badge-warning">Off</span> Signing in needs only your password.</p>
+    <p><span class="badge badge-warning">@T("Off")</span> @T("Signing in needs only your password.")</p>
 
     <ol class="setup-steps">
         <li>
-            <p>Open your authenticator app, add an account and scan this QR code.</p>
-            <img class="qr-code" src="@_qrCode" width="200" height="200" alt="QR code to add @ProductInfo.Name to an authenticator app" />
-            <p class="muted">Can't scan it? Enter this key instead (time-based, 6 digits): <code class="authenticator-key">@_formattedKey</code></p>
+            <p>@T("Open your authenticator app, add an account and scan this QR code.")</p>
+            <img class="qr-code" src="@_qrCode" width="200" height="200" alt="@T("QR code to add {0} to an authenticator app", ProductInfo.Name)" />
+            <p class="muted">@T("Can't scan it? Enter this key instead (time-based, 6 digits):") <code class="authenticator-key">@_formattedKey</code></p>
         </li>
         <li>
-            <p>Enter the 6-digit code the app now shows.</p>
+            <p>@T("Enter the 6-digit code the app now shows.")</p>
             <EditForm Model="Enable" FormName="enable-two-factor" OnValidSubmit="EnableAsync" Enhance class="form">
                 <DataAnnotationsValidator />
-                <FormField Id="enable-code" Label="Code" For="() => Enable!.Code">
+                <FormField Id="enable-code" Label="@T("Code")" For="() => Enable!.Code">
                     <input id="enable-code" name="Enable.Code" inputmode="numeric" autocomplete="one-time-code" maxlength="9" />
                 </FormField>
-                <button type="submit" class="button">Turn on two-factor sign-in</button>
+                <button type="submit" class="button">@T("Turn on two-factor sign-in")</button>
             </EditForm>
         </li>
     </ol>
@@ -156,13 +158,13 @@ else
         var code = AdminSignIn.NormalizeCode(Enable!.Code);
         if (!await Users.VerifyTwoFactorTokenAsync(_user, Users.Options.Tokens.AuthenticatorTokenProvider, code))
         {
-            _errors = ["The code is not correct. Check that the app shows the account just added, and use the current code."];
+            _errors = [Text.T("The code is not correct. Check that the app shows the account just added, and use the current code.")];
             return;
         }
 
         await Users.SetTwoFactorEnabledAsync(_user, true);
         _newCodes = [.. (await Users.GenerateNewTwoFactorRecoveryCodesAsync(_user, AdminIdentity.RecoveryCodeCount))!];
-        _codesTitle = "Two-factor sign-in is on.";
+        _codesTitle = Text.T("Two-factor sign-in is on.");
         await Audit.RecordAsync(AuditCategory.Security, AuditActions.TwoFactorEnabled, AdminActor.From(HttpContext), "Two-factor sign-in turned on; new recovery codes made.");
         await SignIn.RefreshSignInAsync(_user);
         await LoadAsync();
@@ -172,12 +174,12 @@ else
     {
         if (!await Users.CheckPasswordAsync(_user, Codes!.Password))
         {
-            _errors = ["The password is not correct."];
+            _errors = [Text.T("The password is not correct.")];
             return;
         }
 
         _newCodes = [.. (await Users.GenerateNewTwoFactorRecoveryCodesAsync(_user, AdminIdentity.RecoveryCodeCount))!];
-        _codesTitle = "New recovery codes made; the old ones no longer work.";
+        _codesTitle = Text.T("New recovery codes made; the old ones no longer work.");
         await Audit.RecordAsync(AuditCategory.Security, AuditActions.RecoveryCodesGenerated, AdminActor.From(HttpContext), "New recovery codes made; the old ones no longer work.");
         await LoadAsync();
     }
@@ -186,13 +188,13 @@ else
     {
         if (RemoteAdminRequest.IsRemote(HttpContext))
         {
-            _errors = ["Two-factor sign-in cannot be turned off over remote access, which requires it. Use the gateway's own machine."];
+            _errors = [Text.T("Two-factor sign-in cannot be turned off over remote access, which requires it. Use the gateway's own machine.")];
             return;
         }
 
         if (!await Users.CheckPasswordAsync(_user, Disable!.Password))
         {
-            _errors = ["The password is not correct."];
+            _errors = [Text.T("The password is not correct.")];
             return;
         }
 

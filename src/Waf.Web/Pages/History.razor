@@ -2,31 +2,31 @@
 @inject ConfigurationStore Store
 @inject AuditLogStore Audit
 
-<PageTitle>Configuration history · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Configuration history") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Configuration history
-    <HelpTip Title="Configuration history">
-        <p>Every change to the configuration is kept as a numbered version. Only checked, working configurations become active; the active one is marked. Open a version to see what it changed, to restore it or to export it.</p>
+    @T("Configuration history")
+    <HelpTip Title="@T("Configuration history")">
+        <p>@T("Every change to the configuration is kept as a numbered version. Only checked, working configurations become active; the active one is marked. Open a version to see what it changed, to restore it or to export it.")</p>
     </HelpTip>
 </h1>
 
 @if (!string.IsNullOrEmpty(Saved))
 {
-    <div class="alert alert-ok" role="status">@Saved</div>
+    <div class="alert alert-ok" role="status">@Message(Saved)</div>
 }
 
-<p class="actions"><a class="button button-secondary" href="backup">Backup and import</a> <a class="button button-secondary" href="audit?category=Configuration">Audit log</a></p>
+<p class="actions">@TM("<a class=\"button button-secondary\" href=\"backup\">Backup and import</a> <a class=\"button button-secondary\" href=\"audit?category=Configuration\">Audit log</a>")</p>
 
 @if (_versions.Count == 0)
 {
-    <p>No versions stored yet.</p>
+    <p>@T("No versions stored yet.")</p>
 }
 else
 {
     <table>
         <thead>
-            <tr><th scope="col">Version</th><th scope="col">Stored (UTC)</th><th scope="col">By</th><th scope="col">Description</th><th scope="col">Audit</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+            <tr><th scope="col">@T("Version")</th><th scope="col">@T("Stored (UTC)")</th><th scope="col">@T("By")</th><th scope="col">@T("Description")</th><th scope="col">@T("Audit")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr>
         </thead>
         <tbody>
             @foreach (var version in _versions)
@@ -36,19 +36,19 @@ else
                         @version.Version
                         @if (version.Version == _activeVersion)
                         {
-                            <span class="badge badge-ok">Active</span>
+                            <span class="badge badge-ok">@T("Active")</span>
                         }
                     </td>
                     <td>@version.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)</td>
-                    <td>@version.Author</td>
-                    <td>@version.Comment</td>
+                    <td>@Message(version.Author)</td>
+                    <td>@Message(version.Comment)</td>
                     <td>
                         @if (_audited.Contains(version.Version))
                         {
-                            <a href="@($"audit?version={version.Version}")" aria-label="@($"Audit log of version {version.Version}")">Audit entry</a>
+                            <a href="@($"audit?version={version.Version}")" aria-label="@($"Audit log of version {version.Version}")">@T("Audit entry")</a>
                         }
                     </td>
-                    <td><a href="@($"history/{version.Version}")" aria-label="@($"Details of version {version.Version}")">@(version.Version == _activeVersion ? "Details" : "Details and restore")</a></td>
+                    <td><a href="@($"history/{version.Version}")" aria-label="@($"Details of version {version.Version}")">@(version.Version == _activeVersion ? Text.T("Details") : Text.T("Details and restore"))</a></td>
                 </tr>
             }
         </tbody>

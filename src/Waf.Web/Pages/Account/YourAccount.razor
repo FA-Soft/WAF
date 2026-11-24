@@ -5,57 +5,57 @@
 @inject AuditLogStore Audit
 @inject NavigationManager Navigation
 
-<PageTitle>Your account · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Your account") · @ProductInfo.Name</PageTitle>
 
-<h1>Your account</h1>
+<h1>@T("Your account")</h1>
 
-<p>Signed in as <strong>@_userName</strong>.</p>
+<p>@TM("Signed in as <strong>{0}</strong>.", _userName)</p>
 
 @if (Changed)
 {
-    <div class="alert alert-ok" role="status">Your password was changed. Other sessions were signed out.</div>
+    <div class="alert alert-ok" role="status">@T("Your password was changed. Other sessions were signed out.")</div>
 }
 
 @if (TwoFactorOff)
 {
-    <div class="alert alert-ok" role="status">Two-factor sign-in is off.</div>
+    <div class="alert alert-ok" role="status">@T("Two-factor sign-in is off.")</div>
 }
 
 @if (SessionsEnded)
 {
-    <div class="alert alert-ok" role="status">All other sessions were signed out.</div>
+    <div class="alert alert-ok" role="status">@T("All other sessions were signed out.")</div>
 }
 
 @if (_errors.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>The password was not changed.</strong>
+        <strong>@T("The password was not changed.")</strong>
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
 }
 
-<section class="cards" aria-label="Sign-in security">
+<section class="cards" aria-label="@T("Sign-in security")">
     <div class="card">
-        <h2>Two-factor sign-in</h2>
+        <h2>@T("Two-factor sign-in")</h2>
         @if (_twoFactor)
         {
-            <p class="metric">On</p>
-            <p class="muted">@_recoveryCodesLeft recovery codes left</p>
+            <p class="metric">@T("On")</p>
+            <p class="muted">@Plural(_recoveryCodesLeft, "{0} recovery code left", "{0} recovery codes left")</p>
         }
         else
         {
-            <p class="metric">Off</p>
-            <p class="muted">Recommended; required for remote access.</p>
+            <p class="metric">@T("Off")</p>
+            <p class="muted">@T("Recommended; required for remote access.")</p>
         }
-        <p><a href="account/two-factor">@(_twoFactor ? "Manage" : "Turn on")</a></p>
+        <p><a href="account/two-factor">@(_twoFactor ? Text.T("Manage") : Text.T("Turn on"))</a></p>
     </div>
     <div class="card">
-        <h2>Previous sign-in</h2>
+        <h2>@T("Previous sign-in")</h2>
         @if (_summary?.PreviousSignIn is { } previous)
         {
             <p class="metric">@DateTimeOffset.FromUnixTimeMilliseconds(previous.TimestampMs).UtcDateTime.ToString("yyyy-MM-dd HH:mm", Culture) UTC</p>
@@ -63,20 +63,20 @@
         }
         else
         {
-            <p class="metric">None</p>
-            <p class="muted">This is the first sign-in.</p>
+            <p class="metric">@T("None")</p>
+            <p class="muted">@T("This is the first sign-in.")</p>
         }
         <p class="@(_summary?.FailedSince > 0 ? "field-error" : "muted")">
-            @(_summary?.FailedSince ?? 0) failed attempt@(_summary?.FailedSince == 1 ? "" : "s") since then
+            @Plural(_summary?.FailedSince ?? 0, "{0} failed attempt since then", "{0} failed attempts since then")
         </p>
-        <p><a href="account/history">Login history</a></p>
+        <p>@TM("<a href=\"account/history\">Login history</a>")</p>
     </div>
     <div class="card">
-        <h2>Sessions</h2>
-        <p class="muted">A session ends after @AdminIdentity.IdleTimeout.TotalMinutes minutes without activity, and @AdminIdentity.MaxSessionLifetime.TotalHours hours after signing in.</p>
+        <h2>@T("Sessions")</h2>
+        <p class="muted">@T("A session ends after {0} minutes without activity, and {1} hours after signing in.", AdminIdentity.IdleTimeout.TotalMinutes, AdminIdentity.MaxSessionLifetime.TotalHours)</p>
         <form method="post" @formname="end-sessions" @onsubmit="EndOtherSessionsAsync" data-enhance>
             <AntiforgeryToken />
-            <button type="submit" class="button button-secondary">Sign out other sessions</button>
+            <button type="submit" class="button button-secondary">@T("Sign out other sessions")</button>
         </form>
     </div>
 </section>
@@ -84,19 +84,19 @@
 <EditForm Model="Model" FormName="change-password" OnValidSubmit="ChangeAsync" Enhance class="form">
     <DataAnnotationsValidator />
     <fieldset>
-        <legend>Change password</legend>
-        <FormField Id="current-password" Label="Current password" For="() => Model!.CurrentPassword">
+        <legend>@T("Change password")</legend>
+        <FormField Id="current-password" Label="@T("Current password")" For="() => Model!.CurrentPassword">
             <input id="current-password" type="password" name="Model.CurrentPassword" autocomplete="current-password" />
         </FormField>
-        <FormField Id="new-password" Label="New password" Help="@AdminIdentity.PasswordHelp" For="() => Model!.NewPassword">
+        <FormField Id="new-password" Label="@T("New password")" Help="@AdminIdentity.PasswordHelp" For="() => Model!.NewPassword">
             <input id="new-password" type="password" name="Model.NewPassword" autocomplete="new-password" aria-describedby="new-password-help" />
         </FormField>
-        <FormField Id="confirm-password" Label="New password again" For="() => Model!.ConfirmPassword">
+        <FormField Id="confirm-password" Label="@T("New password again")" For="() => Model!.ConfirmPassword">
             <input id="confirm-password" type="password" name="Model.ConfirmPassword" autocomplete="new-password" />
         </FormField>
     </fieldset>
     <div class="actions">
-        <button type="submit" class="button">Change password</button>
+        <button type="submit" class="button">@T("Change password")</button>
     </div>
 </EditForm>
 
@@ -152,7 +152,7 @@
         var result = await Users.ChangePasswordAsync(user, Model!.CurrentPassword, Model.NewPassword);
         if (!result.Succeeded)
         {
-            _errors = [.. result.Errors.Select(e => e.Code == "PasswordMismatch" ? "The current password is not correct." : e.Description)];
+            _errors = [.. result.Errors.Select(e => e.Code == "PasswordMismatch" ? Text.N("The current password is not correct.") : e.Description)];
             return;
         }
 

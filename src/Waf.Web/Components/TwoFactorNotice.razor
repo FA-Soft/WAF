@@ -4,8 +4,8 @@
 @if (_show)
 {
     <div class="alert alert-info" role="note">
-        <strong>Two-factor sign-in is off.</strong> Anyone who learns your password can sign in.
-        <a href="account/two-factor">Turn it on</a>: it takes a minute with an authenticator app, and remote access requires it.
+        <strong>@T("Two-factor sign-in is off.")</strong> @T("Anyone who learns your password can sign in.")
+        @TM("<a href=\"account/two-factor\">Turn it on</a>: it takes a minute with an authenticator app, and remote access requires it.")
     </div>
 }
 

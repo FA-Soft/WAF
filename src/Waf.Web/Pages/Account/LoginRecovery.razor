@@ -4,33 +4,33 @@
 @inject AdminSignIn SignIn
 @inject NavigationManager Navigation
 
-<PageTitle>Sign in with a recovery code · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Sign in with a recovery code") · @ProductInfo.Name</PageTitle>
 
-<h1>Sign in with a recovery code</h1>
+<h1>@T("Sign in with a recovery code")</h1>
 
-<p>Enter one of the recovery codes you saved when you turned on two-factor sign-in. Each code works once.</p>
+<p>@T("Enter one of the recovery codes you saved when you turned on two-factor sign-in. Each code works once.")</p>
 
 @if (_attempt is { Step: SignInStep.Failed })
 {
-    <div class="alert alert-danger" role="alert">That recovery code is not correct, or was used before.</div>
+    <div class="alert alert-danger" role="alert">@T("That recovery code is not correct, or was used before.")</div>
 }
 else if (_attempt?.Message is { } message)
 {
-    <div class="alert alert-danger" role="alert">@message</div>
+    <div class="alert alert-danger" role="alert">@Message(message)</div>
 }
 
 <EditForm Model="Model" FormName="recovery" OnValidSubmit="VerifyAsync" Enhance class="form">
     <DataAnnotationsValidator />
     <input type="hidden" name="Model.ReturnUrl" value="@Model!.ReturnUrl" />
-    <FormField Id="recovery-code" Label="Recovery code" For="() => Model.Code">
+    <FormField Id="recovery-code" Label="@T("Recovery code")" For="() => Model.Code">
         <input id="recovery-code" name="Model.Code" autocomplete="off" />
     </FormField>
     <div class="actions">
-        <button type="submit" class="button">Sign in</button>
+        <button type="submit" class="button">@T("Sign in")</button>
     </div>
 </EditForm>
 
-<p class="muted">Afterwards, check how many codes you have left on your account page, and make new ones if needed.</p>
+<p class="muted">@T("Afterwards, check how many codes you have left on your account page, and make new ones if needed.")</p>
 
 @code {
     private SignInAttempt? _attempt;

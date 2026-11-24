@@ -103,17 +103,17 @@ public sealed class SignInHistory(AdminIdentityDbContext db, AuditLogStore audit
     /// <summary>Plain-language description of a result.</summary>
     public static string Describe(SignInOutcome result) => result switch
     {
-        SignInOutcome.Succeeded => "Signed in",
-        SignInOutcome.WrongPassword => "Wrong password",
-        SignInOutcome.UnknownUser => "Unknown user name",
-        SignInOutcome.LockedOut => "Refused: account locked",
-        SignInOutcome.Throttled => "Refused: too many attempts from this address",
-        SignInOutcome.TwoFactorRequired => "Password correct, waiting for the 2FA code",
-        SignInOutcome.TwoFactorFailed => "Wrong 2FA code",
-        SignInOutcome.RecoveryCodeUsed => "Signed in with a recovery code",
-        SignInOutcome.SignedOut => "Signed out",
-        SignInOutcome.SessionsEnded => "Other sessions signed out",
-        SignInOutcome.RemoteNeedsTwoFactor => "Refused: remote sign-in needs two-factor sign-in",
+        SignInOutcome.Succeeded => Text.N("Signed in"),
+        SignInOutcome.WrongPassword => Text.N("Wrong password"),
+        SignInOutcome.UnknownUser => Text.N("Unknown user name"),
+        SignInOutcome.LockedOut => Text.N("Refused: account locked"),
+        SignInOutcome.Throttled => Text.N("Refused: too many attempts from this address"),
+        SignInOutcome.TwoFactorRequired => Text.N("Password correct, waiting for the 2FA code"),
+        SignInOutcome.TwoFactorFailed => Text.N("Wrong 2FA code"),
+        SignInOutcome.RecoveryCodeUsed => Text.N("Signed in with a recovery code"),
+        SignInOutcome.SignedOut => Text.N("Signed out"),
+        SignInOutcome.SessionsEnded => Text.N("Other sessions signed out"),
+        SignInOutcome.RemoteNeedsTwoFactor => Text.N("Refused: remote sign-in needs two-factor sign-in"),
         _ => result.ToString(),
     };
 }

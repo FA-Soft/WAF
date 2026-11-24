@@ -108,7 +108,7 @@ public sealed partial class FirstRunSetup(
             if (_hasAdmin || await users.Users.AnyAsync().ConfigureAwait(false))
             {
                 _hasAdmin = true;
-                return (IdentityResult.Failed(new IdentityError { Code = "AdminExists", Description = "An admin account already exists. Sign in instead." }), null);
+                return (IdentityResult.Failed(new IdentityError { Code = "AdminExists", Description = Text.N("An admin account already exists. Sign in instead.") }), null);
             }
 
             var user = new IdentityUser(userName.Trim());

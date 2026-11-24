@@ -1,6 +1,5 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
-@inject IStringLocalizer<SharedResource> T
 
 <div class="shell">
     <header class="topbar">
@@ -15,57 +14,57 @@
             <AuthorizeView>
                 <Authorized>
                     @* A plain form (not enhanced): the page loads again in full, in the new theme. *@
-                    <form method="post" action="@AdminTheme.Path.TrimStart('/')" class="theme-switch" aria-label="@T["Color theme"]">
+                    <form method="post" action="@AdminTheme.Path.TrimStart('/')" class="theme-switch" aria-label="@T("Color theme")">
                         <AntiforgeryToken />
                         <input type="hidden" name="returnUrl" value="@ReturnUrl" />
                         @{ var current = AdminTheme.Of(context.User); }
                         @foreach (var (value, label) in AdminTheme.Choices)
                         {
                             <button type="submit" name="theme" value="@value" aria-pressed="@(value == current ? "true" : "false")"
-                                    title="@(value == AdminTheme.System ? T["Follow the system setting"] : T[$"Always {label.ToLowerInvariant()}"])">@T[label]</button>
+                                    title="@(value == AdminTheme.System ? T("Follow the system setting") : value == AdminTheme.Light ? T("Always light") : T("Always dark"))">@T(label)</button>
                         }
                     </form>
                     @* The language: a plain form in a disclosure (no script); each language is named in its own language. *@
                     @{ var stored = AdminLanguage.Stored(context.User); }
                     <details class="language-switch">
-                        <summary title="@T["Language"]"><span class="visually-hidden">@T["Language"]: </span>@LanguageName(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)</summary>
-                        <form method="post" action="@AdminLanguage.Path.TrimStart('/')" aria-label="@T["Language"]">
+                        <summary title="@T("Language")"><span class="visually-hidden">@T("Language"): </span>@LanguageName(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)</summary>
+                        <form method="post" action="@AdminLanguage.Path.TrimStart('/')" aria-label="@T("Language")">
                             <AntiforgeryToken />
                             <input type="hidden" name="returnUrl" value="@ReturnUrl" />
                             <button type="submit" name="language" value="@AdminLanguage.Browser" aria-pressed="@(stored is null ? "true" : "false")"
-                                    title="@T["Follow the browser's language"]">@T["Browser"]</button>
+                                    title="@T("Follow the browser's language")">@T("Browser")</button>
                             @foreach (var (language, name) in AdminLanguage.Languages)
                             {
                                 <button type="submit" name="language" value="@language" lang="@language" aria-pressed="@(stored == language ? "true" : "false")">@name</button>
                             }
                         </form>
                     </details>
-                    <a href="account" class="account-link" aria-label="@T["Your account"]">@context.User.Identity?.Name</a>
+                    <a href="account" class="account-link" aria-label="@T("Your account")">@context.User.Identity?.Name</a>
                     @* A plain form (not enhanced): signing out loads the sign-in page in full. *@
                     <form method="post" action="account/logout" class="signout">
                         <AntiforgeryToken />
-                        <button type="submit" class="button button-secondary">@T["Sign out"]</button>
+                        <button type="submit" class="button button-secondary">@T("Sign out")</button>
                     </form>
                 </Authorized>
             </AuthorizeView>
         </div>
     </header>
 
-    <nav class="sidenav" aria-label="@T["Main navigation"]">
-        <NavLink href="" Match="NavLinkMatch.All">@T["Dashboard"]</NavLink>
-        <NavLink href="logs">@T["Request log"]</NavLink>
-        <NavLink href="routes">@T["Routes"]</NavLink>
-        <NavLink href="targets">@T["Targets"]</NavLink>
-        <NavLink href="rules">@T["Rules"]</NavLink>
-        <NavLink href="rate-limits">@T["Rate limits"]</NavLink>
-        <NavLink href="certificates">@T["Certificates"]</NavLink>
-        <NavLink href="library">@T["Templates and presets"]</NavLink>
-        <NavLink href="test-request">@T["Test a request"]</NavLink>
-        <NavLink href="history">@T["Configuration history"]</NavLink>
-        <NavLink href="audit">@T["Audit log"]</NavLink>
-        <NavLink href="backup">@T["Backup and import"]</NavLink>
-        <NavLink href="remote-access">@T["Remote access"]</NavLink>
-        <NavLink href="ai">@T["AI assistant"]</NavLink>
+    <nav class="sidenav" aria-label="@T("Main navigation")">
+        <NavLink href="" Match="NavLinkMatch.All">@T("Dashboard")</NavLink>
+        <NavLink href="logs">@T("Request log")</NavLink>
+        <NavLink href="routes">@T("Routes")</NavLink>
+        <NavLink href="targets">@T("Targets")</NavLink>
+        <NavLink href="rules">@T("Rules")</NavLink>
+        <NavLink href="rate-limits">@T("Rate limits")</NavLink>
+        <NavLink href="certificates">@T("Certificates")</NavLink>
+        <NavLink href="library">@T("Templates and presets")</NavLink>
+        <NavLink href="test-request">@T("Test a request")</NavLink>
+        <NavLink href="history">@T("Configuration history")</NavLink>
+        <NavLink href="audit">@T("Audit log")</NavLink>
+        <NavLink href="backup">@T("Backup and import")</NavLink>
+        <NavLink href="remote-access">@T("Remote access")</NavLink>
+        <NavLink href="ai">@T("AI assistant")</NavLink>
     </nav>
 
     <main id="main" class="content" tabindex="-1">

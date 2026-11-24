@@ -2,41 +2,41 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>Delete rule @RuleName · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Delete rule {0}", RuleName) · @ProductInfo.Name</PageTitle>
 
-<p><a href="rules">← Rules</a></p>
-<h1>Delete rule '@RuleName'?</h1>
+<p><a href="rules">← @T("Rules")</a></p>
+<h1>@T("Delete rule '{0}'?", RuleName)</h1>
 
 @if (_rule is null)
 {
-    <div class="alert alert-danger" role="alert">Rule '@RuleName' does not exist (any more). <a href="rules">Back to the rules</a>.</div>
+    <div class="alert alert-danger" role="alert">@T("Rule '{0}' does not exist (any more).", RuleName) <a href="rules">@T("Back to the rules")</a>.</div>
 }
 else
 {
     <dl class="details">
-        <dt>When</dt><dd>@Describe.Conditions(_rule.Conditions)</dd>
-        <dt>Then</dt><dd>@Describe.Action(_rule, globalDetectionOnly: false)</dd>
+        <dt>@T("When")</dt><dd>@Describe.Conditions(_rule.Conditions)</dd>
+        <dt>@T("Then")</dt><dd>@Describe.Action(_rule, globalDetectionOnly: false)</dd>
     </dl>
 
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
-            <strong>The rule was not deleted.</strong>
+            <strong>@T("The rule was not deleted.")</strong>
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
     }
 
-    <p>The deletion is stored as a new configuration version, so it can be undone by restoring the previous version. To stop the rule only for a while, disable it instead.</p>
+    <p>@T("The deletion is stored as a new configuration version, so it can be undone by restoring the previous version. To stop the rule only for a while, disable it instead.")</p>
     <form method="post" @formname="rule-delete" @onsubmit="DeleteAsync" data-enhance class="actions">
         <AntiforgeryToken />
         <input type="hidden" name="BaseVersion" value="@_baseVersion" />
-        <button type="submit" class="button button-danger">Delete rule</button>
-        <a class="button button-secondary" href="rules">Cancel</a>
+        <button type="submit" class="button button-danger">@T("Delete rule")</button>
+        <a class="button button-secondary" href="rules">@T("Cancel")</a>
     </form>
 }
 
@@ -68,7 +68,7 @@ else
         var rule = configuration.Rules.FirstOrDefault(r => string.Equals(r.Name, RuleName, StringComparison.OrdinalIgnoreCase));
         if (rule is null)
         {
-            _errors = [$"Rule '{RuleName}' no longer exists."];
+            _errors = [Text.F("Rule '{0}' no longer exists.", RuleName)];
             return;
         }
 

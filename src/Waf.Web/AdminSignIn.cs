@@ -36,19 +36,21 @@ public sealed record SignInAttempt(SignInStep Step, TimeSpan RetryAfter = defaul
     public string? Message => Step switch
     {
         SignInStep.Failed => null,
-        SignInStep.LockedOut => $"Too many failed attempts: this account is locked for {Minutes(RetryAfter)}. Try again later.",
-        SignInStep.Throttled => $"Too many failed attempts from your address: signing in is blocked for {Minutes(RetryAfter)}.",
-        SignInStep.NoPendingSignIn => "Enter your user name and password first.",
+        SignInStep.LockedOut => Text.Plural(
+            Minutes(RetryAfter),
+            "Too many failed attempts: this account is locked for another minute. Try again later.",
+            "Too many failed attempts: this account is locked for another {0} minutes. Try again later."),
+        SignInStep.Throttled => Text.Plural(
+            Minutes(RetryAfter),
+            "Too many failed attempts from your address: signing in is blocked for another minute.",
+            "Too many failed attempts from your address: signing in is blocked for another {0} minutes."),
+        SignInStep.NoPendingSignIn => Text.T("Enter your user name and password first."),
         SignInStep.RemoteNeedsTwoFactor =>
-            "Signing in remotely needs two-factor sign-in. Turn it on for this account on the gateway's own machine (Your account → Two-factor sign-in), then try again.",
+            Text.T("Signing in remotely needs two-factor sign-in. Turn it on for this account on the gateway's own machine (Your account → Two-factor sign-in), then try again."),
         _ => null,
     };
 
-    private static string Minutes(TimeSpan span)
-    {
-        var minutes = Math.Max(1, (int)Math.Ceiling(span.TotalMinutes));
-        return minutes == 1 ? "another minute" : $"another {minutes} minutes";
-    }
+    private static int Minutes(TimeSpan span) => Math.Max(1, (int)Math.Ceiling(span.TotalMinutes));
 }
 
 /// <summary>

@@ -16,11 +16,11 @@ internal sealed record FormTemplate<TModel>(string Id, string Title, string Desc
 internal static class TemplateLibrary
 {
     /// <summary>Example values in templates must be replaced; these are the documentation addresses users recognise.</summary>
-    public const string ExampleNote = "Replace the example host names and addresses with your own.";
+    public static string ExampleNote => Text.T("Replace the example host names and addresses with your own.");
 
     public static readonly IReadOnlyList<FormTemplate<RouteFormModel>> Routes =
     [
-        new("website", "Website", "All requests for your site's host names go to one web server, e.g. IIS or nginx on your network.", m =>
+        new("website", Text.N("Website"), Text.N("All requests for your site's host names go to one web server, e.g. IIS or nginx on your network."), m =>
         {
             m.Name = "website";
             m.Hosts = Lines("www.example.com", "example.com");
@@ -28,7 +28,7 @@ internal static class TemplateLibrary
             m.Destinations = "http://192.168.1.10:80";
             m.HealthCheckPath = "/";
         }),
-        new("api", "API under a path", "Requests under /api go to a separate API server; the rest of the site is unaffected.", m =>
+        new("api", Text.N("API under a path"), Text.N("Requests under /api go to a separate API server; the rest of the site is unaffected."), m =>
         {
             m.Name = "api";
             m.Hosts = "www.example.com";
@@ -36,7 +36,7 @@ internal static class TemplateLibrary
             m.Destinations = "http://192.168.1.20:5000";
             m.HealthCheckPath = "/health";
         }),
-        new("load-balanced", "Load-balanced servers", "Spread requests over two servers; a server that fails its health check gets no traffic until it recovers.", m =>
+        new("load-balanced", Text.N("Load-balanced servers"), Text.N("Spread requests over two servers; a server that fails its health check gets no traffic until it recovers."), m =>
         {
             m.Name = "app";
             m.Hosts = "app.example.com";
@@ -46,7 +46,7 @@ internal static class TemplateLibrary
             m.HealthCheckIntervalSeconds = 10;
             m.HealthCheckTimeoutSeconds = 5;
         }),
-        new("https-backend", "HTTPS backend with its own certificate", "Forward to a server that only speaks HTTPS with a self-signed certificate, such as a default IIS or a NAS.", m =>
+        new("https-backend", Text.N("HTTPS backend with its own certificate"), Text.N("Forward to a server that only speaks HTTPS with a self-signed certificate, such as a default IIS or a NAS."), m =>
         {
             m.Name = "intranet";
             m.Hosts = "intranet.example.com";
@@ -58,26 +58,26 @@ internal static class TemplateLibrary
 
     public static readonly IReadOnlyList<FormTemplate<RuleFormModel>> Rules =
     [
-        new("block-ips", "IP block list", "Block requests from the IP addresses and ranges you list.", m =>
+        new("block-ips", Text.N("IP block list"), Text.N("Block requests from the IP addresses and ranges you list."), m =>
         {
             m.Name = "blocked-ips";
-            m.Description = "Block these IP addresses and ranges.";
+            m.Description = Text.T("Block these IP addresses and ranges.");
             m.Priority = 10;
             m.Action = RuleAction.Block;
             m.Conditions = [Condition(ConditionField.ClientIp, ConditionOperator.InCidr)];
         }),
-        new("allow-ips", "IP allow list", "Always let the IP addresses and ranges you list through, without further checks (e.g. your monitoring).", m =>
+        new("allow-ips", Text.N("IP allow list"), Text.N("Always let the IP addresses and ranges you list through, without further checks (e.g. your monitoring)."), m =>
         {
             m.Name = "trusted-ips";
-            m.Description = "Always allow these IP addresses and ranges (no further checks).";
+            m.Description = Text.T("Always allow these IP addresses and ranges (no further checks).");
             m.Priority = 5;
             m.Action = RuleAction.Allow;
             m.Conditions = [Condition(ConditionField.ClientIp, ConditionOperator.InCidr)];
         }),
-        new("lock-path", "Path only for your IP addresses", "Block a path such as /admin for everyone except the IP addresses you list.", m =>
+        new("lock-path", Text.N("Path only for your IP addresses"), Text.N("Block a path such as /admin for everyone except the IP addresses you list."), m =>
         {
             m.Name = "lock-admin";
-            m.Description = "Only our own networks may open /admin.";
+            m.Description = Text.T("Only our own networks may open /admin.");
             m.Priority = 10;
             m.Action = RuleAction.Block;
             m.Conditions =
@@ -86,10 +86,10 @@ internal static class TemplateLibrary
                 Condition(ConditionField.ClientIp, ConditionOperator.InCidr, negate: true),
             ];
         }),
-        new("require-header", "Require an API key header", "Block requests that do not send the right X-Api-Key header. Enter the key(s) your clients use.", m =>
+        new("require-header", Text.N("Require an API key header"), Text.N("Block requests that do not send the right X-Api-Key header. Enter the key(s) your clients use."), m =>
         {
             m.Name = "require-api-key";
-            m.Description = "Clients must send a valid X-Api-Key header.";
+            m.Description = Text.T("Clients must send a valid X-Api-Key header.");
             m.Priority = 20;
             m.Action = RuleAction.Block;
             m.Conditions =
@@ -97,26 +97,26 @@ internal static class TemplateLibrary
                 new ConditionFormModel { Field = ConditionField.Header, HeaderName = "X-Api-Key", Operator = ConditionOperator.Equals, Negate = true, CaseSensitive = true },
             ];
         }),
-        new("block-wordpress-probes", "Block WordPress probes", "Bots try WordPress login and admin pages on every site. Block them if your site does not run WordPress.", m =>
+        new("block-wordpress-probes", Text.N("Block WordPress probes"), Text.N("Bots try WordPress login and admin pages on every site. Block them if your site does not run WordPress."), m =>
         {
             m.Name = "block-wordpress-probes";
-            m.Description = "This site does not run WordPress.";
+            m.Description = Text.T("This site does not run WordPress.");
             m.Priority = 50;
             m.Action = RuleAction.Block;
             m.Conditions = [Condition(ConditionField.Path, ConditionOperator.StartsWith, "/wp-admin", "/wp-login.php", "/xmlrpc.php", "/wp-content", "/wp-includes")];
         }),
-        new("block-crawlers", "Block SEO crawlers", "Keep commercial SEO crawlers out to save bandwidth. Search engines are not affected.", m =>
+        new("block-crawlers", Text.N("Block SEO crawlers"), Text.N("Keep commercial SEO crawlers out to save bandwidth. Search engines are not affected."), m =>
         {
             m.Name = "block-seo-crawlers";
-            m.Description = "Commercial SEO crawlers only cost bandwidth.";
+            m.Description = Text.T("Commercial SEO crawlers only cost bandwidth.");
             m.Priority = 50;
             m.Action = RuleAction.Block;
             m.Conditions = [Condition(ConditionField.UserAgent, ConditionOperator.Contains, "AhrefsBot", "SemrushBot", "MJ12bot", "DotBot", "BLEXBot")];
         }),
-        new("watch-path", "Log requests to a path", "Only record requests to a path, without blocking them, e.g. to see who uses an old URL.", m =>
+        new("watch-path", Text.N("Log requests to a path"), Text.N("Only record requests to a path, without blocking them, e.g. to see who uses an old URL."), m =>
         {
             m.Name = "watch-old-api";
-            m.Description = "Who still uses the old API?";
+            m.Description = Text.T("Who still uses the old API?");
             m.Priority = 100;
             m.Action = RuleAction.LogOnly;
             m.Conditions = [Condition(ConditionField.Path, ConditionOperator.StartsWith, "/api/v1")];
@@ -125,10 +125,10 @@ internal static class TemplateLibrary
 
     public static readonly IReadOnlyList<FormTemplate<RateLimitFormModel>> RateLimits =
     [
-        new("login", "Login attempts", "At most 10 login attempts per minute per client IP, against password guessing.", m =>
+        new("login", Text.N("Login attempts"), Text.N("At most 10 login attempts per minute per client IP, against password guessing."), m =>
         {
             m.Name = "login-attempts";
-            m.Description = "Slow down password guessing.";
+            m.Description = Text.T("Slow down password guessing.");
             m.PermitLimit = 10;
             m.WindowAmount = 1;
             m.WindowUnitSeconds = 60;
@@ -139,19 +139,19 @@ internal static class TemplateLibrary
                 Condition(ConditionField.Path, ConditionOperator.StartsWith, "/login"),
             ];
         }),
-        new("per-client", "Requests per client", "At most 300 requests per minute per client IP: plenty for people, too little for aggressive bots.", m =>
+        new("per-client", Text.N("Requests per client"), Text.N("At most 300 requests per minute per client IP: plenty for people, too little for aggressive bots."), m =>
         {
             m.Name = "per-client";
-            m.Description = "Fair use per visitor.";
+            m.Description = Text.T("Fair use per visitor.");
             m.PermitLimit = 300;
             m.WindowAmount = 1;
             m.WindowUnitSeconds = 60;
             m.Key = RateLimitKey.ClientIp;
         }),
-        new("protect-backend", "Protect a backend", "At most 1000 requests per minute to a route for all clients together, so a small server is never overloaded. Tick the route to protect.", m =>
+        new("protect-backend", Text.N("Protect a backend"), Text.N("At most 1000 requests per minute to a route for all clients together, so a small server is never overloaded. Tick the route to protect."), m =>
         {
             m.Name = "protect-backend";
-            m.Description = "The backend handles about 1000 requests per minute.";
+            m.Description = Text.T("The backend handles about 1000 requests per minute.");
             m.PermitLimit = 1000;
             m.WindowAmount = 1;
             m.WindowUnitSeconds = 60;

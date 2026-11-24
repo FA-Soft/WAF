@@ -7,79 +7,79 @@
 @inject AuditLogStore Audit
 @inject NavigationManager Navigation
 
-<PageTitle>Remote access · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Remote access") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Remote access
-    <HelpTip Title="Remote access">
-        <p>The admin UI is always available on this machine at http://127.0.0.1:@(Remote.ReservedPorts.Last()). Remote access makes it reachable from elsewhere on an address of its own, such as https://admin.example.com.</p>
-        <p>It is HTTPS only, always needs two-factor sign-in, and before signing in every address except the sign-in page answers "not found". An allowlist can limit it to your own networks. Turn it off here, or on the gateway's machine with <code>wafctl admin unregister-url</code>.</p>
+    @T("Remote access")
+    <HelpTip Title="@T("Remote access")">
+        <p>@T("The admin UI is always available on this machine at {0}. Remote access makes it reachable from elsewhere on an address of its own, such as https://admin.example.com.", $"http://127.0.0.1:{Remote.ReservedPorts.Last()}")</p>
+        <p>@TM("It is HTTPS only, always needs two-factor sign-in, and before signing in every address except the sign-in page answers \"not found\". An allowlist can limit it to your own networks. Turn it off here, or on the gateway's machine with <code>wafctl admin unregister-url</code>.")</p>
     </HelpTip>
 </h1>
 
 @if (!string.IsNullOrEmpty(Saved))
 {
-    <div class="alert alert-ok" role="status">@Saved</div>
+    <div class="alert alert-ok" role="status">@Message(Saved)</div>
 }
 
 @if (_errors.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>Nothing was changed.</strong>
+        <strong>@T("Nothing was changed.")</strong>
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
 }
 
 <section class="card section" aria-labelledby="status-heading">
-    <h2 id="status-heading">Status</h2>
+    <h2 id="status-heading">@T("Status")</h2>
     @if (_url is null)
     {
-        <p><span class="badge badge-muted">Off</span> The admin UI is only available on this machine.</p>
+        <p><span class="badge badge-muted">@T("Off")</span> @T("The admin UI is only available on this machine.")</p>
     }
     else
     {
-        <p><span class="badge badge-ok">On</span> <strong>@_url</strong></p>
-        <p>Sign in at <code>@_url/account/login</code>. Until you sign in, every other address there answers "not found".</p>
+        <p><span class="badge badge-ok">@T("On")</span> <strong>@_url</strong></p>
+        <p>@TM("Sign in at <code>{0}</code>. Until you sign in, every other address there answers \"not found\".", $"{_url}/account/login")</p>
         @if (_url.Port is { } port && !Remote.IsListening(port))
         {
-            <div class="alert alert-warning" role="status">The gateway does not listen on port @port yet: restart the service to open it.</div>
+            <div class="alert alert-warning" role="status">@T("The gateway does not listen on port {0} yet: restart the service to open it.", port)</div>
         }
 
         <form method="post" @formname="remote-off" @onsubmit="TurnOffAsync" data-enhance>
             <AntiforgeryToken />
-            <button type="submit" class="button button-danger">Turn remote access off</button>
+            <button type="submit" class="button button-danger">@T("Turn remote access off")</button>
         </form>
     }
 </section>
 
 <section class="card section" aria-labelledby="register-heading">
-    <h2 id="register-heading">@(_url is null ? "Turn remote access on" : "Change the address")</h2>
-    <p>Before an address can be registered:</p>
+    <h2 id="register-heading">@(_url is null ? Text.T("Turn remote access on") : Text.T("Change the address"))</h2>
+    <p>@T("Before an address can be registered:")</p>
     <ul class="checklist">
-        <li>@Check(_twoFactor) Two-factor sign-in is on for your account (<a href="account/two-factor">set it up</a>).</li>
-        <li>@Check(null) The host name has a valid certificate (<a href="certificates">Certificates</a>) and points to this gateway.</li>
-        <li>@Check(null) No route uses the host name.</li>
+        <li>@Check(_twoFactor) @TM("Two-factor sign-in is on for your account (<a href=\"account/two-factor\">set it up</a>).")</li>
+        <li>@Check(null) @TM("The host name has a valid certificate (<a href=\"certificates\">Certificates</a>) and points to this gateway.")</li>
+        <li>@Check(null) @T("No route uses the host name.")</li>
     </ul>
     <EditForm Model="UrlForm" FormName="remote-register" OnSubmit="RegisterAsync" Enhance class="form">
-        <FormField Id="remote-url" Label="Admin address" Help="https:// and a host name, optionally with a port of its own, e.g. https://admin.example.com or https://admin.example.com:8443." For="() => UrlForm!.Url">
-            <InputText id="remote-url" aria-describedby="remote-url-help" @bind-Value="UrlForm!.Url" autocomplete="off" placeholder="https://admin.example.com" />
+        <FormField Id="remote-url" Label="@T("Admin address")" Help="@T("https:// and a host name, optionally with a port of its own, e.g. https://admin.example.com or https://admin.example.com:8443.")" For="() => UrlForm!.Url">
+            <InputText id="remote-url" aria-describedby="remote-url-help" @bind-Value="UrlForm!.Url" autocomplete="off" placeholder="@T("https://admin.example.com")" />
         </FormField>
-        <button type="submit" class="button">@(_url is null ? "Turn remote access on" : "Save address")</button>
+        <button type="submit" class="button">@(_url is null ? Text.T("Turn remote access on") : Text.T("Save address"))</button>
     </EditForm>
 </section>
 
 <section class="card section" aria-labelledby="allowlist-heading">
-    <h2 id="allowlist-heading">Allowed addresses</h2>
+    <h2 id="allowlist-heading">@T("Allowed addresses")</h2>
     <EditForm Model="Allowlist" FormName="remote-allowlist" OnSubmit="SaveAllowlistAsync" Enhance class="form">
-        <FormField Id="allowlist" Label="Only from these addresses (optional)" Help="One address or range per line, e.g. 203.0.113.0/24. Empty: any address. Others get &quot;not found&quot;." For="() => Allowlist!.Networks">
+        <FormField Id="allowlist" Label="@T("Only from these addresses (optional)")" Help="@T("One address or range per line, e.g. 203.0.113.0/24. Empty: any address. Others get \"not found\".")" For="() => Allowlist!.Networks">
             <InputTextArea id="allowlist" aria-describedby="allowlist-help" @bind-Value="Allowlist!.Networks" rows="4" />
         </FormField>
-        <button type="submit" class="button button-secondary">Save allowed addresses</button>
+        <button type="submit" class="button button-secondary">@T("Save allowed addresses")</button>
     </EditForm>
 </section>
 
@@ -111,8 +111,8 @@
 
     private static MarkupString Check(bool? done) => new(done switch
     {
-        true => "<span class=\"badge badge-ok\">Done</span>",
-        false => "<span class=\"badge badge-warning\">Not yet</span>",
+        true => $"<span class=\"badge badge-ok\">{System.Net.WebUtility.HtmlEncode(T("Done"))}</span>",
+        false => $"<span class=\"badge badge-warning\">{System.Net.WebUtility.HtmlEncode(T("Not yet"))}</span>",
         _ => string.Empty,
     });
 
@@ -135,8 +135,10 @@
         await Audit.RecordAsync(AuditCategory.Security, AuditActions.AdminUrlRegistered, AdminActor.From(HttpContext),
             $"Remote admin access turned on at {url}.");
         await Remote.RefreshAsync(CancellationToken.None);
-        var restart = url!.Port is { } port && !Remote.IsListening(port) ? $" Restart the service to open port {port}." : string.Empty;
-        Navigation.NavigateTo($"remote-access?saved={Uri.EscapeDataString($"Remote access is on at {url}.{restart}")}");
+        var saved = url!.Port is { } port && !Remote.IsListening(port)
+            ? F("Remote access is on at {0}. Restart the service to open port {1}.", url, port)
+            : F("Remote access is on at {0}.", url);
+        Navigation.NavigateTo($"remote-access?saved={Uri.EscapeDataString(saved)}");
     }
 
     private async Task SaveAllowlistAsync()

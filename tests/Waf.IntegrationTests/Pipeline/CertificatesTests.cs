@@ -180,7 +180,7 @@ public sealed class CertificatesTests
 
         var dashboard = await gateway.GetPageAsync("/");
         Assert.Contains("3 certificates need attention.", dashboard, StringComparison.Ordinal);
-        Assert.Contains("a.example.test: expires in 9 day(s)", dashboard, StringComparison.Ordinal);
+        Assert.Contains("a.example.test: expires in 9 days.", dashboard, StringComparison.Ordinal);
         Assert.Contains("b.example.test: no certificate could be loaded", dashboard, StringComparison.Ordinal);
         Assert.Contains("shop.wild.test: the certificate is for another host name", dashboard, StringComparison.Ordinal);
 

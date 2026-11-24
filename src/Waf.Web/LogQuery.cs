@@ -13,23 +13,23 @@ internal sealed record LogQuery
 {
     public static readonly (string Value, string Label, TimeSpan? Span)[] Ranges =
     [
-        ("15m", "Last 15 minutes", TimeSpan.FromMinutes(15)),
-        ("1h", "Last hour", TimeSpan.FromHours(1)),
-        ("24h", "Last 24 hours", TimeSpan.FromHours(24)),
-        ("7d", "Last 7 days", TimeSpan.FromDays(7)),
-        ("30d", "Last 30 days", TimeSpan.FromDays(30)),
-        ("all", "Everything", null),
+        ("15m", Text.N("Last 15 minutes"), TimeSpan.FromMinutes(15)),
+        ("1h", Text.N("Last hour"), TimeSpan.FromHours(1)),
+        ("24h", Text.N("Last 24 hours"), TimeSpan.FromHours(24)),
+        ("7d", Text.N("Last 7 days"), TimeSpan.FromDays(7)),
+        ("30d", Text.N("Last 30 days"), TimeSpan.FromDays(30)),
+        ("all", Text.N("Everything"), null),
     ];
 
     public static readonly (LogView Value, string Label)[] Views =
     [
-        (LogView.All, "All requests"),
-        (LogView.Blocked, "Blocked (403, 429, 503)"),
-        (LogView.WouldBlock, "Would be blocked (detection only)"),
-        (LogView.Logged, "Matched a log-only rule"),
-        (LogView.Forwarded, "Forwarded"),
-        (LogView.NoRoute, "No route (404)"),
-        (LogView.Errors, "Server errors (5xx)"),
+        (LogView.All, Text.N("All requests")),
+        (LogView.Blocked, Text.N("Blocked (403, 429, 503)")),
+        (LogView.WouldBlock, Text.N("Would be blocked (detection only)")),
+        (LogView.Logged, Text.N("Matched a log-only rule")),
+        (LogView.Forwarded, Text.N("Forwarded")),
+        (LogView.NoRoute, Text.N("No route (404)")),
+        (LogView.Errors, Text.N("Server errors (5xx)")),
     ];
 
     public static readonly int[] PageSizes = [25, 50, 100, 200];
@@ -150,14 +150,14 @@ internal static class LogFormat
 
         return entry.Action switch
         {
-            "Forwarded" => ("Forwarded", "badge-ok"),
-            "Blocked" => ("Blocked", "badge-danger"),
-            "RateLimited" => ("Rate limited", "badge-danger"),
-            "FailClosed" => ("Refused (WAF unavailable)", "badge-danger"),
-            "NoRoute" => ("No route", "badge-muted"),
-            "BackendUnavailable" => ("Backend unavailable", "badge-warning"),
-            "Redirected" => ("Redirected to HTTPS", "badge-muted"),
-            _ => ("Answered by the gateway", "badge-muted"),
+            "Forwarded" => (Text.T("Forwarded"), "badge-ok"),
+            "Blocked" => (Text.T("Blocked"), "badge-danger"),
+            "RateLimited" => (Text.T("Rate limited"), "badge-danger"),
+            "FailClosed" => (Text.T("Refused (WAF unavailable)"), "badge-danger"),
+            "NoRoute" => (Text.T("No route"), "badge-muted"),
+            "BackendUnavailable" => (Text.T("Backend unavailable"), "badge-warning"),
+            "Redirected" => (Text.T("Redirected to HTTPS"), "badge-muted"),
+            _ => (Text.T("Answered by the gateway"), "badge-muted"),
         };
     }
 
@@ -168,8 +168,8 @@ internal static class LogFormat
 
         return entry.Event switch
         {
-            "RuleDetected" or "AttackDetected" or "RateLimitDetected" => ("Would block", "badge-warning"),
-            "RuleLogged" => ("Logged", "badge-muted"),
+            "RuleDetected" or "AttackDetected" or "RateLimitDetected" => (Text.T("Would block"), "badge-warning"),
+            "RuleLogged" => (Text.T("Logged"), "badge-muted"),
             _ => null,
         };
     }

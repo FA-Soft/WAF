@@ -23,12 +23,12 @@ internal static class RemoteAccessRules
         var problems = new List<string>();
         if (!twoFactorEnabled)
         {
-            problems.Add("Turn on two-factor sign-in for your account first (Your account → Two-factor sign-in). Remote access always requires it.");
+            problems.Add(Text.N("Turn on two-factor sign-in for your account first (Your account → Two-factor sign-in). Remote access always requires it."));
         }
 
         if (url.Port is { } port && reservedPorts.Contains(port))
         {
-            problems.Add($"Port {port} is already used by the gateway for plain HTTP or the local admin UI; choose another port or none.");
+            problems.Add(Text.F("Port {0} is already used by the gateway for plain HTTP or the local admin UI; choose another port or none.", port));
         }
 
         var routes = configuration.Routes
@@ -37,7 +37,7 @@ internal static class RemoteAccessRules
             .ToList();
         if (routes.Count > 0)
         {
-            problems.Add($"{url.Host} is used by route {string.Join(", ", routes.Select(r => $"'{r}'"))}. Use a host name of its own for the admin UI.");
+            problems.Add(Text.F("{0} is used by route {1}. Use a host name of its own for the admin UI.", url.Host, string.Join(", ", routes.Select(r => $"'{r}'"))));
         }
 
         var certificate = certificates.FirstOrDefault(c =>
@@ -45,8 +45,10 @@ internal static class RemoteAccessRules
         if (certificate is not { State: CertificateState.Ok or CertificateState.ExpiresSoon })
         {
             problems.Add(certificate is null
-                ? $"There is no certificate for {url.Host}. Add one on the Certificates page (upload it or use Let's Encrypt) first."
-                : $"The certificate for {url.Host} is not usable yet ({certificate.State}{(certificate.Problem is null ? string.Empty : $": {certificate.Problem}")}).");
+                ? Text.F("There is no certificate for {0}. Add one on the Certificates page (upload it or use Let's Encrypt) first.", url.Host)
+                : certificate.Problem is null
+                    ? Text.F("The certificate for {0} is not usable yet ({1}).", url.Host, certificate.State)
+                    : Text.F("The certificate for {0} is not usable yet ({1}: {2}).", url.Host, certificate.State, certificate.Problem));
         }
 
         return problems;

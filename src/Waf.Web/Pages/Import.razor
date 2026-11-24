@@ -4,25 +4,25 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>Import a configuration · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Import a configuration") · @ProductInfo.Name</PageTitle>
 
-<p><a href="backup">← Backup and import</a></p>
-<h1>Import a configuration</h1>
+<p><a href="backup">← @T("Backup and import")</a></p>
+<h1>@T("Import a configuration")</h1>
 
 @if (_active is null)
 {
-    <div class="alert alert-danger" role="alert">No configuration is active yet.</div>
+    <div class="alert alert-danger" role="alert">@T("No configuration is active yet.")</div>
 }
 else
 {
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
-            <strong>The configuration was not imported.</strong> The running configuration is unchanged.
+            <strong>@T("The configuration was not imported.")</strong> @T("The running configuration is unchanged.")
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
@@ -30,58 +30,58 @@ else
 
     @if (_notice is not null)
     {
-        <div class="alert alert-warning" role="alert">@_notice</div>
+        <div class="alert alert-warning" role="alert">@Message(_notice)</div>
     }
 
     <EditForm Model="Model" FormName="import-config" OnSubmit="HandleAsync" Enhance enctype="multipart/form-data" class="form">
         <input type="hidden" name="Model.PreviewTag" value="@_preview?.Tag" />
 
         <fieldset>
-            <legend>Configuration file</legend>
+            <legend>@T("Configuration file")</legend>
             <div class="field">
-                <label for="config-file">Choose a file</label>
-                <p class="field-help" id="config-file-help">A JSON file exported from the gateway (at most @(ConfigurationImport.MaxBytes / (1024 * 1024)) MB).</p>
+                <label for="config-file">@T("Choose a file")</label>
+                <p class="field-help" id="config-file-help">@T("A JSON file exported from the gateway (at most {0} MB).", ConfigurationImport.MaxBytes / (1024 * 1024))</p>
                 <input type="file" id="config-file" name="configFile" accept=".json,application/json" aria-describedby="config-file-help" />
             </div>
             <details class="advanced" open="@(!string.IsNullOrEmpty(Model!.Json))">
-                <summary>Or paste the JSON</summary>
-                <FormField Id="json" Label="Configuration JSON" Help="The contents of an exported file. After checking a file, its contents are shown here." For="() => Model.Json">
+                <summary>@T("Or paste the JSON")</summary>
+                <FormField Id="json" Label="@T("Configuration JSON")" Help="@T("The contents of an exported file. After checking a file, its contents are shown here.")" For="() => Model.Json">
                     <InputTextArea id="json" aria-describedby="json-help" @bind-Value="Model.Json" rows="12" class="code" spellcheck="false" />
                 </FormField>
             </details>
-            <button type="submit" name="Model.Command" value="preview" class="button button-secondary">Check the file</button>
+            <button type="submit" name="Model.Command" value="preview" class="button button-secondary">@T("Check the file")</button>
         </fieldset>
 
         @if (_preview is not null)
         {
             <section class="preview" aria-labelledby="preview-heading" aria-live="polite">
-                <h2 id="preview-heading">Preview: what will change</h2>
+                <h2 id="preview-heading">@T("Preview: what will change")</h2>
 
                 @if (_preview.Errors.Count > 0)
                 {
                     <div class="alert alert-danger" role="alert">
-                        <strong>This file cannot be imported:</strong>
+                        <strong>@T("This file cannot be imported:")</strong>
                         <ul>
                             @foreach (var error in _preview.Errors)
                             {
-                                <li>@error</li>
+                                <li>@Message(error)</li>
                             }
                         </ul>
                     </div>
                 }
                 else if (_preview.Changes.Count == 0)
                 {
-                    <div class="alert alert-ok" role="status">Nothing to change: the file is identical to the running configuration.</div>
+                    <div class="alert alert-ok" role="status">@T("Nothing to change: the file is identical to the running configuration.")</div>
                 }
                 else
                 {
                     @if (_preview.KeptSecrets > 0)
                     {
-                        <p class="muted">The file was exported without secrets: @_preview.KeptSecrets secret value@(_preview.KeptSecrets == 1 ? " is" : "s are") kept from the running configuration.</p>
+                        <p class="muted">@Plural(_preview.KeptSecrets, "The file was exported without secrets: {0} secret value is kept from the running configuration.", "The file was exported without secrets: {0} secret values are kept from the running configuration.")</p>
                     }
 
                     <ChangeList Changes="_preview.Changes" Before="_active.Configuration" After="_preview.Candidate!" />
-                    <p class="muted">Importing creates version @(_active.Version + 1) and takes effect immediately, without a restart. You can roll it back on the <a href="history">history page</a>.</p>
+                    <p class="muted">@TM("Importing creates version {0} and takes effect immediately, without a restart. You can roll it back on the <a href=\"history\">history page</a>.", _active.Version + 1)</p>
                 }
             </section>
         }
@@ -89,9 +89,9 @@ else
         <div class="actions">
             @if (_preview?.CanApply == true)
             {
-                <button type="submit" name="Model.Command" value="apply" class="button">Import these changes</button>
+                <button type="submit" name="Model.Command" value="apply" class="button">@T("Import these changes")</button>
             }
-            <a class="button button-secondary" href="backup">Cancel</a>
+            <a class="button button-secondary" href="backup">@T("Cancel")</a>
         </div>
     </EditForm>
 }
@@ -122,7 +122,7 @@ else
         {
             if (file.Length > ConfigurationImport.MaxBytes)
             {
-                _errors = [$"The file is larger than {ConfigurationImport.MaxBytes / (1024 * 1024)} MB."];
+                _errors = [Text.F("The file is larger than {0} MB.", ConfigurationImport.MaxBytes / (1024 * 1024))];
                 return;
             }
 
@@ -137,7 +137,7 @@ else
         {
             if (_preview.Tag != model.PreviewTag)
             {
-                _notice = "The file or the running configuration changed since the preview. Check the updated preview below, then import again.";
+                _notice = Text.N("The file or the running configuration changed since the preview. Check the updated preview below, then import again.");
             }
             else
             {

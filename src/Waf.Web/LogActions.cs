@@ -59,20 +59,20 @@ internal static class LogActions
         var actions = new List<(LogAction, string, string)>();
         if (entry.Event is "RuleBlocked" or "RuleDetected" or "AttackBlocked" or "AttackDetected" or "RateLimited" or "RateLimitDetected")
         {
-            actions.Add((LogAction.Allow, "Allow this (false positive)",
+            actions.Add((LogAction.Allow, Text.T("Allow this (false positive)"),
                 AttackCategoryOf(entry) is { } category
-                    ? $"Switch off {Label(category)} detection for {entry.Path} and below."
-                    : $"Add an Allow rule for this client and path that runs before '{entry.RuleName}'."));
+                    ? Text.T("Switch off {0} detection for {1} and below.", Label(category), entry.Path)
+                    : Text.T("Add an Allow rule for this client and path that runs before '{0}'.", entry.RuleName)));
         }
 
         if (entry.RouteName is null && entry.Action == "NoRoute")
         {
-            actions.Add((LogAction.Route, $"Create a route for {entry.Host}", "Send requests for this host to a backend."));
+            actions.Add((LogAction.Route, Text.T("Create a route for {0}", entry.Host), Text.T("Send requests for this host to a backend.")));
         }
 
-        actions.Add((LogAction.Block, $"Block {entry.ClientIp}",
-            FindBlockList(configuration) is { } list ? $"Add the address to the IP block list '{list.Name}'." : "Start an IP block list with this address."));
-        actions.Add((LogAction.Rule, "Create a rule for this path", $"A rule for requests to {entry.Path}; choose what it does."));
+        actions.Add((LogAction.Block, Text.T("Block {0}", entry.ClientIp),
+            FindBlockList(configuration) is { } list ? Text.T("Add the address to the IP block list '{0}'.", list.Name) : Text.T("Start an IP block list with this address.")));
+        actions.Add((LogAction.Rule, Text.T("Create a rule for this path"), Text.T("A rule for requests to {0}; choose what it does.", entry.Path)));
         return actions;
     }
 
@@ -98,7 +98,7 @@ internal static class LogActions
         var routes = configuration.Routes.Select(r => r.Name).ToList();
         var names = configuration.Rules.Select(r => r.Name);
         var model = RuleFormModel.ForNewRule(baseVersion, routes);
-        var note = $"From the request log (request {entry.Id.ToString(CultureInfo.InvariantCulture)}).";
+        var note = Text.T("From the request log (request {0}).", entry.Id.ToString(CultureInfo.InvariantCulture));
 
         switch (action)
         {
@@ -106,14 +106,14 @@ internal static class LogActions
                 model = RuleFormModel.ForNewRule(baseVersion, routes, "block-ips");
                 model.Name = UniqueName(model.Name, names);
                 model.Conditions[0].Values = entry.ClientIp;
-                model.Description = $"Block these IP addresses and ranges. {note}";
+                model.Description = Text.T("Block these IP addresses and ranges. {0}", note);
                 return model;
 
             case LogAction.Allow:
                 var blocking = configuration.Rules.FirstOrDefault(r => string.Equals(r.Name, entry.RuleName, StringComparison.OrdinalIgnoreCase));
                 model.Name = UniqueName($"allow-{Slug(entry.RuleName ?? "request", "request")}-exception", names);
                 model.Action = RuleAction.Allow;
-                model.Description = $"False positive of '{entry.RuleName}'. {note}";
+                model.Description = Text.T("False positive of '{0}'. {1}", entry.RuleName, note);
 
                 // Rules run lowest priority first: the exception must come before the rule that blocked. Allow also
                 // skips rate limits, so for a rate limit any priority works.
@@ -175,7 +175,7 @@ internal static class LogActions
 
         var model = ExclusionFormModel.ForNew(baseVersion, configuration.Routes.Select(r => r.Name));
         model.PathPrefix = entry.Path;
-        model.Reason = $"False positive: {entry.Detail ?? entry.RuleName} (request log {entry.Id.ToString(CultureInfo.InvariantCulture)}).";
+        model.Reason = Text.T("False positive: {0} (request log {1}).", entry.Detail ?? entry.RuleName, entry.Id.ToString(CultureInfo.InvariantCulture));
         if (model.Reason.Length > ExclusionFormModel.MaxReasonLength)
         {
             model.Reason = model.Reason[..ExclusionFormModel.MaxReasonLength];
@@ -223,11 +223,11 @@ internal static class LogActions
 
     public static string Label(AttackCategory category) => category switch
     {
-        AttackCategory.SqlInjection => "SQL injection",
-        AttackCategory.CrossSiteScripting => "cross-site scripting",
-        AttackCategory.PathTraversal => "path traversal",
-        AttackCategory.CommandInjection => "command injection",
-        _ => "attack tool",
+        AttackCategory.SqlInjection => Text.T("SQL injection"),
+        AttackCategory.CrossSiteScripting => Text.T("cross-site scripting"),
+        AttackCategory.PathTraversal => Text.T("path traversal"),
+        AttackCategory.CommandInjection => Text.T("command injection"),
+        _ => Text.T("attack tool"),
     };
 
     /// <summary>"shop-example-org" for "shop.example.org"; letters, digits and '-' only, at most 40 characters.</summary>

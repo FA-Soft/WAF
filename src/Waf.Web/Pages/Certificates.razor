@@ -5,20 +5,20 @@
 @inject NavigationManager Navigation
 @inject TimeProvider Time
 
-<PageTitle>Certificates · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Certificates") · @ProductInfo.Name</PageTitle>
 
 <h1>
-    Certificates
-    <HelpTip Title="Certificates">
-        <p>HTTPS needs a certificate for every host name. The certificate is chosen per connection by the host name the browser asks for (SNI); a host name without a certificate gets no HTTPS connection at all.</p>
-        <p>Upload your own certificate as a PFX file (with its password) or as PEM files (certificate, with its chain, and private key). Private keys are stored encrypted. Then choose the host names it is used for; a wildcard certificate (*.example.com) can serve every host name one level below it.</p>
-        <p>Certificates that expire within 30 days, have expired or are missing are shown here and on the dashboard, and written to the service log once a day.</p>
+    @T("Certificates")
+    <HelpTip Title="@T("Certificates")">
+        <p>@T("HTTPS needs a certificate for every host name. The certificate is chosen per connection by the host name the browser asks for (SNI); a host name without a certificate gets no HTTPS connection at all.")</p>
+        <p>@T("Upload your own certificate as a PFX file (with its password) or as PEM files (certificate, with its chain, and private key). Private keys are stored encrypted. Then choose the host names it is used for; a wildcard certificate (*.example.com) can serve every host name one level below it.")</p>
+        <p>@T("Certificates that expire within 30 days, have expired or are missing are shown here and on the dashboard, and written to the service log once a day.")</p>
     </HelpTip>
 </h1>
 
 @if (!string.IsNullOrEmpty(Saved))
 {
-    <div class="alert alert-ok" role="status">@Saved</div>
+    <div class="alert alert-ok" role="status">@Message(Saved)</div>
 }
 
 @if (_errors.Count > 0)
@@ -27,26 +27,26 @@
         <ul>
             @foreach (var error in _errors)
             {
-                <li>@error</li>
+                <li>@Message(error)</li>
             }
         </ul>
     </div>
 }
 
-<p class="actions"><a class="button" href="certificates/upload">Upload a certificate</a></p>
+<p class="actions">@TM("<a class=\"button\" href=\"certificates/upload\">Upload a certificate</a>")</p>
 
 <section class="section" aria-labelledby="hosts-heading">
-    <h2 id="hosts-heading">Host names</h2>
+    <h2 id="hosts-heading">@T("Host names")</h2>
     @if (_statuses.Count == 0)
     {
-        <p class="muted">No host name has a certificate yet, so HTTPS connections are refused. Upload a certificate and choose its host names.</p>
+        <p class="muted">@T("No host name has a certificate yet, so HTTPS connections are refused. Upload a certificate and choose its host names.")</p>
     }
     else
     {
         <div class="table-scroll">
             <table>
                 <thead>
-                    <tr><th scope="col">Host name</th><th scope="col">Certificate</th><th scope="col">Valid until</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+                    <tr><th scope="col">@T("Host name")</th><th scope="col">@T("Certificate")</th><th scope="col">@T("Valid until")</th><th scope="col">@T("Status")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr>
                 </thead>
                 <tbody>
                     @foreach (var status in _statuses)
@@ -79,7 +79,7 @@
                             <td>
                                 <form method="post" @formname="@($"remove-{host}")" @onsubmit="() => RemoveAsync(host)" data-enhance>
                                     <AntiforgeryToken />
-                                    <button type="submit" class="link-button" aria-label="@($"Remove the certificate of {host}")">Remove</button>
+                                    <button type="submit" class="link-button" aria-label="@($"Remove the certificate of {host}")">@T("Remove")</button>
                                 </form>
                             </td>
                         </tr>
@@ -94,35 +94,35 @@
 {
     <section class="card section" aria-labelledby="letsencrypt-heading">
         <h2 id="letsencrypt-heading">
-            Let's Encrypt
-            <HelpTip Title="Let's Encrypt">
-                <p>Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate.</p>
-                <p>The <strong>staging</strong> environment issues test certificates that browsers do not trust, with much higher limits: use it to try things out, then switch it off. Switching gets new certificates from the other environment.</p>
+            @T("Let's Encrypt")
+            <HelpTip Title="@T("Let's Encrypt")">
+                <p>@T("Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate.")</p>
+                <p>@TM("The <strong>staging</strong> environment issues test certificates that browsers do not trust, with much higher limits: use it to try things out, then switch it off. Switching gets new certificates from the other environment.")</p>
             </HelpTip>
         </h2>
         <EditForm Model="Acme" FormName="acme-settings" OnValidSubmit="SaveAcmeAsync" Enhance class="form">
             <DataAnnotationsValidator />
             <input type="hidden" name="Acme.BaseVersion" value="@_active.Version" />
             <div class="field-row">
-                <FormField Id="acme-email" Label="Contact e-mail" Help="Let's Encrypt sends notices about your certificates here." For="() => Acme!.Email">
+                <FormField Id="acme-email" Label="@T("Contact e-mail")" Help="@T("Let's Encrypt sends notices about your certificates here.")" For="() => Acme!.Email">
                     <InputText id="acme-email" type="email" aria-describedby="acme-email-help" @bind-Value="Acme!.Email" autocomplete="email" />
                 </FormField>
             </div>
             <div class="field checkbox-field">
                 <InputCheckbox id="acme-tos" @bind-Value="Acme!.AcceptTermsOfService" />
-                <label for="acme-tos">I accept the <a href="https://letsencrypt.org/repository/" rel="noopener noreferrer" target="_blank">Let's Encrypt subscriber agreement</a></label>
+                <label for="acme-tos">@TM("I accept the <a href=\"https://letsencrypt.org/repository/\" rel=\"noopener noreferrer\" target=\"_blank\">Let's Encrypt subscriber agreement</a>")</label>
             </div>
             <div class="field checkbox-field">
                 <InputCheckbox id="acme-staging" @bind-Value="Acme!.UseStaging" aria-describedby="acme-staging-help" />
-                <label for="acme-staging">Use the staging environment (test certificates)</label>
-                <p class="field-help" id="acme-staging-help">For trying things out: staging certificates are not trusted by browsers.</p>
+                <label for="acme-staging">@T("Use the staging environment (test certificates)")</label>
+                <p class="field-help" id="acme-staging-help">@T("For trying things out: staging certificates are not trusted by browsers.")</p>
             </div>
-            <button type="submit" class="button button-secondary">Save Let's Encrypt settings</button>
+            <button type="submit" class="button button-secondary">@T("Save Let's Encrypt settings")</button>
         </EditForm>
 
         <EditForm Model="LetsEncryptHost" FormName="use-letsencrypt" OnSubmit="UseLetsEncryptAsync" Enhance class="form">
             <input type="hidden" name="LetsEncryptHost.BaseVersion" value="@_active.Version" />
-            <FormField Id="letsencrypt-host" Label="Use Let's Encrypt for a host name" Help="E.g. www.example.com. A host name that has another certificate switches to Let's Encrypt." For="() => LetsEncryptHost!.HostName">
+            <FormField Id="letsencrypt-host" Label="@T("Use Let's Encrypt for a host name")" Help="@T("E.g. www.example.com. A host name that has another certificate switches to Let's Encrypt.")" For="() => LetsEncryptHost!.HostName">
                 <InputText id="letsencrypt-host" list="hosts-without-certificate" aria-describedby="letsencrypt-host-help" @bind-Value="LetsEncryptHost!.HostName" autocomplete="off" />
             </FormField>
             <datalist id="hosts-without-certificate">
@@ -131,15 +131,15 @@
                     <option value="@host"></option>
                 }
             </datalist>
-            <button type="submit" class="button">Use Let's Encrypt</button>
+            <button type="submit" class="button">@T("Use Let's Encrypt")</button>
         </EditForm>
 
         @if (_statuses.Any(s => s.Source == CertificateSource.LetsEncrypt && s.State is CertificateState.Pending or CertificateState.Missing))
         {
             <form method="post" @formname="request-letsencrypt" @onsubmit="RequestNow" data-enhance>
                 <AntiforgeryToken />
-                <p class="muted">Certificates are requested automatically. After fixing a problem (DNS, port 80), you can ask again right away:</p>
-                <button type="submit" class="button button-secondary">Request certificates now</button>
+                <p class="muted">@T("Certificates are requested automatically. After fixing a problem (DNS, port 80), you can ask again right away:")</p>
+                <button type="submit" class="button button-secondary">@T("Request certificates now")</button>
             </form>
         }
     </section>
@@ -149,45 +149,45 @@
 {
     <section class="card section" aria-labelledby="hsts-heading">
         <h2 id="hsts-heading">
-            HSTS
-            <HelpTip Title="HTTP Strict Transport Security">
-                <p>Routes with "Tell browsers to use HTTPS only" send this header on HTTPS responses. Browsers then use HTTPS for the host name for the time below, even when someone types http://. Which routes send it is chosen per route.</p>
-                <p>Start short (a day) and raise it to a year once everything works over HTTPS. 0 tells browsers to forget it. <strong>Subdomains</strong> extends it to every subdomain; <strong>preload</strong> asks to be built into browsers (hstspreload.org) and is very hard to undo.</p>
+            @T("HSTS")
+            <HelpTip Title="@T("HTTP Strict Transport Security")">
+                <p>@T("Routes with \"Tell browsers to use HTTPS only\" send this header on HTTPS responses. Browsers then use HTTPS for the host name for the time below, even when someone types http://. Which routes send it is chosen per route.")</p>
+                <p>@TM("Start short (a day) and raise it to a year once everything works over HTTPS. 0 tells browsers to forget it. <strong>Subdomains</strong> extends it to every subdomain; <strong>preload</strong> asks to be built into browsers (hstspreload.org) and is very hard to undo.")</p>
             </HelpTip>
         </h2>
         <EditForm Model="Hsts" FormName="hsts-settings" OnValidSubmit="SaveHstsAsync" Enhance class="form">
             <DataAnnotationsValidator />
             <input type="hidden" name="Hsts.BaseVersion" value="@_active.Version" />
-            <FormField Id="hsts-days" Label="Remember HTTPS for (days)" Help="365 is the usual value. 0 tells browsers to forget it." For="() => Hsts!.MaxAgeDays">
+            <FormField Id="hsts-days" Label="@T("Remember HTTPS for (days)")" Help="@T("365 is the usual value. 0 tells browsers to forget it.")" For="() => Hsts!.MaxAgeDays">
                 <InputNumber id="hsts-days" aria-describedby="hsts-days-help" @bind-Value="Hsts!.MaxAgeDays" min="0" max="730" />
             </FormField>
             <div class="field checkbox-field">
                 <InputCheckbox id="hsts-subdomains" @bind-Value="Hsts!.IncludeSubDomains" />
-                <label for="hsts-subdomains">Include subdomains</label>
+                <label for="hsts-subdomains">@T("Include subdomains")</label>
             </div>
             <div class="field checkbox-field">
                 <InputCheckbox id="hsts-preload" @bind-Value="Hsts!.Preload" aria-describedby="hsts-preload-help" />
-                <label for="hsts-preload">Allow preloading</label>
-                <p class="field-help" id="hsts-preload-help">Needs subdomains and at least 365 days.</p>
+                <label for="hsts-preload">@T("Allow preloading")</label>
+                <p class="field-help" id="hsts-preload-help">@T("Needs subdomains and at least 365 days.")</p>
             </div>
-            <p class="muted">Header sent: <code>Strict-Transport-Security: @_active.Configuration.Settings.Hsts.HeaderValue()</code></p>
-            <button type="submit" class="button button-secondary">Save HSTS settings</button>
+            <p class="muted">@TM("Header sent: <code>{0}</code>", "Strict-Transport-Security: " + _active.Configuration.Settings.Hsts.HeaderValue())</p>
+            <button type="submit" class="button button-secondary">@T("Save HSTS settings")</button>
         </EditForm>
     </section>
 }
 
 <section class="section" aria-labelledby="stored-heading">
-    <h2 id="stored-heading">Uploaded certificates</h2>
+    <h2 id="stored-heading">@T("Uploaded certificates")</h2>
     @if (_stored.Count == 0)
     {
-        <p class="muted">No certificates uploaded.</p>
+        <p class="muted">@T("No certificates uploaded.")</p>
     }
     else
     {
         <div class="table-scroll">
             <table>
                 <thead>
-                    <tr><th scope="col">Valid for</th><th scope="col">Valid until</th><th scope="col">Used for</th><th scope="col">Uploaded</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+                    <tr><th scope="col">@T("Valid for")</th><th scope="col">@T("Valid until")</th><th scope="col">@T("Used for")</th><th scope="col">@T("Uploaded")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr>
                 </thead>
                 <tbody>
                     @foreach (var certificate in _stored)
@@ -197,18 +197,18 @@
                         <tr>
                             <td>
                                 @string.Join(", ", certificate.DnsNameList)
-                                <div class="muted" title="SHA-256 thumbprint">@thumbprint[..16]…</div>
+                                <div class="muted" title="@T("SHA-256 thumbprint")">@thumbprint[..16]…</div>
                             </td>
                             <td class="nowrap">@certificate.NotAfterUtc.ToString("yyyy-MM-dd", Culture)</td>
                             <td>@(used.Count == 0 ? "–" : string.Join(", ", used))</td>
                             <td class="nowrap">@certificate.UploadedAtUtc.ToString("yyyy-MM-dd", Culture)<div class="muted">@certificate.UploadedBy</div></td>
                             <td><div class="row-actions">
-                                <a href="@($"certificates/{thumbprint}")">Choose host names</a>
+                                <a href="@($"certificates/{thumbprint}")">@T("Choose host names")</a>
                                 @if (used.Count == 0)
                                 {
                                     <form method="post" @formname="@($"delete-{thumbprint}")" @onsubmit="() => DeleteAsync(thumbprint)" data-enhance>
                                         <AntiforgeryToken />
-                                        <button type="submit" class="link-button">Delete</button>
+                                        <button type="submit" class="link-button">@T("Delete")</button>
                                     </form>
                                 }
                             </div></td>
@@ -270,7 +270,7 @@
         configuration.Settings.Hsts.MaxAgeSeconds = Hsts!.MaxAgeDays * 86_400;
         configuration.Settings.Hsts.IncludeSubDomains = Hsts.IncludeSubDomains;
         configuration.Settings.Hsts.Preload = Hsts.Preload;
-        await SaveAsync(Hsts.BaseVersion, configuration, "HSTS settings changed.", "HSTS settings saved");
+        await SaveAsync(Hsts.BaseVersion, configuration, Text.N("HSTS settings changed."), Text.N("HSTS settings saved"));
     }
 
     private async Task SaveAcmeAsync()
@@ -280,7 +280,7 @@
         configuration.Settings.Acme.Email = string.IsNullOrWhiteSpace(Acme!.Email) ? null : Acme.Email.Trim();
         configuration.Settings.Acme.AcceptTermsOfService = Acme.AcceptTermsOfService;
         configuration.Settings.Acme.UseStaging = Acme.UseStaging;
-        await SaveAsync(Acme.BaseVersion, configuration, "Let's Encrypt settings changed.", "Let's Encrypt settings saved");
+        await SaveAsync(Acme.BaseVersion, configuration, Text.N("Let's Encrypt settings changed."), Text.N("Let's Encrypt settings saved"));
     }
 
     private async Task UseLetsEncryptAsync()
@@ -288,14 +288,14 @@
         var host = LetsEncryptHost!.HostName?.Trim().TrimEnd('.').ToLowerInvariant();
         if (string.IsNullOrEmpty(host))
         {
-            _errors = ["Enter a host name, e.g. www.example.com."];
+            _errors = [Text.N("Enter a host name, e.g. www.example.com.")];
             await LoadAsync();
             return;
         }
 
         var active = await Configurations.GetActiveAsync(CancellationToken.None);
         await SaveAsync(LetsEncryptHost.BaseVersion, CertificateEditing.UseLetsEncrypt(active!.Configuration, host),
-            $"Let's Encrypt used for {host}.", $"{host} gets its certificate from Let's Encrypt");
+            Text.F("Let's Encrypt used for {0}.", host), Text.F("{0} gets its certificate from Let's Encrypt", host));
     }
 
     private async Task SaveAsync(long baseVersion, GatewayConfiguration configuration, string description, string message)
@@ -335,7 +335,7 @@
         var active = await Configurations.GetActiveAsync(CancellationToken.None);
         var result = await Configurations.ActivateIfCurrentAsync(
             active!.Version, CertificateEditing.Without(active.Configuration, host), AdminActor.From(HttpContext),
-            $"Certificate of {host} removed.", CancellationToken.None);
+            Text.F("Certificate of {0} removed.", host), CancellationToken.None);
         if (result.Succeeded)
         {
             Navigation.NavigateTo($"certificates?saved={Uri.EscapeDataString($"{host} has no certificate any more (version {result.Version!.Version}).")}");

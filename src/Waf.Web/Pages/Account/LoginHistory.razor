@@ -1,30 +1,30 @@
 @page "/account/history"
 @inject SignInHistory History
 
-<PageTitle>Login history · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Login history") · @ProductInfo.Name</PageTitle>
 
-<p><a href="account">← Your account</a></p>
+<p><a href="account">← @T("Your account")</a></p>
 <h1>
-    Login history
-    <HelpTip Title="Login history">
-        <p>Every sign-in, failed attempt, lockout and sign-out of the admin UI, newest first. The last @SignInHistory.MaxEvents entries of at most @SignInHistory.MaxAge.TotalDays days are kept. For an unknown user name, the name typed is not stored: it may be a password typed into the wrong field.</p>
+    @T("Login history")
+    <HelpTip Title="@T("Login history")">
+        <p>@T("Every sign-in, failed attempt, lockout and sign-out of the admin UI, newest first. The last {0} entries of at most {1} days are kept. For an unknown user name, the name typed is not stored: it may be a password typed into the wrong field.", SignInHistory.MaxEvents, SignInHistory.MaxAge.TotalDays)</p>
     </HelpTip>
 </h1>
 
 @if (_events.Count == 0)
 {
-    <p class="muted">Nothing yet.</p>
+    <p class="muted">@T("Nothing yet.")</p>
 }
 else
 {
     <table class="table">
         <thead>
             <tr>
-                <th scope="col">Time (UTC)</th>
-                <th scope="col">What happened</th>
-                <th scope="col">Account</th>
-                <th scope="col">From</th>
-                <th scope="col">Browser</th>
+                <th scope="col">@T("Time (UTC)")</th>
+                <th scope="col">@T("What happened")</th>
+                <th scope="col">@T("Account")</th>
+                <th scope="col">@T("From")</th>
+                <th scope="col">@T("Browser")</th>
             </tr>
         </thead>
         <tbody>
@@ -33,7 +33,7 @@ else
                 var failed = SignInHistory.Failures.Contains(entry.Result);
                 <tr class="@(failed ? "row-failed" : null)">
                     <td>@DateTimeOffset.FromUnixTimeMilliseconds(entry.TimestampMs).UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture)</td>
-                    <td>@SignInHistory.Describe(entry.Result)</td>
+                    <td>@T(SignInHistory.Describe(entry.Result))</td>
                     <td>@(entry.UserName ?? "–")</td>
                     <td>@entry.ClientIp</td>
                     <td class="muted" title="@entry.UserAgent">@Shorten(entry.UserAgent)</td>

@@ -312,7 +312,7 @@ internal sealed class RouteFormModel : IValidatableObject
 
         if (uri.AbsolutePath != "/" || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment) || !string.IsNullOrEmpty(uri.UserInfo))
         {
-            error = "a backend address is only scheme, host and port, without a path (the request path is forwarded as is).";
+            error = Text.N("a backend address is only scheme, host and port, without a path (the request path is forwarded as is).");
             return false;
         }
 
@@ -320,7 +320,7 @@ internal sealed class RouteFormModel : IValidatableObject
         var host = RawHost(value);
         if (!ProxyRouteValidator.IsValidAddress(host))
         {
-            error = $"'{host}' is not a valid IP address or host name.";
+            error = Text.F("'{0}' is not a valid IP address or host name.", host);
             return false;
         }
 
@@ -416,14 +416,14 @@ internal static class ConfigurationEditing
         var references = new List<string>();
         references.AddRange(configuration.Rules
             .Where(r => r.Routes.Contains(routeName, StringComparer.OrdinalIgnoreCase))
-            .Select(r => $"rule '{r.Name}'"));
+            .Select(r => Text.T("rule '{0}'", r.Name)));
         references.AddRange(configuration.RateLimits
             .Where(l => l.Routes.Contains(routeName, StringComparer.OrdinalIgnoreCase))
-            .Select(l => $"rate limit '{l.Name}'"));
+            .Select(l => Text.T("rate limit '{0}'", l.Name)));
         references.AddRange(configuration.Settings.AttackDetection.Exclusions
             .Select((e, i) => (e, i))
             .Where(x => x.e.Routes.Contains(routeName, StringComparer.OrdinalIgnoreCase))
-            .Select(x => $"detection exclusion #{x.i + 1} ({x.e.PathPrefix})"));
+            .Select(x => Text.T("detection exclusion #{0} ({1})", x.i + 1, x.e.PathPrefix)));
         return references;
     }
 }

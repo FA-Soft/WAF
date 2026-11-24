@@ -103,12 +103,9 @@ internal static class Presets
     [
         new(
             "block-common-attacks",
-            "Block common attacks",
-            "Switch on every attack detector and block probes for hidden files and unusual methods.",
-            "Switches on detection of SQL injection, cross-site scripting, path traversal, command injection and attack tools, "
-                + "and adds two rules: one blocks requests for hidden files and leftovers that should never be public (.git, .env, "
-                + "backup copies such as index.php.bak, dumps such as backup.zip), "
-                + "one blocks the TRACE and TRACK methods that are only used to probe servers.",
+            Text.N("Block common attacks"),
+            Text.N("Switch on every attack detector and block probes for hidden files and unusual methods."),
+            Text.N("Switches on detection of SQL injection, cross-site scripting, path traversal, command injection and attack tools, and adds two rules: one blocks requests for hidden files and leftovers that should never be public (.git, .env, backup copies such as index.php.bak, dumps such as backup.zip), one blocks the TRACE and TRACK methods that are only used to probe servers."),
             PresetInputs.None,
             _ => { },
             (_, configuration) =>
@@ -122,20 +119,19 @@ internal static class Presets
                 detection.BadUserAgents = true;
 
                 Upsert(configuration.Rules, Rule(
-                    "block-sensitive-files", "Hidden files, backup copies and dumps must never be public.", 20,
+                    "block-sensitive-files", Text.T("Hidden files, backup copies and dumps must never be public."), 20,
                     new RuleCondition { Field = ConditionField.Path, Operator = ConditionOperator.Regex, Values = { SensitiveFilesPattern } }));
                 Upsert(configuration.Rules, Rule(
-                    "block-unusual-methods", "TRACE and TRACK are only used to probe servers.", 20,
+                    "block-unusual-methods", Text.T("TRACE and TRACK are only used to probe servers."), 20,
                     new RuleCondition { Field = ConditionField.Method, Operator = ConditionOperator.Equals, Values = { "TRACE", "TRACK" } }));
                 return [];
             }),
 
         new(
             "lock-path",
-            "Lock a path to your IP addresses",
-            "Only your own IP addresses may open a path such as /admin; everyone else gets 403.",
-            "Adds a rule that blocks the path for every client IP that is not in your list. Enter your office or VPN "
-                + "addresses. Rules with a lower priority number, such as an IP allow list, still run first.",
+            Text.N("Lock a path to your IP addresses"),
+            Text.N("Only your own IP addresses may open a path such as /admin; everyone else gets 403."),
+            Text.N("Adds a rule that blocks the path for every client IP that is not in your list. Enter your office or VPN addresses. Rules with a lower priority number, such as an IP allow list, still run first."),
             PresetInputs.PathPrefix | PresetInputs.AllowedIps | PresetInputs.DetectionOnly | PresetInputs.Routes,
             m => m.PathPrefix = "/admin",
             (m, configuration) =>
@@ -145,14 +141,14 @@ internal static class Presets
                 var ips = m.IpList;
                 if (ips.Count == 0)
                 {
-                    problems.Add("Enter at least one IP address or range that may still open the path, e.g. 203.0.113.0/24.");
+                    problems.Add(Text.T("Enter at least one IP address or range that may still open the path, e.g. 203.0.113.0/24."));
                 }
 
                 foreach (var ip in ips)
                 {
                     if (!StrictCidr.TryParse(ip, out _, out var reason))
                     {
-                        problems.Add($"'{ip}': {reason}.");
+                        problems.Add(Text.T("'{0}': {1}.", ip, reason));
                     }
                 }
 
@@ -168,7 +164,7 @@ internal static class Presets
                 }
 
                 var rule = Rule(
-                    LockRuleName(path), $"Only our own IP addresses may open {path}.", 10,
+                    LockRuleName(path), Text.T("Only our own IP addresses may open {0}.", path), 10,
                     new RuleCondition { Field = ConditionField.Path, Operator = ConditionOperator.StartsWith, Values = { path } },
                     ipCondition);
                 rule.DetectionOnly = m.DetectionOnly;
@@ -179,10 +175,9 @@ internal static class Presets
 
         new(
             "protect-login",
-            "Protect a login page",
-            "Slow down password guessing: limit login attempts per client IP.",
-            "Adds a rate limit on POST requests to the login path, counted per client IP. A client that sends more "
-                + "attempts per minute than allowed gets 429 until it slows down.",
+            Text.N("Protect a login page"),
+            Text.N("Slow down password guessing: limit login attempts per client IP."),
+            Text.N("Adds a rate limit on POST requests to the login path, counted per client IP. A client that sends more attempts per minute than allowed gets 429 until it slows down."),
             PresetInputs.PathPrefix | PresetInputs.PermitLimit | PresetInputs.DetectionOnly | PresetInputs.Routes,
             m =>
             {
@@ -199,7 +194,7 @@ internal static class Presets
                     return problems;
                 }
 
-                var limit = Limit("login-attempts", "Slow down password guessing.", m);
+                var limit = Limit("login-attempts", Text.T("Slow down password guessing."), m);
                 limit.Conditions.Add(new RuleCondition { Field = ConditionField.Method, Operator = ConditionOperator.Equals, Values = { "POST" } });
                 limit.Conditions.Add(new RuleCondition { Field = ConditionField.Path, Operator = ConditionOperator.StartsWith, Values = { path } });
                 Upsert(configuration.RateLimits, limit);
@@ -208,10 +203,9 @@ internal static class Presets
 
         new(
             "limit-per-client",
-            "Limit requests per client",
-            "Stop aggressive bots: each client IP gets a fair number of requests per minute.",
-            "Adds a rate limit on all requests, counted per client IP (IPv6 per /64 network). People browsing a site "
-                + "stay far below 300 requests per minute; scrapers and floods do not.",
+            Text.N("Limit requests per client"),
+            Text.N("Stop aggressive bots: each client IP gets a fair number of requests per minute."),
+            Text.N("Adds a rate limit on all requests, counted per client IP (IPv6 per /64 network). People browsing a site stay far below 300 requests per minute; scrapers and floods do not."),
             PresetInputs.PermitLimit | PresetInputs.DetectionOnly | PresetInputs.Routes,
             m => m.PermitLimit = 300,
             (m, configuration) =>
@@ -223,7 +217,7 @@ internal static class Presets
                     return problems;
                 }
 
-                Upsert(configuration.RateLimits, Limit("per-client", "Fair use per visitor.", m));
+                Upsert(configuration.RateLimits, Limit("per-client", Text.T("Fair use per visitor."), m));
                 return [];
             }),
     ];
@@ -280,7 +274,7 @@ internal static class Presets
         var trimmed = (path ?? string.Empty).Trim();
         if (trimmed.Length == 0 || trimmed[0] != '/')
         {
-            problems.Add("The path must start with /, e.g. /admin.");
+            problems.Add(Text.T("The path must start with /, e.g. /admin."));
         }
 
         return trimmed;
@@ -290,7 +284,7 @@ internal static class Presets
     {
         if (limit < 1 || limit > max)
         {
-            problems.Add(string.Create(CultureInfo.InvariantCulture, $"Allow between 1 and {max:N0} requests per minute."));
+            problems.Add(Text.T("Allow between 1 and {0} requests per minute.", max.ToString("N0", CultureInfo.CurrentCulture)));
         }
     }
 

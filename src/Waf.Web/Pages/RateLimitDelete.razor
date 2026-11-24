@@ -2,14 +2,14 @@
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
-<PageTitle>Delete rate limit @LimitName · @ProductInfo.Name</PageTitle>
+<PageTitle>@T("Delete rate limit {0}", LimitName) · @ProductInfo.Name</PageTitle>
 
-<p><a href="rate-limits">← Rate limits</a></p>
-<h1>Delete rate limit '@LimitName'?</h1>
+<p><a href="rate-limits">← @T("Rate limits")</a></p>
+<h1>@T("Delete rate limit '{0}'?", LimitName)</h1>
 
 @if (_limit is null)
 {
-    <div class="alert alert-danger" role="alert">Rate limit '@LimitName' does not exist (any more). <a href="rate-limits">Back to the rate limits</a>.</div>
+    <div class="alert alert-danger" role="alert">@T("Rate limit '{0}' does not exist (any more).", LimitName) <a href="rate-limits">@T("Back to the rate limits")</a>.</div>
 }
 else
 {
@@ -18,22 +18,22 @@ else
     @if (_errors.Count > 0)
     {
         <div class="alert alert-danger" role="alert">
-            <strong>The rate limit was not deleted.</strong>
+            <strong>@T("The rate limit was not deleted.")</strong>
             <ul>
                 @foreach (var error in _errors)
                 {
-                    <li>@error</li>
+                    <li>@Message(error)</li>
                 }
             </ul>
         </div>
     }
 
-    <p>The deletion is stored as a new configuration version, so it can be undone by restoring the previous version.</p>
+    <p>@T("The deletion is stored as a new configuration version, so it can be undone by restoring the previous version.")</p>
     <form method="post" @formname="rate-limit-delete" @onsubmit="DeleteAsync" data-enhance class="actions">
         <AntiforgeryToken />
         <input type="hidden" name="BaseVersion" value="@_baseVersion" />
-        <button type="submit" class="button button-danger">Delete rate limit</button>
-        <a class="button button-secondary" href="rate-limits">Cancel</a>
+        <button type="submit" class="button button-danger">@T("Delete rate limit")</button>
+        <a class="button button-secondary" href="rate-limits">@T("Cancel")</a>
     </form>
 }
 
@@ -65,7 +65,7 @@ else
         var limit = configuration.RateLimits.FirstOrDefault(l => string.Equals(l.Name, LimitName, StringComparison.OrdinalIgnoreCase));
         if (limit is null)
         {
-            _errors = [$"Rate limit '{LimitName}' no longer exists."];
+            _errors = [Text.F("Rate limit '{0}' no longer exists.", LimitName)];
             return;
         }
 

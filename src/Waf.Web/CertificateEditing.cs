@@ -94,21 +94,21 @@ internal static class CertificateEditing
     /// <summary>How a binding's source is shown.</summary>
     public static string SourceLabel(CertificateSource source) => source switch
     {
-        CertificateSource.Uploaded => "Uploaded",
-        CertificateSource.File => "File on disk",
-        _ => "Let's Encrypt",
+        CertificateSource.Uploaded => Text.T("Uploaded"),
+        CertificateSource.File => Text.T("File on disk"),
+        _ => Text.T("Let's Encrypt"),
     };
 
     /// <summary>Badge class and text of a state.</summary>
     public static (string Badge, string Label) StateBadge(CertificateState state) => state switch
     {
-        CertificateState.Ok => ("badge-ok", "Valid"),
-        CertificateState.ExpiresSoon => ("badge-warning", "Expires soon"),
-        CertificateState.Pending => ("badge-muted", "Not issued yet"),
-        CertificateState.NotYetValid => ("badge-warning", "Not yet valid"),
-        CertificateState.Expired => ("badge-danger", "Expired"),
-        CertificateState.WrongHost => ("badge-danger", "Wrong host name"),
-        _ => ("badge-danger", "Missing"),
+        CertificateState.Ok => ("badge-ok", Text.T("Valid")),
+        CertificateState.ExpiresSoon => ("badge-warning", Text.T("Expires soon")),
+        CertificateState.Pending => ("badge-muted", Text.T("Not issued yet")),
+        CertificateState.NotYetValid => ("badge-warning", Text.T("Not yet valid")),
+        CertificateState.Expired => ("badge-danger", Text.T("Expired")),
+        CertificateState.WrongHost => ("badge-danger", Text.T("Wrong host name")),
+        _ => ("badge-danger", Text.T("Missing")),
     };
 
     private static bool IsThis(CertificateBinding binding, string thumbprint) =>
