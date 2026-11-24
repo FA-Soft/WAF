@@ -183,3 +183,66 @@ jobs:
           name: WafGateway-win-x64
           path: artifacts/windows/WafGateway-win-x64.zip
           retention-days: 7
+
+  linux-installer:
+    name: Linux installer (Ubuntu, systemd, ${{ matrix.rid }})
+    needs: build-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            emulated: false
+          # The Raspberry Pi build, run by systemd under QEMU emulation (no arm64 runner for this repository).
+          - rid: linux-arm64
+            emulated: true
+    continue-on-error: ${{ matrix.emulated }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-publish-${{ matrix.rid }}-${{ hashFiles('global.json', '**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-publish-${{ matrix.rid }}-
+
+      - name: Build the package
+        run: bash deploy/linux/build-package.sh ${{ matrix.rid }}
+
+      - name: Check the systemd unit
+        run: |
+          sed 's|@PREFIX@|/opt/wafgateway|g' deploy/linux/wafgateway.service > /tmp/wafgateway.service
+          systemd-analyze verify /tmp/wafgateway.service 2>&1 | grep -v 'Command /opt/wafgateway/WafGateway is not executable' || true
+
+      - name: Run arm64 programs with QEMU
+        if: matrix.emulated
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qemu-user-static binfmt-support
+          grep -q '^flags:.*F' /proc/sys/fs/binfmt_misc/qemu-aarch64
+          # The .NET runtime under QEMU: no write-xor-execute (very slow when emulated), more time to start.
+          sudo mkdir -p /etc/systemd/system/wafgateway.service.d
+          printf '[Service]\nEnvironment=DOTNET_EnableWriteXorExecute=0\nTimeoutStartSec=600\n' | sudo tee /etc/systemd/system/wafgateway.service.d/qemu.conf
+          echo "WAFGATEWAY_ALLOW_FOREIGN_ARCH=1" >> "$GITHUB_ENV"
+
+      - name: Install, upgrade, uninstall
+        run: sudo --preserve-env=WAFGATEWAY_ALLOW_FOREIGN_ARCH bash deploy/linux/test-install.sh artifacts/linux/wafgateway-${{ matrix.rid }}
+
+      - name: Service log
+        if: always()
+        run: sudo journalctl -u wafgateway --no-pager -n 200 || true
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v7
+        with:
+          name: wafgateway-${{ matrix.rid }}
+          path: artifacts/linux/wafgateway-${{ matrix.rid }}.tar.gz
+          retention-days: 7

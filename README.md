@@ -336,15 +336,59 @@ docker run --rm --isolation=hyperv -v "$PWD\artifacts\windows\WafGateway-win-x64
   -Command "Start-Service W3SVC; C:\scripts\Test-Install.ps1 -Package C:\pkg -WithIis; exit `$LASTEXITCODE"
 ```
 
-### Ubuntu / Raspberry Pi (planned interface)
+### Ubuntu / Raspberry Pi
+
+Ubuntu Server 22.04 or later (any distribution with systemd works the same way) on a Raspberry Pi with a 64-bit OS (`linux-arm64`) or on x64 (`linux-x64`). Build the package on any machine with the .NET SDK (it cross-compiles; on Windows use Git Bash), copy it over, and run the installer as root:
 
 ```bash
-sudo ./install.sh                  # install the service under a dedicated non-root user
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
+deploy/linux/build-package.sh linux-arm64      # artifacts/linux/wafgateway-linux-arm64.tar.gz (linux-x64 for PCs)
+scp artifacts/linux/wafgateway-linux-arm64.tar.gz pi@raspberrypi:
+
+tar -xzf wafgateway-linux-arm64.tar.gz && cd wafgateway-linux-arm64
+sudo bash install.sh               # install the service under a dedicated non-root user, and start it
+sudo bash install.sh --ufw         # also allow 80/tcp and 443/tcp in UFW
+sudo bash install.sh --no-start    # install or upgrade without starting
+sudo bash install.sh --uninstall   # remove the service and program; keep data and settings (--purge deletes them)
 ```
 
-The systemd unit uses `CAP_NET_BIND_SERVICE` and hardening options such as `NoNewPrivileges` and `ProtectSystem`.
+What `install.sh` does:
+
+- **A dedicated user.** The system user `wafgateway` (no login shell, no home folder of its own) runs the service; nothing runs as root.
+- **Program files** go to `/opt/wafgateway`, owned by root and read-only for the service. The package is self-contained: no .NET runtime needs to be installed. The installer refuses a package for the wrong processor (an x64 package on a Pi).
+- **Folders.** Data in `/var/lib/wafgateway` (mode `0750`, owned by `wafgateway`: `config.db`, `identity.db`, `events.db`, the data protection keys); optional settings in `/etc/wafgateway/appsettings.json` (owned by root, readable by the service, not writable by it).
+- **The systemd unit** `wafgateway.service` (from `deploy/linux/wafgateway.service`) starts at boot, restarts after a failure, and tells systemd when the listeners are up (`Type=notify`). Logs go to the journal: `journalctl -u wafgateway`.
+- **`wafctl`** is on the `PATH` (`/usr/local/bin/wafctl`). Run it with `sudo`: it switches to the `wafgateway` user, so files it writes stay the service's (`sudo wafctl status`).
+- **Start.** The installer starts the service and waits until the admin UI answers. If another program (nginx, Apache) holds port 80 or 443, the service is installed but not started, and the installer shows which program it is. Add that web server as a route on another port, then `sudo systemctl start wafgateway`.
+- **Upgrades.** Run the new package's `install.sh` again: the service stops, the program folder is replaced, and the service starts again. Data and settings are kept, and so are your own unit changes in a drop-in (`sudo systemctl edit wafgateway`).
+
+**Hardening.** The unit gives the gateway exactly one capability, `CAP_NET_BIND_SERVICE` (to bind ports 80 and 443 without root), and takes away the rest:
+
+| Setting | Effect |
+|---|---|
+| `User=wafgateway`, `NoNewPrivileges=true`, `CapabilityBoundingSet=CAP_NET_BIND_SERVICE` | No root, no way to gain privileges, no other capability |
+| `ProtectSystem=strict`, `StateDirectory=wafgateway` | The whole file system is read-only except `/var/lib/wafgateway` |
+| `ProtectHome`, `PrivateTmp`, `PrivateDevices` | No home folders, a private `/tmp`, no device access |
+| `ProtectKernelTunables`, `ProtectKernelModules`, `ProtectKernelLogs`, `ProtectControlGroups`, `ProtectClock`, `ProtectHostname`, `ProtectProc=invisible` | No changes to the kernel or system; other processes are invisible |
+| `RestrictNamespaces`, `RestrictRealtime`, `RestrictSUIDSGID`, `LockPersonality`, `SystemCallFilter=@system-service`, `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK` | Only the system calls and socket types a network service needs |
+
+`MemoryDenyWriteExecute` is not set: the .NET JIT compiler needs it off. Check the result with `systemd-analyze security wafgateway`. On Linux the data protection keys are not encrypted (there is no DPAPI); the folder permissions protect them.
+
+**UFW.** The installer never changes the firewall unless you pass `--ufw` (then it allows `80/tcp` and `443/tcp`, labelled "WAF Gateway"; `--uninstall --ufw` removes them). With UFW active and no `--ufw`, it prints the commands:
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 8443/tcp            # only for a remote admin URL with a port of its own (see Remote access)
+```
+
+Never open the local admin port 8900: it listens on `127.0.0.1` and `::1` only. To reach the admin UI of a Pi from your PC before remote access is set up, use an SSH tunnel: `ssh -L 8900:localhost:8900 pi@raspberrypi`, then open `http://localhost:8900`. If you enable UFW on a machine you reach over SSH, allow SSH first (`sudo ufw allow OpenSSH`).
+
+**Tests.** Every CI run builds the packages and runs `deploy/linux/test-install.sh` on Ubuntu with systemd: install, the service user, capabilities, hardening (`systemd-analyze security`), folders and permissions, `wafctl`, upgrade, uninstall and purge. `linux-x64` runs natively; the Raspberry Pi build (`linux-arm64`) runs the same test under QEMU emulation, because no arm64 runner is available to this repository. On a real Pi, copy `deploy/linux/test-install.sh` next to the extracted package and run it there (on a test Pi only: it installs and removes everything, data included):
+
+```bash
+scp deploy/linux/test-install.sh pi@raspberrypi:
+sudo bash test-install.sh wafgateway-linux-arm64
+```
 
 **Data locations**
 
@@ -399,7 +443,7 @@ src/Waf.Host      Startup, Kestrel, service hosting
 src/Waf.Cli       wafctl
 tests/            Unit, integration and benchmark projects
 deploy/windows    Install.ps1 (service, firewall, IIS), Build-Package.ps1, Test-Install.ps1
-deploy/linux      install.sh, systemd unit, UFW notes
+deploy/linux      install.sh, wafgateway.service (systemd), build-package.sh, test-install.sh
 ```
 
 ## Building from source
