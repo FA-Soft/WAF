@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Options;
 using FASoft.Waf.Core;
+using FASoft.Waf.Host.Hosting.Neighbors;
 using FASoft.Waf.Core.Routing;
 using FASoft.Waf.Core.Hosting;
 using FASoft.Waf.Core.Net;
@@ -26,7 +27,9 @@ internal static partial class GatewayApplication
     /// <summary>Process exit code used when the gateway cannot start.</summary>
     public const int StartupFailureExitCode = 1;
 
-    public static WebApplication Build(string[] args)
+    /// <param name="args">Command-line arguments.</param>
+    /// <param name="configureServices">Last changes to the services before the host is built (tests replace parts, e.g. the neighbour table).</param>
+    public static WebApplication Build(string[] args, Action<IServiceCollection>? configureServices = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -88,6 +91,14 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton(store);
         builder.Services.AddSingleton(AuditLogStore.Create(storagePaths, TimeProvider.System));
         builder.Services.AddSingleton(configurationStatus);
+        // Targets with a MAC address: their current IP address is looked up in the neighbour table (runtime state).
+        var resolverOptions = builder.Configuration.GetSection(TargetResolverOptions.SectionName).Get<TargetResolverOptions>() ?? new TargetResolverOptions();
+        builder.Services.AddSingleton(resolverOptions);
+        builder.Services.AddSingleton<INeighborTable, SystemNeighborTable>();
+        builder.Services.AddSingleton<TargetAddressBook>();
+        builder.Services.AddSingleton<ITargetAddressSource>(sp => sp.GetRequiredService<TargetAddressBook>());
+        builder.Services.AddSingleton<ITargetAddressMonitor>(sp => sp.GetRequiredService<TargetAddressBook>());
+        builder.Services.AddHostedService<TargetAddressResolver>();
         builder.Services.AddSingleton<GatewayConfigurationService>();
         builder.Services.AddSingleton<FASoft.Waf.Web.IGatewayConfigurationService>(sp => sp.GetRequiredService<GatewayConfigurationService>());
         builder.Services.AddHostedService<AppSettingsWatcher>();
@@ -121,6 +132,7 @@ internal static partial class GatewayApplication
 
         builder.WebHost.ConfigureKestrel(kestrel => KestrelListeners.Configure(kestrel, endpoints, dedicatedPort));
 
+        configureServices?.Invoke(builder.Services);
         var app = builder.Build();
 
         LogBootstrap(app.Logger, bootstrap, storagePaths);

@@ -158,6 +158,18 @@
           "Address": {
             "type": "string"
           },
+          "MacAddress": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ResolveIntervalSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "Ports": {
             "type": "array",
             "items": {

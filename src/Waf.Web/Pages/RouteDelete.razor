@@ -1,4 +1,5 @@
 @page "/routes/{RouteName}/delete"
+@inject ITargetAddressMonitor Addresses
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 
@@ -15,7 +16,7 @@ else
 {
     <dl class="details">
         <dt>Handles</dt><dd>@Describe.Match(_route.Match)</dd>
-        <dt>Forwards to</dt><dd>@Describe.Destinations(_route.Destinations, _targets)</dd>
+        <dt>Forwards to</dt><dd>@Describe.Destinations(_route.Destinations, _targets, Addresses)</dd>
     </dl>
 
     @if (_references.Count > 0)

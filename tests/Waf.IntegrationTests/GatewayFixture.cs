@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using FASoft.Waf.Host.Hosting;
 
 namespace FASoft.Waf.IntegrationTests;
@@ -38,6 +39,11 @@ public partial class GatewayFixture : IAsyncLifetime
     /// <summary>Extra command-line style configuration, e.g. routes.</summary>
     protected virtual IEnumerable<string> ExtraArgs => [];
 
+    /// <summary>Changes to the gateway's services before it is built, e.g. a fake neighbour table.</summary>
+    protected virtual void ConfigureServices(IServiceCollection services)
+    {
+    }
+
     /// <summary>Runs before the gateway starts, e.g. to start backends.</summary>
     protected virtual ValueTask BeforeStartAsync() => ValueTask.CompletedTask;
 
@@ -55,7 +61,7 @@ public partial class GatewayFixture : IAsyncLifetime
         // can take it (the OS hands out the same ephemeral ports). Then retry with new ports.
         for (var attempt = 1; ; attempt++)
         {
-            _app = GatewayApplication.Build([.. Args, .. ExtraArgs]);
+            _app = GatewayApplication.Build([.. Args, .. ExtraArgs], ConfigureServices);
             try
             {
                 await _app.StartAsync(TestContext.Current.CancellationToken);

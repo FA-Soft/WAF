@@ -458,4 +458,4 @@ td .badge {
 /* Targets: port lists in the table, and "Add a target" in the route editor. */
 .plain-list { list-style: none; margin: 0; padding: 0; }
 .inline-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-.inline-controls select { flex: 1 1 18rem; }
+.inline-controls select, .inline-controls input { flex: 1 1 16rem; width: auto; }

@@ -108,6 +108,14 @@ Routes can then forward to "nas · web" instead of an address: pick it under **A
 type `nas/web` in the backends. When the machine gets another address, change it once on the Targets page, and every
 route that uses it follows at once. A target that routes still use cannot be deleted; the page tells you which routes.
 
+**A device whose address changes (DHCP).** Enter its MAC address under **Changing address (DHCP)**. Don't know it?
+Type the device's current IP address, click **Look up MAC address**, and the gateway fills it in. From then on the
+gateway looks up the device's current address every minute, and its routes follow it. The Targets page shows the
+address in use and when it was last seen. If the device is gone for 10 minutes, its routes stop sending traffic
+(visitors get 503) until it is back, and the dashboard tells you. This works only for devices on the gateway's own
+network. Phones and laptops with a "private Wi-Fi address" need that switched off for this network. A fixed address
+in your router (DHCP reservation) is often simpler.
+
 ### Add a route
 
 A route says which requests go to which backend. **Routes → Add a route**:

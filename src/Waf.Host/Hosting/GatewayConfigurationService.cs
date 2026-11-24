@@ -23,6 +23,7 @@ internal sealed partial class GatewayConfigurationService(
     CertificateStore certificateStore,
     WafEngineHolder engines,
     ProxyRouteUpdater routes,
+    ITargetAddressSource addresses,
     ConfigurationStatus status,
     StoragePaths paths,
     TimeProvider time,
@@ -111,7 +112,7 @@ internal sealed partial class GatewayConfigurationService(
                 return RestoreResult.Failed([$"The WAF engine could not be built: {ex.Message}"]);
             }
 
-            var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(active), tag).ConfigureAwait(false);
+            var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(active, addresses), tag).ConfigureAwait(false);
             if (prepared is null)
             {
                 return RestoreResult.Failed(routeErrors);
@@ -251,7 +252,7 @@ internal sealed partial class GatewayConfigurationService(
                 return false;
             }
 
-            var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(stored.Configuration), tag).ConfigureAwait(false);
+            var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(stored.Configuration, addresses), tag).ConfigureAwait(false);
             if (prepared is null)
             {
                 _failedExternalTag = tag;
@@ -273,6 +274,46 @@ internal sealed partial class GatewayConfigurationService(
     }
 
     private bool NeedsSync(string tag) => engines.Current?.ConfigTag != tag && tag != _failedExternalTag;
+
+    /// <summary>
+    /// Builds the routes of the running configuration again with the current target addresses (a device found at
+    /// another address by its MAC address) and swaps them in. No new version: the configuration did not change, and the
+    /// WAF engine keeps running (same tag). Skipped while the running engine is not the one of the active version.
+    /// </summary>
+    public async Task ReapplyTargetAddressesAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var stored = await store.GetLastKnownGoodAsync(cancellationToken).ConfigureAwait(false);
+            if (stored is null)
+            {
+                return;
+            }
+
+            var tag = ConfigurationStore.ConfigTag(stored.Sha256);
+            if (engines.Current?.ConfigTag != tag)
+            {
+                return; // the next activation uses the current addresses anyway
+            }
+
+            var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(stored.Configuration, addresses), tag).ConfigureAwait(false);
+            if (prepared is null)
+            {
+                LogTargetRoutesFailed(logger, string.Join(" ", routeErrors));
+                return;
+            }
+
+            routes.Apply(prepared);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    [LoggerMessage(EventId = 105, Level = LogLevel.Error, Message = "The routes could not be updated with the new target addresses; they keep the previous ones. {Errors}")]
+    private static partial void LogTargetRoutesFailed(ILogger logger, string errors);
 
     /// <summary>The running configuration (last-known-good), or null if none was activated yet.</summary>
     public Task<StoredConfiguration?> GetActiveAsync(CancellationToken cancellationToken) =>
@@ -345,7 +386,7 @@ internal sealed partial class GatewayConfigurationService(
             return ActivationResult.Failed([$"The WAF engine could not be built: {ex.Message}"]);
         }
 
-        var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(candidate), tag).ConfigureAwait(false);
+        var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(candidate, addresses), tag).ConfigureAwait(false);
         if (prepared is null)
         {
             return ActivationResult.Failed(routeErrors);

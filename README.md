@@ -199,6 +199,20 @@ A **target** names a machine behind the gateway and its ports, under **Targets**
 - **Checks:** a route that names an unknown target or port is refused with a message that names it, and a target that routes still use cannot be deleted (the page lists them).
 - The request log shows the label with the address it stood for at the time, e.g. `nas · web (http://192.168.1.20:5000/)`. Targets are part of versions, exports, backups, the configuration diff and the audit log; the AI assistant sees them and may propose changes to them.
 
+#### Devices with a changing address (MAC address)
+
+A device that gets its IP address from DHCP can move to another address. Give its target a **MAC address** instead of (or as well as) an address, and the gateway finds its current IP address in the operating system's neighbour (ARP) table:
+
+```json
+{ "Name": "nas", "MacAddress": "aa:bb:cc:dd:ee:01", "Address": "192.168.1.20", "ResolveIntervalSeconds": 60, "Ports": [ { "Name": "web", "Port": 5000 } ] }
+```
+
+- **How:** every `ResolveIntervalSeconds` (10 to 3600, default 60) the gateway reads the table: `ip neigh` (or `/proc/net/arp`) on Linux, `GetIpNetTable2` on Windows. An entry the system confirmed recently is used as it is. A stale one is confirmed first by contacting it (one UDP datagram to the discard port; no privileges, no ping). When the MAC address is not in the table at all, the gateway contacts every address of its own local networks (at most a /22, at most every 5 minutes) and reads again. In the target editor, **Look up MAC address** fills in the MAC address of the IP address you entered.
+- **Routes follow the device** at once: they are rebuilt with the new address, without a new configuration version (the address is runtime state, not configuration). Each move is written to the service log and the audit log ("Target 'nas' (aa:bb:cc:dd:ee:01) is at 192.168.1.37 (was 192.168.1.20)"). The Targets page shows the MAC address, the address in use and when it was last seen.
+- **Until it is found**, the configured `Address` is used (optional with a MAC address). **When it is gone** for 10 minutes, the target is unavailable: its destinations are left out, so its routes answer 503 instead of sending traffic to an address that may now belong to another device. The dashboard warns, the audit log records it, and traffic resumes as soon as it is found again.
+- **Limits:** only devices on the gateway's own network segment (layer 2) can be found; not behind a router or VPN, or on a guest network with client isolation. Devices that use a random ("private") Wi-Fi address need that turned off for this network. A MAC address is not a proof of identity: anyone on the LAN can claim one, so use HTTPS backends with a valid certificate where it matters. Often simpler: a DHCP reservation in the router, or the device's host name.
+- **Host settings** (`Gateway:TargetResolver`, normally left out): `Enabled` (false: no look-ups, targets keep their configured address), `GracePeriod` (default `00:10:00`), `SweepInterval` (`00:05:00`), `CheckInterval` (`00:00:05`) and `ProbeWait` (`00:00:01.500`).
+
 ### HTTPS and certificates
 
 ![Certificates page with three host names and their uploaded certificates](docs/images/admin-certificates.png)

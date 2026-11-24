@@ -31,11 +31,16 @@ internal static class Describe
     /// e.g. "http://10.0.0.5:8080", or "nas · web (http://192.168.1.20:5000)" for a target destination (just the label
     /// when <paramref name="targets"/> is not given or does not know it); a list for several destinations.
     /// </summary>
-    public static string Destinations(IEnumerable<ProxyDestinationOptions> destinations, IEnumerable<BackendTarget>? targets = null)
+    /// <param name="destinations">The destinations.</param>
+    /// <param name="targets">The configuration's targets, to show the address a label stands for.</param>
+    /// <param name="addresses">Where targets are right now (MAC addresses found); null: their configured addresses.</param>
+    public static string Destinations(
+        IEnumerable<ProxyDestinationOptions> destinations, IEnumerable<BackendTarget>? targets = null, ITargetAddressSource? addresses = null)
     {
         ArgumentNullException.ThrowIfNull(destinations);
 
         var known = targets?.ToList() ?? [];
+        addresses ??= ConfiguredTargetAddresses.Instance;
         return string.Join(", ", destinations.Select(d =>
         {
             if (!d.UsesTarget)
@@ -44,9 +49,14 @@ internal static class Describe
             }
 
             var label = TargetResolver.Label(d.Target, d.TargetPort);
-            return TargetResolver.Find(known, d.Target) is { } target && TargetResolver.FindPort(target, d.TargetPort) is { } port
-                ? $"{label} ({Address(port.Scheme, target.Address, port.Port)})"
-                : label;
+            if (TargetResolver.Find(known, d.Target) is not { } target || TargetResolver.FindPort(target, d.TargetPort) is not { } port)
+            {
+                return label;
+            }
+
+            return addresses.CurrentAddress(target) is { Length: > 0 } address
+                ? $"{label} ({Address(port.Scheme, address, port.Port)})"
+                : $"{label} (not found: no traffic)";
         }));
     }
 

@@ -18,7 +18,7 @@ internal static class GatewayConfigurationLoader
     public const string SectionName = "Gateway";
 
     /// <summary>Keys of the Gateway section that are not part of <see cref="GatewayConfiguration"/>.</summary>
-    private static readonly string[] HostKeys = ["Endpoints", "Storage", "EventLog", "Acme", "Ai"];
+    private static readonly string[] HostKeys = ["Endpoints", "Storage", "EventLog", "Acme", "Ai", "TargetResolver"];
 
     /// <summary>
     /// Fingerprint (SHA-256, hex) of the configuration part of the Gateway section, i.e. without the host-only
