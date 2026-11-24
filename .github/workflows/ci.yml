@@ -246,12 +246,18 @@ jobs:
             "$VERSION_CODENAME" "$VERSION_CODENAME" "$VERSION_CODENAME" | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.sources
           sudo dpkg --add-architecture arm64
           sudo apt-get update -qq
-          newest() { apt-cache search --names-only "^$1\$" | awk '{ print $1 }' | sort -V | tail -n 1; }
+          # OpenSSL and ICU: the arm64 build of the packages that serve the native x64 gateway on this runner.
+          owner() { dpkg -S "/usr/lib/x86_64-linux-gnu/$1" | head -n 1 | cut -d: -f1; }
+          ssl="$(owner 'libssl.so.*')" icu="$(owner 'libicuuc.so.*')"
+          # With the libraries they link to (OpenSSL may need compression libraries): dlopen fails without them.
+          packages="$( { printf '%s\n' libc6 libgcc-s1 libstdc++6 zlib1g "$ssl" "$icu"
+                         apt-cache depends "$ssl" "$icu" | awk '$1 == "Depends:" && $2 ~ /^lib/ { print $2 }'; } \
+                       | sed 's/:.*//' | sort -u | sed 's/$/:arm64/' | tr '\n' ' ')"
+          echo "OpenSSL package: $ssl, ICU package: $icu; downloading: $packages"
           # Not "apt-get install": a multiarch install needs the same version for both architectures, and the ports
           # mirror often lags behind, which would downgrade the runner's own libc6. Only the library files are needed.
           debs="$(mktemp -d)" sysroot="$(mktemp -d)"
-          (cd "$debs" && apt-get download -qq libc6:arm64 libgcc-s1:arm64 libstdc++6:arm64 \
-            "$(newest 'libssl3(t64)?'):arm64" "$(newest 'libicu[0-9]+'):arm64")
+          (cd "$debs" && apt-get download -qq $packages)
           for deb in "$debs"/*.deb; do dpkg-deb -x "$deb" "$sysroot"; done
           sudo mkdir -p /usr/lib/aarch64-linux-gnu
           for dir in "$sysroot/lib/aarch64-linux-gnu" "$sysroot/usr/lib/aarch64-linux-gnu"; do
@@ -259,7 +265,9 @@ jobs:
           done
           # The program loader at the path arm64 programs ask for (/lib is /usr/lib on current Ubuntu).
           [ -e /lib/ld-linux-aarch64.so.1 ] || sudo ln -s /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64.so.1
-          ls -l /lib/ld-linux-aarch64.so.1 /usr/lib/aarch64-linux-gnu/ | head -n 40
+          ls -l /lib/ld-linux-aarch64.so.1
+          ls /usr/lib/aarch64-linux-gnu/ | grep -E '^lib(ssl|crypto|icu|c|stdc\+\+|gcc_s|z)\.?' || true
+          ls /usr/lib/x86_64-linux-gnu/ | grep -E '^lib(ssl|crypto)\.so' || true
           # Emulation works outside the service: if this fails, the problem is QEMU or the libraries, not systemd.
           artifacts/linux/wafgateway-${{ matrix.rid }}/wafctl --help >/dev/null
           # The .NET runtime under QEMU: no write-xor-execute (very slow when emulated), more time to start.
