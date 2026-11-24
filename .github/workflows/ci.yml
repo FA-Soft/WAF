@@ -183,3 +183,108 @@ jobs:
           name: WafGateway-win-x64
           path: artifacts/windows/WafGateway-win-x64.zip
           retention-days: 7
+
+  linux-installer:
+    name: Linux installer (Ubuntu, systemd, ${{ matrix.rid }})
+    needs: build-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            emulated: false
+          # The Raspberry Pi build, run by systemd under QEMU emulation (no arm64 runner for this repository).
+          - rid: linux-arm64
+            emulated: true
+    continue-on-error: ${{ matrix.emulated }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-publish-${{ matrix.rid }}-${{ hashFiles('global.json', '**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-publish-${{ matrix.rid }}-
+
+      - name: Build the package
+        run: bash deploy/linux/build-package.sh ${{ matrix.rid }}
+
+      - name: Check the systemd unit
+        run: |
+          sed 's|@PREFIX@|/opt/wafgateway|g' deploy/linux/wafgateway.service > /tmp/wafgateway.service
+          systemd-analyze verify /tmp/wafgateway.service 2>&1 | grep -v 'Command /opt/wafgateway/WafGateway is not executable' || true
+
+      # Registers static QEMU interpreters in binfmt_misc (kernel-wide, not only for containers). Newer Ubuntu
+      # runner images no longer have the qemu-user-static apt package.
+      - name: Set up QEMU
+        if: matrix.emulated
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Run arm64 programs with QEMU
+        if: matrix.emulated
+        run: |
+          # The F flag loads the interpreter at registration, so it also works in the service's sandbox.
+          cat /proc/sys/fs/binfmt_misc/qemu-aarch64
+          grep -q '^flags:.*F' /proc/sys/fs/binfmt_misc/qemu-aarch64
+          # The gateway is a dynamically linked arm64 program: it needs the arm64 C library, OpenSSL and ICU, as on
+          # a Pi. Ubuntu's x64 mirrors have no arm64 packages; those come from ports.ubuntu.com.
+          . /etc/os-release
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ] && ! grep -q '^Architectures:' /etc/apt/sources.list.d/ubuntu.sources; then
+            sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          fi
+          printf 'Types: deb\nURIs: http://ports.ubuntu.com/ubuntu-ports\nSuites: %s %s-updates %s-security\nComponents: main universe\nArchitectures: arm64\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' \
+            "$VERSION_CODENAME" "$VERSION_CODENAME" "$VERSION_CODENAME" | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.sources
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update -qq
+          # OpenSSL and ICU: the arm64 build of the packages that serve the native x64 gateway on this runner.
+          owner() { dpkg -S "/usr/lib/x86_64-linux-gnu/$1" | head -n 1 | cut -d: -f1; }
+          ssl="$(owner 'libssl.so.*')" icu="$(owner 'libicuuc.so.*')"
+          # With the libraries they link to (OpenSSL may need compression libraries): dlopen fails without them.
+          packages="$( { printf '%s\n' libc6 libgcc-s1 libstdc++6 zlib1g "$ssl" "$icu"
+                         apt-cache depends "$ssl" "$icu" | awk '$1 == "Depends:" && $2 ~ /^lib/ { print $2 }'; } \
+                       | sed 's/:.*//' | sort -u | sed 's/$/:arm64/' | tr '\n' ' ')"
+          echo "OpenSSL package: $ssl, ICU package: $icu; downloading: $packages"
+          # Not "apt-get install": a multiarch install needs the same version for both architectures, and the ports
+          # mirror often lags behind, which would downgrade the runner's own libc6. Only the library files are needed.
+          debs="$(mktemp -d)" sysroot="$(mktemp -d)"
+          (cd "$debs" && apt-get download -qq $packages)
+          for deb in "$debs"/*.deb; do dpkg-deb -x "$deb" "$sysroot"; done
+          sudo mkdir -p /usr/lib/aarch64-linux-gnu
+          for dir in "$sysroot/lib/aarch64-linux-gnu" "$sysroot/usr/lib/aarch64-linux-gnu"; do
+            [ ! -d "$dir" ] || sudo cp -a "$dir/." /usr/lib/aarch64-linux-gnu/
+          done
+          # The program loader at the path arm64 programs ask for (/lib is /usr/lib on current Ubuntu).
+          [ -e /lib/ld-linux-aarch64.so.1 ] || sudo ln -s /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64.so.1
+          ls -l /lib/ld-linux-aarch64.so.1
+          ls /usr/lib/aarch64-linux-gnu/ | grep -E '^lib(ssl|crypto|icu|c|stdc\+\+|gcc_s|z)\.?' || true
+          ls /usr/lib/x86_64-linux-gnu/ | grep -E '^lib(ssl|crypto)\.so' || true
+          # Emulation works outside the service: if this fails, the problem is QEMU or the libraries, not systemd.
+          artifacts/linux/wafgateway-${{ matrix.rid }}/wafctl --help >/dev/null
+          # The .NET runtime under QEMU: no write-xor-execute (very slow when emulated), more time to start.
+          sudo mkdir -p /etc/systemd/system/wafgateway.service.d
+          printf '[Service]\nEnvironment=DOTNET_EnableWriteXorExecute=0\nTimeoutStartSec=600\n' | sudo tee /etc/systemd/system/wafgateway.service.d/qemu.conf
+          echo "WAFGATEWAY_ALLOW_FOREIGN_ARCH=1" >> "$GITHUB_ENV"
+
+      - name: Install, upgrade, uninstall
+        run: sudo --preserve-env=WAFGATEWAY_ALLOW_FOREIGN_ARCH bash deploy/linux/test-install.sh artifacts/linux/wafgateway-${{ matrix.rid }}
+
+      - name: Service log
+        if: always()
+        run: sudo journalctl -u wafgateway --no-pager -n 200 || true
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v7
+        with:
+          name: wafgateway-${{ matrix.rid }}
+          path: artifacts/linux/wafgateway-${{ matrix.rid }}.tar.gz
+          retention-days: 7
