@@ -25,9 +25,9 @@ jobs:
 
           echo "=== CLEANUP STARTED ==="
 
-          ARTIFACT_CUTOFF=$(date -u -d "3 days ago" +"%Y-%m-%dT%H:%M:%SZ")
+          ARTIFACT_CUTOFF=$(date -u -d "2 days ago" +"%Y-%m-%dT%H:%M:%SZ")
 
-          echo "Deleting artifacts older than 3 days..."
+          echo "Deleting artifacts older than 2 days..."
 
           gh api \
             "/repos/$REPO/actions/artifacts?per_page=100" \
@@ -44,9 +44,9 @@ jobs:
             fi
           done
 
-          CACHE_CUTOFF=$(date -d "3 days ago" +%s)
+          CACHE_CUTOFF=$(date -d "2 days ago" +%s)
 
-          echo "Deleting caches older than 3 days..."
+          echo "Deleting caches older than 2 days..."
 
           gh api \
             "/repos/$REPO/actions/caches?per_page=100" \
