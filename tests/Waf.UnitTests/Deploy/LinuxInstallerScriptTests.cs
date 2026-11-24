@@ -39,6 +39,7 @@ public sealed class LinuxInstallerScriptTests
     [InlineData("install.sh")]
     [InlineData("build-package.sh")]
     [InlineData("test-install.sh")]
+    [InlineData("smoke-test.sh")]
     public async Task The_scripts_parse_in_bash(string name)
     {
         var bash = Bash();
@@ -58,6 +59,7 @@ public sealed class LinuxInstallerScriptTests
     [InlineData("install.sh")]
     [InlineData("build-package.sh")]
     [InlineData("test-install.sh")]
+    [InlineData("smoke-test.sh")]
     [InlineData("wafgateway.service")]
     public void Linux_files_have_LF_line_endings(string name) =>
         Assert.DoesNotContain('\r', System.IO.File.ReadAllText(DeployFile(name)));

@@ -4,6 +4,7 @@
 #   sudo ./install.sh                 install or upgrade, and start the service
 #   sudo ./install.sh --ufw           also allow 80/tcp and 443/tcp in UFW
 #   sudo ./install.sh --no-start      install or upgrade without starting
+#   sudo ./install.sh --memory-max 512M   limit the service's memory (Raspberry Pi); --memory-max none removes it
 #   sudo ./install.sh --uninstall     remove the service and program files; keep data and configuration
 #   sudo ./install.sh --uninstall --purge   also delete data, configuration and the service user
 #
@@ -24,6 +25,8 @@ ACTION=install
 PURGE=0
 START=1
 UFW=0
+MEMORY_MAX=
+MEMORY_DROPIN=/etc/systemd/system/$SERVICE.service.d/memory.conf
 
 step() { printf '==> %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
@@ -31,7 +34,7 @@ warn() { printf 'WARNING: %s\n' "$*" >&2; }
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 usage() {
-    sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    awk 'NR > 1 && /^#/ { print; next } NR > 1 { exit }' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit "${1:-0}"
 }
 
@@ -42,6 +45,7 @@ while [ $# -gt 0 ]; do
         --purge) PURGE=1; shift ;;
         --no-start) START=0; shift ;;
         --ufw) UFW=1; shift ;;
+        --memory-max) MEMORY_MAX="${2:-}"; shift 2 || { printf 'Missing size after --memory-max\n\n' >&2; usage 2; } ;;
         -h|--help) usage 0 ;;
         *) printf 'Unknown option: %s\n\n' "$1" >&2; usage 2 ;;
     esac
@@ -50,6 +54,11 @@ done
 [ "$(id -u)" -eq 0 ] || fail "Run the installer as root: sudo $0 $*"
 command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] || fail "systemd is not running on this machine."
 [ "$PURGE" -eq 0 ] || [ "$ACTION" = uninstall ] || fail "--purge is only valid with --uninstall."
+case "$MEMORY_MAX" in
+    ''|none) ;;
+    *) printf '%s' "$MEMORY_MAX" | grep -Eq '^[1-9][0-9]*[KMG]?$' \
+        || fail "--memory-max takes a size such as 512M or 1G, or none (was: $MEMORY_MAX)." ;;
+esac
 
 # The effective Gateway:Endpoints:<name> (built-in appsettings.json, overridden by the one in /etc/wafgateway).
 endpoint_setting() {
@@ -186,6 +195,17 @@ note "Data: $DATA_DIR (only $SERVICE_USER). Settings: $CONFIG_DIR (read-only for
 # 5. The systemd unit.
 sed "s|@PREFIX@|$PREFIX|g" "$SOURCE/wafgateway.service" > "$UNIT_FILE"
 chmod 0644 "$UNIT_FILE"
+
+# Memory limit, in a drop-in so upgrades keep it. .NET reads the limit and keeps its heap below it (75%).
+if [ "$MEMORY_MAX" = none ]; then
+    rm -f "$MEMORY_DROPIN"
+    note "Memory limit removed."
+elif [ -n "$MEMORY_MAX" ]; then
+    mkdir -p "$(dirname "$MEMORY_DROPIN")"
+    printf '# Written by install.sh --memory-max.\n[Service]\nMemoryMax=%s\n' "$MEMORY_MAX" > "$MEMORY_DROPIN"
+    chmod 0644 "$MEMORY_DROPIN"
+    note "Memory limit: $MEMORY_MAX (change with --memory-max, remove with --memory-max none)."
+fi
 systemctl daemon-reload
 systemctl enable "$SERVICE" >/dev/null 2>&1
 note "Service $SERVICE enabled (starts at boot, restarts after a failure)."

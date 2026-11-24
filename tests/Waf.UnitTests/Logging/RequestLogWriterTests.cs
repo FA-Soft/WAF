@@ -25,6 +25,9 @@ public class RequestLogWriterTests
 
         public List<RequestLogEntry> Stored { get; } = [];
 
+        /// <summary>Transactions written.</summary>
+        public int Writes { get; private set; }
+
         public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public async Task WriteAsync(IReadOnlyList<RequestLogEntry> entries, CancellationToken cancellationToken)
@@ -39,12 +42,92 @@ public class RequestLogWriterTests
             lock (Stored)
             {
                 Stored.AddRange(entries);
+                Writes++;
             }
         }
     }
 
     private static RequestLogWriter Writer(IRequestLogStore store, int capacity = 100, int batch = 10) =>
-        new(store, new EventLogOptions { QueueCapacity = capacity, BatchSize = batch }, TimeProvider.System, NullLogger<RequestLogWriter>.Instance);
+        Writer(store, new EventLogOptions { QueueCapacity = capacity, BatchSize = batch });
+
+    private static RequestLogWriter Writer(IRequestLogStore store, EventLogOptions options) =>
+        new(store, options, TimeProvider.System, NullLogger<RequestLogWriter>.Instance);
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition() && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(20, Ct);
+        }
+    }
+
+    [Fact]
+    public async Task Without_forwarded_requests_only_entries_with_something_to_see_are_recorded()
+    {
+        var store = new TestStore();
+        store.Gate.SetResult();
+        using var writer = Writer(store, new EventLogOptions { LogForwardedRequests = false });
+        await writer.StartAsync(Ct);
+
+        writer.Write(Entry(1)); // forwarded, nothing happened: left out
+        writer.Write(Entry(2) with { Action = RequestAction.Blocked, Event = WafEventKind.RuleBlocked, StatusCode = 403 });
+        writer.Write(Entry(3) with { Event = WafEventKind.RuleDetected }); // forwarded, but a rule in detection mode matched
+        writer.Write(Entry(4) with { Action = RequestAction.NoRoute, StatusCode = 404 });
+        writer.Write(Entry(5) with { Action = RequestAction.RateLimited, StatusCode = 429 });
+        await writer.StopAsync(Ct);
+
+        Assert.Equal(["/page/2", "/page/3", "/page/4", "/page/5"], store.Stored.Select(e => e.Path));
+        Assert.Equal((4L, 0L), (writer.Statistics!.Written, writer.Statistics.Dropped));
+    }
+
+    [Fact]
+    public async Task A_flush_interval_collects_entries_into_one_transaction()
+    {
+        var store = new TestStore();
+        store.Gate.SetResult();
+        using var writer = Writer(store, new EventLogOptions { FlushIntervalSeconds = 1, BatchSize = 100 });
+        await writer.StartAsync(Ct);
+
+        for (var i = 0; i < 5; i++)
+        {
+            writer.Write(Entry(i));
+            await Task.Delay(50, Ct);
+        }
+
+        Assert.Equal(0, store.Writes); // still collecting
+
+        await WaitUntilAsync(() => store.Writes > 0);
+        Assert.Equal(1, store.Writes);
+        Assert.Equal(5, store.Stored.Count);
+        await writer.StopAsync(Ct);
+    }
+
+    [Fact]
+    public async Task A_full_batch_and_shutdown_do_not_wait_for_the_flush_interval()
+    {
+        var store = new TestStore();
+        store.Gate.SetResult();
+        using var writer = Writer(store, new EventLogOptions { FlushIntervalSeconds = EventLogOptions.MaxFlushIntervalSeconds, BatchSize = 10 });
+        await writer.StartAsync(Ct);
+
+        // A burst: written as soon as a batch is full, not after five minutes.
+        for (var i = 0; i < 10; i++)
+        {
+            writer.Write(Entry(i));
+        }
+
+        await WaitUntilAsync(() => store.Stored.Count == 10);
+        Assert.Equal(10, store.Stored.Count);
+
+        // Shutdown writes what is still collecting.
+        writer.Write(Entry(10));
+        var watch = Stopwatch.StartNew();
+        await writer.StopAsync(Ct);
+
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(10), $"Stopping took {watch.Elapsed}.");
+        Assert.Equal(11, store.Stored.Count);
+    }
 
     [Fact]
     public async Task Write_never_waits_for_a_stalled_database_and_counts_what_it_drops()
@@ -143,11 +226,13 @@ public class RequestLogWriterTests
     }
 
     [Theory]
-    [InlineData(99, 500, "QueueCapacity")]
-    [InlineData(10_000, 0, "BatchSize")]
-    public void Options_are_validated(int capacity, int batch, string expected)
+    [InlineData(99, 500, 0, "QueueCapacity")]
+    [InlineData(10_000, 0, 0, "BatchSize")]
+    [InlineData(10_000, 500, -1, "FlushIntervalSeconds")]
+    [InlineData(10_000, 500, 301, "FlushIntervalSeconds")]
+    public void Options_are_validated(int capacity, int batch, int flush, string expected)
     {
-        var errors = new EventLogOptions { QueueCapacity = capacity, BatchSize = batch }.Validate();
+        var errors = new EventLogOptions { QueueCapacity = capacity, BatchSize = batch, FlushIntervalSeconds = flush }.Validate();
 
         Assert.Contains(expected, Assert.Single(errors), StringComparison.Ordinal);
         Assert.Empty(new EventLogOptions().Validate());

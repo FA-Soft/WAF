@@ -1,0 +1,41 @@
+<Project>
+  <!--
+    Release build settings, shared by the publish profiles of Waf.Host and Waf.Cli
+    (src/<project>/Properties/PublishProfiles/<runtime>.pubxml):
+
+      dotnet publish src/Waf.Host -c Release -p:PublishProfile=linux-arm64
+
+    The package scripts (deploy/linux/build-package.sh, deploy/windows/Build-Package.ps1) and the release workflow use
+    the same profiles.
+  -->
+  <PropertyGroup>
+    <!-- Self-contained single file: no .NET runtime needs to be installed on the target machine. -->
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+
+    <!--
+      No ReadyToRun (precompiled code): it would start the gateway faster on a Raspberry Pi, but makes the file about
+      2.5 times as large (136 MB to 350 MB for linux-arm64). The framework itself is already precompiled.
+    -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+
+    <!-- English only: leaves out the translated messages of the framework and packages (the UI is English). -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+    <!-- No debug symbols in the package. -->
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+
+    <!-- Both programs in one folder, when published without -o. -->
+    <PublishDir>$(MSBuildThisFileDirectory)artifacts/publish/$(RuntimeIdentifier)/</PublishDir>
+  </PropertyGroup>
+
+  <!--
+    Raspberry Pi (and other small arm64 machines): the workstation garbage collector without a background collection
+    thread keeps memory use low and steady. The server collector, the ASP.NET Core default, trades memory for
+    throughput on machines with many cores. Override at run time with DOTNET_gcServer=1 and DOTNET_gcConcurrent=1.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm64'">
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+</Project>

@@ -50,7 +50,7 @@ Blocked requests get a generic message without rule names. The admin listener is
 | Windows Server (optionally with IIS on the same machine) | x64 |
 | Ubuntu Server on Raspberry Pi | linux-arm64 |
 
-Releases are self-contained single-file builds, so no .NET runtime needs to be installed. Linux x64 and Docker are optional, lower-priority targets.
+[Releases](https://github.com/FA-Soft/WAF/releases) are self-contained single-file builds, so no .NET runtime needs to be installed: `WafGateway-win-x64.zip`, `wafgateway-linux-arm64.tar.gz` (Raspberry Pi) and `wafgateway-linux-x64.tar.gz`, each with its installer. Linux x64 and Docker are optional, lower-priority targets.
 
 Built on **.NET 11**, ASP.NET Core 11, EF Core 11 (SQLite) and Blazor.
 
@@ -281,12 +281,16 @@ Logging never slows requests down: each entry goes into a bounded in-memory queu
 ```json
 "Gateway": {
   "EventLog": {
-    "Enabled": true,         // false: no request log at all
-    "QueueCapacity": 10000,  // entries that may wait to be written (100 to 1,000,000)
-    "BatchSize": 500         // entries per transaction
+    "Enabled": true,               // false: no request log at all
+    "QueueCapacity": 10000,        // entries that may wait to be written (100 to 1,000,000)
+    "BatchSize": 500,              // entries per transaction
+    "FlushIntervalSeconds": 0,     // 0 to 300: collect entries this long before writing (fewer, larger writes)
+    "LogForwardedRequests": true   // false: only blocked, rate-limited, fail-closed, unrouted and flagged requests
   }
 }
 ```
+
+`FlushIntervalSeconds` turns many small writes into one per interval, which matters on an SD card (see [Raspberry Pi tuning](#raspberry-pi-tuning)). A full batch is still written at once, so a burst never waits for the interval, and what is collecting is written on shutdown. With `LogForwardedRequests` off, a request that was simply forwarded is not recorded; one that matched a rule in detection mode (or any other WAF event) still is.
 
 The **request log** page shows it, newest first: filter by time range, what happened (blocked, would be blocked, forwarded, no route, server errors), client IP, host, route, rule or status, search free text, and page through older entries. Filters are part of the address, so a view can be bookmarked. "Live" adds new requests as they arrive (polling every 2 seconds; also with `?live=1` in the address). Paging works by entry id instead of offset and reads stop as soon as a page is full, so the viewer stays fast at any size: about 1 ms per page with a million entries, and about half a second for the worst case (a search without matches through all of them). From any entry you can turn what you see into configuration: **block its source** (added to your IP block list, or a new one), **allow a false positive** (an exclusion for the attack check that fired, limited to that path and route, or an Allow rule that runs just before the rule that blocked it), **create a route** for a host that had none, or **create a rule** for its path. Each action opens the normal editor pre-filled; nothing changes until you check it and save. Detection exclusions are listed on the Rules page, where they can be removed again. **Retention** keeps the log bounded by age and by size, set on the **Log retention** page (part of the configuration, so versioned and exported with it; defaults: 30 days, 1024 MB). A background job checks every minute: entries older than the age limit are removed, and when the log reaches 90% of its size limit the oldest entries are removed until it is at 80%. Space of removed entries is reused, so the file stops growing; when it is larger than the limit (for example after lowering it) the space is given back to the disk. Deletes run in small chunks, so request logging never waits long. The size limit holds as long as less than about a fifth of it is written per minute (for 1 GB: roughly a million requests a minute); an entry takes about 200–300 bytes.
 
@@ -300,7 +304,7 @@ The **request log** page shows it, newest first: filter by time range, what happ
 
 ### Windows
 
-Windows 10/11 and Windows Server 2016 or later, x64. Build the package (or take `WafGateway-win-x64.zip` from a CI run), extract it, and run the installer in Windows PowerShell **as Administrator**:
+Windows 10/11 and Windows Server 2016 or later, x64. Download `WafGateway-win-x64.zip` from the [releases](https://github.com/FA-Soft/WAF/releases) (or build the package yourself), extract it, and run the installer in Windows PowerShell **as Administrator**:
 
 ```powershell
 .\deploy\windows\Build-Package.ps1   # creates artifacts\windows\WafGateway-win-x64 (self-contained) and the zip
@@ -338,16 +342,17 @@ docker run --rm --isolation=hyperv -v "$PWD\artifacts\windows\WafGateway-win-x64
 
 ### Ubuntu / Raspberry Pi
 
-Ubuntu Server 22.04 or later (any distribution with systemd works the same way) on a Raspberry Pi with a 64-bit OS (`linux-arm64`) or on x64 (`linux-x64`). Build the package on any machine with the .NET SDK (it cross-compiles; on Windows use Git Bash), copy it over, and run the installer as root:
+Ubuntu Server 22.04 or later (any distribution with systemd works the same way) on a Raspberry Pi with a 64-bit OS (`linux-arm64`) or on x64 (`linux-x64`). Download `wafgateway-linux-arm64.tar.gz` from the [releases](https://github.com/FA-Soft/WAF/releases), or build the package on any machine with the .NET SDK (it cross-compiles; on Windows use Git Bash) and copy it over. Then run the installer as root:
 
 ```bash
-deploy/linux/build-package.sh linux-arm64      # artifacts/linux/wafgateway-linux-arm64.tar.gz (linux-x64 for PCs)
-scp artifacts/linux/wafgateway-linux-arm64.tar.gz pi@raspberrypi:
+curl -fLO https://github.com/FA-Soft/WAF/releases/latest/download/wafgateway-linux-arm64.tar.gz   # on the Pi
+# or: deploy/linux/build-package.sh linux-arm64 && scp artifacts/linux/wafgateway-linux-arm64.tar.gz pi@raspberrypi:
 
 tar -xzf wafgateway-linux-arm64.tar.gz && cd wafgateway-linux-arm64
 sudo bash install.sh               # install the service under a dedicated non-root user, and start it
 sudo bash install.sh --ufw         # also allow 80/tcp and 443/tcp in UFW
 sudo bash install.sh --no-start    # install or upgrade without starting
+sudo bash install.sh --memory-max 512M   # limit the service's memory (see Raspberry Pi tuning); none removes it
 sudo bash install.sh --uninstall   # remove the service and program; keep data and settings (--purge deletes them)
 ```
 
@@ -383,12 +388,56 @@ sudo ufw allow 8443/tcp            # only for a remote admin URL with a port of 
 
 Never open the local admin port 8900: it listens on `127.0.0.1` and `::1` only. To reach the admin UI of a Pi from your PC before remote access is set up, use an SSH tunnel: `ssh -L 8900:localhost:8900 pi@raspberrypi`, then open `http://localhost:8900`. If you enable UFW on a machine you reach over SSH, allow SSH first (`sudo ufw allow OpenSSH`).
 
-**Tests.** Every CI run builds the packages and runs `deploy/linux/test-install.sh` on Ubuntu with systemd: install, the service user, capabilities, hardening (`systemd-analyze security`), folders and permissions, `wafctl`, upgrade, uninstall and purge. `linux-x64` runs natively; the Raspberry Pi build (`linux-arm64`) runs the same test under QEMU emulation, because no arm64 runner is available to this repository. On a real Pi, copy `deploy/linux/test-install.sh` next to the extracted package and run it there (on a test Pi only: it installs and removes everything, data included):
+**Tests.** Every CI run builds the packages and runs `deploy/linux/test-install.sh` on Ubuntu with systemd: install, the service user, capabilities, hardening (`systemd-analyze security`), folders and permissions, `wafctl`, upgrade with a memory limit, uninstall and purge. `linux-x64` runs natively; the Raspberry Pi build (`linux-arm64`) runs the same test under QEMU emulation, because no arm64 runner is available to this repository. On a real Pi, copy `deploy/linux/test-install.sh` next to the extracted package and run it there (on a test Pi only: it installs and removes everything, data included):
 
 ```bash
 scp deploy/linux/test-install.sh pi@raspberrypi:
 sudo bash test-install.sh wafgateway-linux-arm64
 ```
+
+### Raspberry Pi tuning
+
+A Raspberry Pi has little memory and usually an SD card, which wears out from many small writes. The `linux-arm64` build and the installer are set up for that; the rest is a few settings.
+
+**Memory.** The `linux-arm64` build uses .NET's workstation garbage collector without a background collection thread (set in its publish profile; the x64 builds keep the server collector, which trades memory for throughput). To cap its memory, give the service a memory limit: .NET reads the limit and keeps its heap below 75% of it, collecting more often instead of growing.
+
+```bash
+sudo bash install.sh --memory-max 512M     # writes /etc/systemd/system/wafgateway.service.d/memory.conf (MemoryMax=512M)
+sudo bash install.sh --memory-max none     # removes the limit
+```
+
+Choose the limit from what the gateway really uses on your site: `systemctl status wafgateway` shows the current and peak memory (`Memory: ... (peak: ...)`). Leave room above the peak, because a limit that is too tight makes the kernel stop the service (systemd then restarts it). Upgrades keep the limit. To go back to the server collector (many cores, heavy traffic), add `Environment=DOTNET_gcServer=1` in `sudo systemctl edit wafgateway`.
+
+**Fewer writes: the request log.** Every request is one row in `events.db`. On a quiet site that means a small transaction per request; on a busy one, batches of up to 500. Two host settings in `/etc/wafgateway/appsettings.json` reduce the writes (see [Logging](#logging)):
+
+```json
+{
+  "Gateway": {
+    "EventLog": {
+      "FlushIntervalSeconds": 10,       // collect entries and write them together, at most every 10 seconds
+      "LogForwardedRequests": false     // record only blocked, rate-limited, unrouted and flagged requests
+    }
+  },
+  "Logging": { "LogLevel": { "Default": "Warning" } }   // less in the journal
+}
+```
+
+Restart the service after changing it (`sudo systemctl restart wafgateway`). With `FlushIntervalSeconds`, a power failure loses at most that many seconds of the request log; the configuration database is not affected. Lower the **Log retention** size (for example 200 MB) so the log stays small.
+
+**The journal.** The gateway's own messages go to the systemd journal, which Ubuntu keeps on disk. To keep it in memory only (lost at reboot), set `Storage=volatile` and, for example, `RuntimeMaxUse=50M` in `/etc/systemd/journald.conf`, then `sudo systemctl restart systemd-journald`.
+
+**An SSD for the data folder.** An SSD on USB 3 (or NVMe on a Pi 5) lasts far longer than an SD card and is faster. Best: boot the whole system from the SSD (Raspberry Pi Imager writes the image to it; Pi 4 and 5 boot from USB). Otherwise, mount an SSD partition on the data folder, so nothing else changes:
+
+```bash
+sudo systemctl stop wafgateway
+sudo mkfs.ext4 -L wafdata /dev/sda1                         # the SSD partition: this erases it
+sudo mkdir -p /mnt/wafdata && sudo mount /dev/sda1 /mnt/wafdata
+sudo cp -a /var/lib/wafgateway/. /mnt/wafdata/ && sudo umount /mnt/wafdata
+echo 'LABEL=wafdata /var/lib/wafgateway ext4 defaults,noatime 0 2' | sudo tee -a /etc/fstab
+sudo mount /var/lib/wafgateway && sudo systemctl start wafgateway
+```
+
+Keep the mount point `/var/lib/wafgateway`: the service may only write there (`ProtectSystem=strict`), and systemd sets its owner and mode at every start.
 
 **Data locations**
 
@@ -403,7 +452,7 @@ A configuration only becomes active after it passed every check (validation, bui
 
 **Changes without a restart:** every accepted change is applied immediately. Swaps are atomic per request: every request is judged by the rules of the same configuration whose routes routed it, and requests in flight finish on the configuration they started with. A change identical to the running configuration is ignored, so rate-limit counters are kept. On a fresh install the folder (mode `0750` on Linux) and the database are created and migrated automatically; if that fails, the gateway stops with a message naming the folder. An optional `appsettings.json` in the configuration folder overrides the built-in settings (environment variables and command-line arguments still take precedence), so your settings survive upgrades. Both folders can be changed with `Gateway:Storage:DataDirectory` and `Gateway:Storage:ConfigDirectory`; in Development the data folder is `src/Waf.Host/.data` (git-ignored).
 
-On a Raspberry Pi, store the data folder on an SSD where possible to reduce SD-card wear.
+On a Raspberry Pi, store the data folder on an SSD where possible to reduce SD-card wear (see [Raspberry Pi tuning](#raspberry-pi-tuning)).
 
 ## Recovery tool
 
@@ -442,8 +491,9 @@ src/Waf.Web       Blazor UI, identity, log viewer, sample library
 src/Waf.Host      Startup, Kestrel, service hosting
 src/Waf.Cli       wafctl
 tests/            Unit, integration and benchmark projects
-deploy/windows    Install.ps1 (service, firewall, IIS), Build-Package.ps1, Test-Install.ps1
-deploy/linux      install.sh, wafgateway.service (systemd), build-package.sh, test-install.sh
+deploy/windows    Install.ps1 (service, firewall, IIS), Build-Package.ps1, Test-Install.ps1, Smoke-Test.ps1
+deploy/linux      install.sh, wafgateway.service (systemd), build-package.sh, test-install.sh, smoke-test.sh
+Publish.props     Release build settings for the publish profiles
 ```
 
 ## Building from source
@@ -469,7 +519,19 @@ Pebble validates HTTP-01 by connecting from the container to the gateway's HTTP 
 
 Database migrations use the repository-local `dotnet-ef` tool (`dotnet tool restore`, then e.g. `dotnet dotnet-ef migrations add <Name> --project src/Waf.Data --startup-project src/Waf.Data`). A unit test fails when the EF model changes without a migration.
 
-GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds and tests every push to `main` and every pull request on Windows and Ubuntu, then publishes self-contained single-file builds for `win-x64` and `linux-arm64` as a smoke check. Each run's summary page shows a test report per OS (passed/failed/skipped per test assembly, failure details and code coverage), and failed tests appear as annotations. Test results (TRX, Cobertura coverage) and the builds are also uploaded as workflow artifacts.
+**Publish profiles.** Release builds use the publish profiles in `src/Waf.Host/Properties/PublishProfiles` and `src/Waf.Cli/Properties/PublishProfiles` (`win-x64`, `linux-arm64`, `linux-x64`), with the shared settings in [`Publish.props`](Publish.props): self-contained, single file, English resources only, no debug symbols, and for `linux-arm64` the low-memory garbage collector. ReadyToRun (precompiled code) is off: it would start the gateway faster, but makes the `linux-arm64` file 2.5 times as large (136 MB to 350 MB). The package scripts use the profiles; to publish one program by hand:
+
+```bash
+dotnet publish src/Waf.Host -c Release -p:PublishProfile=linux-arm64   # artifacts/publish/linux-arm64
+```
+
+**Releases.** Pushing a version tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml): it builds the three packages with that version, starts each one once on a machine without .NET (`deploy/windows/Smoke-Test.ps1` with the runner's .NET hidden; `deploy/linux/smoke-test.sh` in a plain Ubuntu 24.04 container, `linux-arm64` under QEMU), and attaches the packages and `SHA256SUMS.txt` to a GitHub release with generated notes. A tag with a hyphen becomes a pre-release. Running the workflow by hand builds and tests without releasing.
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds and tests every push to `main` and every pull request on Windows and Ubuntu, then publishes self-contained single-file builds for `win-x64` and `linux-arm64` with the publish profiles as a smoke check. Each run's summary page shows a test report per OS (passed/failed/skipped per test assembly, failure details and code coverage), and failed tests appear as annotations. Test results (TRX, Cobertura coverage) and the builds are also uploaded as workflow artifacts.
 
 ## Roadmap
 

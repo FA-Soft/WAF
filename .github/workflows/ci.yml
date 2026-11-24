@@ -106,12 +106,12 @@ jobs:
           key: nuget-publish-${{ matrix.rid }}-${{ hashFiles('global.json', '**/Directory.Packages.props', '**/*.csproj') }}
           restore-keys: nuget-publish-${{ matrix.rid }}-
 
+      # The release publish profiles (Publish.props): self-contained, single file, Raspberry Pi tuning.
       - name: Publish self-contained single files
         run: |
           for project in Waf.Host Waf.Cli; do
             dotnet publish "src/$project/$project.csproj" -c "$CONFIGURATION" \
-              -r "${{ matrix.rid }}" --self-contained \
-              -p:PublishSingleFile=true \
+              -r "${{ matrix.rid }}" -p:PublishProfile=${{ matrix.rid }} \
               -o "publish/${{ matrix.rid }}"
           done
 
