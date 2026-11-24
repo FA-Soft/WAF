@@ -34,7 +34,7 @@ public static class ConfigurationProposal
     public const int MaxSummaryLength = 2000;
 
     private static readonly string[] Lists =
-        [nameof(GatewayConfiguration.Routes), nameof(GatewayConfiguration.Rules), nameof(GatewayConfiguration.RateLimits)];
+        [nameof(GatewayConfiguration.Targets), nameof(GatewayConfiguration.Routes), nameof(GatewayConfiguration.Rules), nameof(GatewayConfiguration.RateLimits)];
 
     private static readonly JsonDocumentOptions StrictJson = new() { CommentHandling = JsonCommentHandling.Disallow, AllowTrailingCommas = false, AllowDuplicateProperties = false };
 
@@ -54,7 +54,7 @@ public static class ConfigurationProposal
             },
             "configuration": {
               "type": "string",
-              "description": "A JSON object with only the sections that change (Routes, Rules, RateLimits, Settings), serialized as a string; an empty string when no change is proposed."
+              "description": "A JSON object with only the sections that change (Targets, Routes, Rules, RateLimits, Settings), serialized as a string; an empty string when no change is proposed."
             }
           }
         }
@@ -75,8 +75,8 @@ public static class ConfigurationProposal
           gateway's configuration), and explain why in "summary".
 
         Rules for "configuration":
-        - Allowed top-level properties: "Routes", "Rules", "RateLimits" and "Settings". Leave out sections you do not change.
-        - "Routes", "Rules" and "RateLimits" are each the complete new list for that section: copy the items you do not
+        - Allowed top-level properties: "Targets", "Routes", "Rules", "RateLimits" and "Settings". Leave out sections you do not change.
+        - "Targets", "Routes", "Rules" and "RateLimits" are each the complete new list for that section: copy the items you do not
           change exactly as they are, in the same order, and keep the names of existing items. Give new items short,
           lowercase names with hyphens.
         - "Settings" may only contain {{string.Join(", ", ConfigurationSummary.AllowedSettings.Select(s => $"\"{s}\""))}}; each one
@@ -202,7 +202,7 @@ public static class ConfigurationProposal
             }
             else
             {
-                errors.Add($"The proposal changes '{name}', which the assistant may not change. It may only change routes, rules, rate limits and the settings {string.Join(", ", ChangeableSettings)}.");
+                errors.Add($"The proposal changes '{name}', which the assistant may not change. It may only change targets, routes, rules, rate limits and the settings {string.Join(", ", ChangeableSettings)}.");
             }
         }
 

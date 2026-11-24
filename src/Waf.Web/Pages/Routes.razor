@@ -54,7 +54,7 @@ else if (_active is not null)
                             <div class="muted">@(route.Https.RedirectHttp && route.Https.Hsts ? "HTTPS only, with HSTS" : route.Https.RedirectHttp ? "HTTPS only" : "HSTS on HTTPS")</div>
                         }
                     </td>
-                    <td>@Describe.Destinations(route.Destinations)</td>
+                    <td>@Describe.Destinations(route.Destinations, _active.Configuration.Targets)</td>
                     <td>
                         @if (route.Enabled)
                         {

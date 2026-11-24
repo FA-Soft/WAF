@@ -116,6 +116,12 @@ public static class ProxyRouteValidator
             var destination = destinations[i];
             var where = destinations.Count == 1 ? label : $"{label}, destination #{i + 1}";
 
+            // A target destination before resolution: its target and port label are checked by TargetValidator.
+            if (destination.UsesTarget && string.IsNullOrEmpty(destination.Address) && destination.Port == 0)
+            {
+                continue;
+            }
+
             if (!string.Equals(destination.Scheme, "http", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(destination.Scheme, "https", StringComparison.OrdinalIgnoreCase))
             {

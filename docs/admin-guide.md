@@ -93,6 +93,21 @@ dropped log entries, two-factor sign-in still off, or an `appsettings.json` that
 
 ## 4. Put a site behind the gateway
 
+### Name your machines (targets)
+
+Optional, but handy as soon as a machine serves more than one site, or its address might change. On **Targets →
+Add a target**:
+
+1. Give the machine a name, for example `nas`, and its address, for example `192.168.1.20`.
+2. Give each port a label: `web` for port 5000, `admin` for port 5001. Tick **HTTPS** when the machine answers with
+   TLS on that port.
+
+![Targets](images/admin-targets.png)
+
+Routes can then forward to "nas · web" instead of an address: pick it under **Add a target** in the route editor, or
+type `nas/web` in the backends. When the machine gets another address, change it once on the Targets page, and every
+route that uses it follows at once. A target that routes still use cannot be deleted; the page tells you which routes.
+
 ### Add a route
 
 A route says which requests go to which backend. **Routes → Add a route**:

@@ -1,4 +1,5 @@
 using FASoft.Waf.Core.Configuration;
+using FASoft.Waf.Core.Routing;
 using FASoft.Waf.Core.Tls;
 using FASoft.Waf.Data;
 using FASoft.Waf.Engine;
@@ -110,7 +111,7 @@ internal sealed partial class GatewayConfigurationService(
                 return RestoreResult.Failed([$"The WAF engine could not be built: {ex.Message}"]);
             }
 
-            var (prepared, routeErrors) = await routes.PrepareAsync(active.Routes, tag).ConfigureAwait(false);
+            var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(active), tag).ConfigureAwait(false);
             if (prepared is null)
             {
                 return RestoreResult.Failed(routeErrors);
@@ -250,7 +251,7 @@ internal sealed partial class GatewayConfigurationService(
                 return false;
             }
 
-            var (prepared, routeErrors) = await routes.PrepareAsync(stored.Configuration.Routes, tag).ConfigureAwait(false);
+            var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(stored.Configuration), tag).ConfigureAwait(false);
             if (prepared is null)
             {
                 _failedExternalTag = tag;
@@ -344,7 +345,7 @@ internal sealed partial class GatewayConfigurationService(
             return ActivationResult.Failed([$"The WAF engine could not be built: {ex.Message}"]);
         }
 
-        var (prepared, routeErrors) = await routes.PrepareAsync(candidate.Routes, tag).ConfigureAwait(false);
+        var (prepared, routeErrors) = await routes.PrepareAsync(TargetResolver.Resolve(candidate), tag).ConfigureAwait(false);
         if (prepared is null)
         {
             return ActivationResult.Failed(routeErrors);

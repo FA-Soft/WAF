@@ -1,0 +1,72 @@
+@page "/targets"
+@inject IGatewayConfigurationService Configurations
+
+<PageTitle>Targets · @ProductInfo.Name</PageTitle>
+
+<h1>
+    Targets
+    <HelpTip Title="Targets">
+        <p>A target is a machine behind the gateway, with a name and labelled ports: for example <em>nas</em> at 192.168.1.20, with <em>web</em> on port 5000 and <em>admin</em> on port 5001. Routes can forward to "nas · web" instead of an address.</p>
+        <p>When the machine gets another address, change it here once: every route that uses the target follows at once.</p>
+    </HelpTip>
+</h1>
+
+@if (!string.IsNullOrEmpty(Saved))
+{
+    <div class="alert alert-ok" role="status">@Saved</div>
+}
+
+<p class="actions"><a class="button" href="targets/new">Add a target</a></p>
+
+@if (_active is not null && _active.Configuration.Targets.Count == 0)
+{
+    <p>No targets yet. Routes forward to addresses such as http://10.0.0.5:8080. Add a target to give a machine and its ports a name that routes can use.</p>
+}
+else if (_active is not null)
+{
+    <table>
+        <thead>
+            <tr><th scope="col">Name</th><th scope="col">Address</th><th scope="col">Ports</th><th scope="col">Used by</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var target in _active.Configuration.Targets)
+            {
+                var routes = TargetEditing.RouteNames(_active.Configuration, target.Name);
+                <tr>
+                    <td>
+                        @target.Name
+                        @if (!string.IsNullOrEmpty(target.Description))
+                        {
+                            <div class="muted">@target.Description</div>
+                        }
+                    </td>
+                    <td>@target.Address</td>
+                    <td>
+                        <ul class="plain-list">
+                            @foreach (var port in target.Ports)
+                            {
+                                <li><strong>@port.Name</strong> @Describe.Address(port.Scheme, target.Address, port.Port)</li>
+                            }
+                        </ul>
+                    </td>
+                    <td>@(routes.Count == 0 ? "No routes" : string.Join(", ", routes))</td>
+                    <td><div class="row-actions">
+                        <a href="@($"targets/{Uri.EscapeDataString(target.Name)}/edit")">Edit</a>
+                        <a href="@($"targets/{Uri.EscapeDataString(target.Name)}/delete")">Delete</a>
+                    </div></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private StoredConfiguration? _active;
+
+    /// <summary>Confirmation shown after a change, e.g. "Target 'nas' saved (version 4)."</summary>
+    [SupplyParameterFromQuery]
+    public string? Saved { get; set; }
+
+    protected override async Task OnInitializedAsync() =>
+        _active = await Configurations.GetActiveAsync(CancellationToken.None);
+}

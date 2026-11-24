@@ -180,11 +180,28 @@ public static partial class GatewayConfigurationJson
             PreferredObjectCreationHandling = JsonObjectCreationHandling.Populate,
             RespectNullableAnnotations = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { OmitEmptyTargets } },
         };
         options.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
         options.MakeReadOnly();
         return options;
+    }
+
+    /// <summary>
+    /// <c>Targets</c> is written only when there are targets: configurations from before targets existed keep
+    /// byte-identical JSON, so their stored hashes still match after an upgrade.
+    /// </summary>
+    private static void OmitEmptyTargets(JsonTypeInfo typeInfo)
+    {
+        if (typeInfo.Type != typeof(GatewayConfiguration))
+        {
+            return;
+        }
+
+        foreach (var property in typeInfo.Properties.Where(p => p.Name == nameof(GatewayConfiguration.Targets)))
+        {
+            property.ShouldSerialize = (_, value) => value is ICollection<Routing.BackendTarget> { Count: > 0 };
+        }
     }
 
     /// <summary>Turns a serializer exception into a plain-language message with the JSON location.</summary>

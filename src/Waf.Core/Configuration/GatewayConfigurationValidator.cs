@@ -26,6 +26,7 @@ public static class GatewayConfigurationValidator
 
         ValidateSettings(configuration.Settings, errors);
         errors.AddRange(ProxyRouteValidator.Validate([.. configuration.Routes]));
+        TargetResolver.Validate(configuration, errors);
 
         var routeNames = new HashSet<string>(configuration.Routes.Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
         ValidateRules(configuration.Rules, routeNames, errors);

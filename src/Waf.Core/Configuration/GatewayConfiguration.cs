@@ -23,6 +23,12 @@ public sealed class GatewayConfiguration
     /// <summary>Global settings.</summary>
     public GatewaySettings Settings { get; set; } = new();
 
+    /// <summary>
+    /// Named backend machines with labelled ports, which route destinations can use instead of an address. Left out
+    /// of the JSON while empty, so configurations without targets keep their exact JSON (and hash).
+    /// </summary>
+    public IList<BackendTarget> Targets { get; } = [];
+
     /// <summary>Routes: which requests go to which backends.</summary>
     public IList<ProxyRouteOptions> Routes { get; } = [];
 

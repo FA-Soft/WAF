@@ -19,13 +19,14 @@ public enum ConfigurationSection
     Rule,
     RateLimit,
     Certificate,
+    Target,
 }
 
 /// <summary>One difference between two configurations.</summary>
 /// <param name="Kind">Added, changed or removed.</param>
 /// <param name="Section">Where the item lives.</param>
 /// <param name="Name">
-/// The item's name (route, rule, rate limit) or host name (certificate); for <see cref="ConfigurationSection.Settings"/>
+/// The item's name (target, route, rule, rate limit) or host name (certificate); for <see cref="ConfigurationSection.Settings"/>
 /// the path of the setting, e.g. <c>AttackDetection.SqlInjection</c>.
 /// </param>
 /// <param name="Before">The old value as JSON; null when added.</param>
@@ -33,7 +34,7 @@ public enum ConfigurationSection
 public sealed record ConfigurationChange(ChangeKind Kind, ConfigurationSection Section, string Name, string? Before, string? After);
 
 /// <summary>
-/// Compares two configurations item by item: routes, rules, rate limits and certificates by name, settings per
+/// Compares two configurations item by item: targets, routes, rules, rate limits and certificates by name, settings per
 /// value. Used to show what a preset, an import or the AI assistant would change before it is applied.
 /// </summary>
 public static class ConfigurationDiff
@@ -46,6 +47,7 @@ public static class ConfigurationDiff
 
         var changes = new List<ConfigurationChange>();
         CompareSettings(Node(before.Settings), Node(after.Settings), string.Empty, changes);
+        CompareItems(ConfigurationSection.Target, before.Targets, after.Targets, t => t.Name, changes);
         CompareItems(ConfigurationSection.Route, before.Routes, after.Routes, r => r.Name, changes);
         CompareItems(ConfigurationSection.Rule, before.Rules, after.Rules, r => r.Name, changes);
         CompareItems(ConfigurationSection.RateLimit, before.RateLimits, after.RateLimits, l => l.Name, changes);

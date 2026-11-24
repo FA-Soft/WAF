@@ -72,17 +72,30 @@ public sealed class RouteMatchOptions
     public IList<string> Methods { get; } = [];
 }
 
-/// <summary>A backend address.</summary>
+/// <summary>
+/// A backend: either an address (<see cref="Scheme"/>, <see cref="Address"/>, <see cref="Port"/>), or a labelled port
+/// of a named target (<see cref="Target"/> and <see cref="TargetPort"/>; then address and port stay empty).
+/// </summary>
 public sealed class ProxyDestinationOptions
 {
-    /// <summary><c>http</c> (default) or <c>https</c>.</summary>
+    /// <summary><c>http</c> (default) or <c>https</c>. With a target, the target port's scheme is used.</summary>
     public string Scheme { get; set; } = "http";
 
-    /// <summary>IP address (e.g. <c>10.0.0.5</c>, <c>fd00::10</c>) or host name.</summary>
+    /// <summary>IP address (e.g. <c>10.0.0.5</c>, <c>fd00::10</c>) or host name. Empty with a target.</summary>
     public string Address { get; set; } = string.Empty;
 
-    /// <summary>Backend port.</summary>
+    /// <summary>Backend port. 0 with a target.</summary>
     public int Port { get; set; }
+
+    /// <summary>Name of a target in <c>Targets</c>, e.g. <c>nas</c>; together with <see cref="TargetPort"/>.</summary>
+    public string? Target { get; set; }
+
+    /// <summary>Label of one of the target's ports, e.g. <c>web</c>.</summary>
+    public string? TargetPort { get; set; }
+
+    /// <summary>True when this destination names a target instead of an address. Not part of the configuration JSON.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool UsesTarget => !string.IsNullOrEmpty(Target) || !string.IsNullOrEmpty(TargetPort);
 }
 
 /// <summary>Active health checks: the gateway probes each backend periodically.</summary>

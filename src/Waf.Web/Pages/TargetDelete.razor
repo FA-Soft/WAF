@@ -1,0 +1,103 @@
+@page "/targets/{TargetName}/delete"
+@inject IGatewayConfigurationService Configurations
+@inject NavigationManager Navigation
+
+<PageTitle>Delete target @TargetName · @ProductInfo.Name</PageTitle>
+
+<p><a href="targets">← Targets</a></p>
+<h1>Delete target '@TargetName'?</h1>
+
+@if (_target is null)
+{
+    <div class="alert alert-danger" role="alert">Target '@TargetName' does not exist (any more). <a href="targets">Back to the targets</a>.</div>
+}
+else
+{
+    <dl class="details">
+        <dt>Address</dt><dd>@_target.Address</dd>
+        <dt>Ports</dt><dd>@string.Join(", ", _target.Ports.Select(p => $"{p.Name} {Describe.Address(p.Scheme, _target.Address, p.Port)}"))</dd>
+    </dl>
+
+    @if (_references.Count > 0)
+    {
+        <div class="alert alert-warning" role="alert">
+            <strong>This target cannot be deleted yet</strong>, because it is used by:
+            <ul>
+                @foreach (var reference in _references)
+                {
+                    <li>@reference</li>
+                }
+            </ul>
+            <p>Change these routes to another target or address first, or delete them.</p>
+        </div>
+    }
+    else
+    {
+        @if (_errors.Count > 0)
+        {
+            <div class="alert alert-danger" role="alert">
+                <strong>The target was not deleted.</strong>
+                <ul>
+                    @foreach (var error in _errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <p>No route uses it. The deletion is stored as a new configuration version, so it can be undone by restoring the previous version.</p>
+        <form method="post" @formname="target-delete" @onsubmit="DeleteAsync" data-enhance class="actions">
+            <AntiforgeryToken />
+            <input type="hidden" name="BaseVersion" value="@_baseVersion" />
+            <button type="submit" class="button button-danger">Delete target</button>
+            <a class="button button-secondary" href="targets">Cancel</a>
+        </form>
+    }
+}
+
+@code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    private BackendTarget? _target;
+    private IReadOnlyList<string> _references = [];
+    private IReadOnlyList<string> _errors = [];
+    private long _baseVersion;
+
+    [Parameter]
+    public string TargetName { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "target-delete")]
+    private long? BaseVersion { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _baseVersion = active?.Version ?? 0;
+        _target = active is null ? null : TargetResolver.Find(active.Configuration.Targets, TargetName);
+        _references = active is null || _target is null ? [] : TargetEditing.References(active.Configuration, _target.Name);
+    }
+
+    private async Task DeleteAsync()
+    {
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        var configuration = ConfigurationEditing.Clone(active!.Configuration);
+        var target = TargetResolver.Find(configuration.Targets, TargetName);
+        if (target is null)
+        {
+            _errors = [$"Target '{TargetName}' no longer exists."];
+            return;
+        }
+
+        configuration.Targets.Remove(target);
+        var result = await Configurations.ActivateIfCurrentAsync(BaseVersion ?? active.Version, configuration, AdminActor.From(HttpContext), $"Target '{target.Name}' deleted.", CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _errors = result.Errors;
+            return;
+        }
+
+        Navigation.NavigateTo($"targets?saved={Uri.EscapeDataString($"Target '{target.Name}' deleted (version {result.Version!.Version}).")}");
+    }
+}

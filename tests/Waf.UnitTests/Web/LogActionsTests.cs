@@ -84,7 +84,7 @@ public class LogActionsTests
         // The backend is left for the user: saving without one is refused by the form.
         var results = new List<ValidationResult>();
         Assert.False(Validator.TryValidateObject(form, new ValidationContext(form), results, validateAllProperties: true));
-        Assert.Contains(results, r => r.ErrorMessage!.StartsWith("Enter at least one backend address", StringComparison.Ordinal));
+        Assert.Contains(results, r => r.ErrorMessage!.StartsWith("Enter at least one backend", StringComparison.Ordinal));
     }
 
     [Fact]

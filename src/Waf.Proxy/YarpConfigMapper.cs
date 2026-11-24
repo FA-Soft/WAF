@@ -22,6 +22,21 @@ public static class YarpConfigMapper
     /// <summary>Route metadata key: "true" when HTTPS responses carry the HSTS header.</summary>
     public const string HstsMetadataKey = "WafHsts";
 
+    /// <summary>Destination metadata key: the target label ("nas · web") of a destination that uses a target.</summary>
+    public const string TargetMetadataKey = "WafTarget";
+
+    /// <summary>
+    /// How a destination appears in the request log: its address, preceded by the target label when it has one
+    /// (<c>nas · web (http://192.168.1.20:5000/)</c>).
+    /// </summary>
+    public static string DescribeDestination(DestinationConfig destination)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        return destination.Metadata?.TryGetValue(TargetMetadataKey, out var label) == true
+            ? $"{label} ({destination.Address})"
+            : destination.Address;
+    }
+
     /// <param name="routes">The routes to translate; disabled routes are left out.</param>
     /// <param name="configTag">Tag of the configuration the routes belong to; stored in each route's metadata.</param>
     public static (IReadOnlyList<RouteConfig> Routes, IReadOnlyList<ClusterConfig> Clusters) Map(
@@ -109,8 +124,15 @@ public static class YarpConfigMapper
         var destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < route.Destinations.Count; i++)
         {
-            destinations[string.Create(CultureInfo.InvariantCulture, $"{route.Name}-{i + 1}")] =
-                new DestinationConfig { Address = ToDestinationUrl(route.Destinations[i]) };
+            var destination = route.Destinations[i];
+            destinations[string.Create(CultureInfo.InvariantCulture, $"{route.Name}-{i + 1}")] = new DestinationConfig
+            {
+                Address = ToDestinationUrl(destination),
+                // "nas · web" for a target destination, shown in the request log next to the address.
+                Metadata = destination.UsesTarget
+                    ? new Dictionary<string, string> { [TargetMetadataKey] = TargetResolver.Label(destination.Target, destination.TargetPort) }
+                    : null,
+            };
         }
 
         var health = route.HealthCheck;
