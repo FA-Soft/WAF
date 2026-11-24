@@ -98,11 +98,11 @@ else
             </h2>
             @if (RequestLog.Statistics is { } log)
             {
-                <p class="metric">@log.Written.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</p>
+                <p class="metric">@log.Written.ToString("N0", CultureInfo.CurrentCulture)</p>
                 <p class="muted">written since start@(log.Queued > 0 ? $", {log.Queued:N0} waiting" : string.Empty)</p>
                 @if (log.Dropped > 0)
                 {
-                    <p><span class="badge badge-warning">@log.Dropped.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) dropped</span></p>
+                    <p><span class="badge badge-warning">@log.Dropped.ToString("N0", CultureInfo.CurrentCulture) dropped</span></p>
                 }
                 @if (log.LastError is not null)
                 {
@@ -159,9 +159,9 @@ else
                     {
                         <tr>
                             <td>@route.RouteName</td>
-                            <td>@route.NoBackend.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</td>
-                            <td>@route.BackendError.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</td>
-                            <td>@route.Timeout.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@route.NoBackend.ToString("N0", CultureInfo.CurrentCulture)</td>
+                            <td>@route.BackendError.ToString("N0", CultureInfo.CurrentCulture)</td>
+                            <td>@route.Timeout.ToString("N0", CultureInfo.CurrentCulture)</td>
                             <td>@Describe.Time(route.Last)</td>
                         </tr>
                     }

@@ -40,7 +40,7 @@ else
             <dt>Status</dt>
             <dd><span class="badge @AiProposalText.Badge(_proposal.Status)">@AiProposalText.Status(_proposal.Status)</span></dd>
             <dt>Model</dt>
-            <dd><code>@_proposal.Model</code>, @_proposal.InputTokens.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) tokens in, @_proposal.OutputTokens.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) out</dd>
+            <dd><code>@_proposal.Model</code>, @_proposal.InputTokens.ToString("N0", CultureInfo.CurrentCulture) tokens in, @_proposal.OutputTokens.ToString("N0", CultureInfo.CurrentCulture) out</dd>
         </dl>
         @if (!string.IsNullOrEmpty(_proposal.Summary))
         {

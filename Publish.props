@@ -19,8 +19,11 @@
     -->
     <PublishReadyToRun>false</PublishReadyToRun>
 
-    <!-- English only: leaves out the translated messages of the framework and packages (the UI is English). -->
-    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!--
+      The admin UI's languages: English, Dutch, French and German (the gateway's own translations, and those of the
+      framework and packages). Other languages are left out. Single-file packages embed them.
+    -->
+    <SatelliteResourceLanguages>en;nl;fr;de</SatelliteResourceLanguages>
 
     <!-- No debug symbols in the package. -->
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>

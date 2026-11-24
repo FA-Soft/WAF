@@ -64,6 +64,10 @@ internal static class AdminPipeline
         admin.UseRouting();
         admin.UseAuthentication();
 
+        // The language of the UI (texts, numbers): the account's choice, else the browser's, else English. After
+        // authentication, which provides the account's choice. Sign-in pages follow the browser.
+        admin.UseRequestLocalization(AdminLanguage.LocalizationOptions());
+
         // Remote, not signed in: only the sign-in pages; everything else is "not found" (no redirect that reveals the UI).
         admin.UseWhen(RemoteAdminRequest.IsRemote, branch => branch.UseMiddleware<RemoteAdminSignInGateMiddleware>());
         admin.UseAuthorization();
@@ -74,6 +78,7 @@ internal static class AdminPipeline
             endpoints.MapHealthChecks("/healthz");
             endpoints.MapAdminAccountEndpoints();
             endpoints.MapAdminThemeEndpoint();
+            endpoints.MapAdminLanguageEndpoint();
 
             // Everything else needs a signed-in admin; only the sign-in and first-run pages are marked [AllowAnonymous].
             var signedIn = endpoints.MapGroup(string.Empty).RequireAuthorization();

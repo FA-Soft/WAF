@@ -84,6 +84,8 @@ internal static partial class GatewayApplication
         builder.Services.AddHostedService<CertificateRefresher>();
         builder.Services.AddSingleton<ListenerClassifier>();
         builder.Services.AddRazorComponents();
+        // Admin UI texts in English, Dutch, French and German (Waf.Web/Resources); see AdminLanguage.
+        builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
         builder.Services.AddAdminIdentity(storagePaths);
         AddDataProtection(builder, storagePaths);
         builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
