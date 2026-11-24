@@ -15,6 +15,16 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
 
+    <!-- Static security analysis: every security rule of the .NET analyzers (CA2100, CA3xxx, CA5xxx), as errors. -->
+    <AnalysisModeSecurity>All</AnalysisModeSecurity>
+
+    <!-- Dependency scanning on every restore: known vulnerabilities in direct and transitive packages. High and
+         critical (NU1903, NU1904) fail the build; low and moderate are warnings. CI also lists them in a report. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902</WarningsNotAsErrors>
+
     <!-- Metadata -->
     <Company>FA-Soft</Company>
     <Product>WAF Gateway</Product>

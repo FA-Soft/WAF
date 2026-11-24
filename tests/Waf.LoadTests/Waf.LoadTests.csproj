@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Load tests of a published gateway: a backend, a load generator and a suite that runs both through the gateway. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>waf-loadtest</AssemblyName>
+    <Optimize>true</Optimize>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>

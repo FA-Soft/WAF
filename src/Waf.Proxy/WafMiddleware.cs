@@ -205,17 +205,111 @@ public sealed class FailClosedGuardMiddleware(RequestDelegate next, WafEngineHol
 }
 
 /// <summary>Default event sink: writes security events to the application log.</summary>
-public sealed partial class LoggingWafEventSink(ILogger<LoggingWafEventSink> logger) : IWafEventSink
+public sealed partial class LoggingWafEventSink : IWafEventSink, IDisposable
 {
+    /// <summary>
+    /// Most WAF events written to the application log per minute; the rest are counted and summarized in one line.
+    /// Every request, blocked or not, is still in the request log (events.db). Without this cap an attack flood would
+    /// write one line per blocked request: the console logger blocks callers once its queue is full (slowing all
+    /// traffic, not only the attack), and journald or the Windows Event Log would take thousands of writes a second.
+    /// </summary>
+    public const int MaxLinesPerMinute = 60;
+
+    private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
+
+    private readonly ILogger<LoggingWafEventSink> _logger;
+    private readonly TimeProvider _time;
+    private readonly Lock _lock = new();
+    private DateTimeOffset _windowStart = DateTimeOffset.MinValue;
+    private int _written;
+    private long _suppressed;
+    private DateTimeOffset _suppressedSince;
+    private ITimer? _flushTimer;
+
+    public LoggingWafEventSink(ILogger<LoggingWafEventSink> logger, TimeProvider time)
+    {
+        _logger = logger;
+        _time = time;
+    }
+
     public void Publish(WafEvent wafEvent)
     {
         ArgumentNullException.ThrowIfNull(wafEvent);
-        LogEvent(logger, wafEvent.Kind, wafEvent.RuleName, wafEvent.ClientIp, wafEvent.Method, wafEvent.Host, wafEvent.Path, wafEvent.StatusCode, wafEvent.Detail ?? string.Empty);
+
+        var now = _time.GetUtcNow();
+        (long Count, DateTimeOffset Since) summary = default;
+        bool write;
+        lock (_lock)
+        {
+            if (now - _windowStart >= Window)
+            {
+                summary = TakeSuppressed();
+                _windowStart = now;
+                _written = 0;
+            }
+
+            write = _written < MaxLinesPerMinute;
+            if (write)
+            {
+                _written++;
+            }
+            else if (_suppressed++ == 0)
+            {
+                // Also written when the flood stops: at the end of this window, or with the next event after it.
+                _suppressedSince = now;
+                var due = _windowStart + Window - now;
+                _flushTimer ??= _time.CreateTimer(_ => FlushSuppressed(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                _flushTimer.Change(due > TimeSpan.Zero ? due : TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+            }
+        }
+
+        // Outside the lock: a logger may block.
+        if (summary.Count > 0)
+        {
+            LogSuppressed(_logger, summary.Count, summary.Since, MaxLinesPerMinute);
+        }
+
+        if (write)
+        {
+            LogEvent(_logger, wafEvent.Kind, wafEvent.RuleName, wafEvent.ClientIp, wafEvent.Method, wafEvent.Host, wafEvent.Path, wafEvent.StatusCode, wafEvent.Detail ?? string.Empty);
+        }
+    }
+
+    /// <summary>Writes the summary of events not written yet (at the end of a window and on shutdown).</summary>
+    public void FlushSuppressed()
+    {
+        (long Count, DateTimeOffset Since) summary;
+        lock (_lock)
+        {
+            summary = TakeSuppressed();
+        }
+
+        if (summary.Count > 0)
+        {
+            LogSuppressed(_logger, summary.Count, summary.Since, MaxLinesPerMinute);
+        }
+    }
+
+    public void Dispose()
+    {
+        _flushTimer?.Dispose();
+        FlushSuppressed();
+    }
+
+    private (long Count, DateTimeOffset Since) TakeSuppressed()
+    {
+        var taken = (_suppressed, _suppressedSince);
+        _suppressed = 0;
+        return taken;
     }
 
     [LoggerMessage(EventId = 200, Level = LogLevel.Warning,
         Message = "{Kind} '{RuleName}': {ClientIp} {Method} {Host}{Path} -> {StatusCode} {Detail}")]
     private static partial void LogEvent(ILogger logger, WafEventKind kind, string ruleName, System.Net.IPAddress clientIp, string method, string host, string path, int statusCode, string detail);
+
+    [LoggerMessage(EventId = 201, Level = LogLevel.Warning,
+        Message = "{Count} more WAF events since {Since:u} are not in this log (at most {Limit} a minute are written here); every request is in the request log.")]
+    private static partial void LogSuppressed(ILogger logger, long count, DateTimeOffset since, int limit);
 }
 
 /// <summary>Pipeline registration for the WAF middleware.</summary>

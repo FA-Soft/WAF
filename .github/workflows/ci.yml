@@ -76,6 +76,103 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # Static analysis of the C# code runs in every build: the .NET analyzers with all security rules, as errors
+  # (Directory.Build.props). This job scans the dependencies and the installer scripts.
+  security-scan:
+    name: Security scan (dependencies, scripts)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', '**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # NuGet audit (Directory.Build.props): high and critical advisories fail the restore.
+      - name: Restore (NuGet audit)
+        run: dotnet restore WafGateway.sln
+
+      - name: Known vulnerabilities in NuGet packages (direct and transitive)
+        run: |
+          dotnet list WafGateway.sln package --vulnerable --include-transitive --format json > vulnerable.json
+          python3 .github/scripts/vulnerable_packages.py vulnerable.json
+
+      - name: Deprecated NuGet packages (report only)
+        run: dotnet list WafGateway.sln package --deprecated --include-transitive
+
+      - name: ShellCheck (Linux installer and package scripts)
+        run: |
+          shellcheck --version
+          shellcheck --severity=error deploy/linux/*.sh
+          echo 'Warnings and style notes (not failing):'
+          shellcheck --format=gcc deploy/linux/*.sh || true
+
+      - name: PSScriptAnalyzer (Windows installer and package scripts)
+        shell: pwsh
+        run: |
+          if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) {
+              Set-PSRepository PSGallery -InstallationPolicy Trusted
+              Install-Module PSScriptAnalyzer -Scope CurrentUser
+          }
+          $findings = @(Invoke-ScriptAnalyzer -Path deploy/windows -Recurse)
+          $findings | Sort-Object Severity, ScriptName, Line | Format-Table Severity, RuleName, ScriptName, Line, Message -AutoSize -Wrap |
+              Out-String -Width 220 | Write-Host
+          $errors = @($findings | Where-Object Severity -eq 'Error')
+          foreach ($e in $errors) { Write-Host "::error file=deploy/windows/$($e.ScriptName),line=$($e.Line)::$($e.RuleName): $($e.Message)" }
+          if ($errors.Count -gt 0) { exit 1 }
+
+  load-test:
+    name: Load test (linux-x64)
+    needs: build-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-publish-linux-x64-${{ hashFiles('global.json', '**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-publish-linux-x64-
+
+      - name: Build the package
+        run: bash deploy/linux/build-package.sh linux-x64
+
+      # Backend, gateway and load generator share the runner's few cores: the numbers vary from run to run and are
+      # far below a dedicated machine (docs/performance.md). The job fails only when requests fail.
+      - name: Load test (tests/Waf.LoadTests)
+        run: >
+          dotnet run --project tests/Waf.LoadTests -c "$CONFIGURATION" --
+          suite --gateway "$PWD/artifacts/linux/wafgateway-linux-x64/WafGateway"
+          --seconds 10 --warmup 5 --output loadtest.md
+
+      - name: Report
+        if: ${{ !cancelled() && hashFiles('loadtest.md') != '' }}
+        run: cat loadtest.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the report
+        if: ${{ !cancelled() && hashFiles('loadtest.md') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: loadtest-linux-x64
+          path: loadtest.md
+          retention-days: 30
+
   publish:
     name: Publish smoke check (${{ matrix.rid }})
     needs: build-test

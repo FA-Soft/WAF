@@ -190,6 +190,35 @@ internal sealed class RemoteAdminSignInGateMiddleware(RequestDelegate next)
     }
 }
 
+/// <summary>
+/// The loopback admin listener answers only to loopback host names (<c>localhost</c>, <c>127.0.0.1</c>, <c>[::1]</c>,
+/// with any port, so an SSH tunnel to another local port works). Against DNS rebinding: a web page in a browser on this
+/// machine can point its own host name at 127.0.0.1, and would otherwise use the admin UI as its own origin (read the
+/// sign-in and first-run setup forms, and before the first account exists create it, which needs no token from this
+/// machine). The browser still sends the page's host name in the Host header, which is refused here.
+/// </summary>
+internal sealed class LoopbackHostGuardMiddleware(RequestDelegate next)
+{
+    public Task InvokeAsync(HttpContext context)
+    {
+        if (IsLoopbackHost(context.Request.Host.Host))
+        {
+            return next(context);
+        }
+
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        var port = context.Connection.LocalPort;
+        return context.Response.WriteAsync(
+            $"The admin UI answers only at http://127.0.0.1:{port}, http://localhost:{port} or http://[::1]:{port}.", context.RequestAborted);
+    }
+
+    public static bool IsLoopbackHost(string? host) =>
+        host is not null
+        && (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+            || (IPAddress.TryParse(host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address)));
+}
+
 /// <summary>The answer for anything that must not be found: 404, no body, no telling headers (like an unknown host).</summary>
 internal static class GenericNotFound
 {

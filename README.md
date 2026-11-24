@@ -74,7 +74,7 @@ The WAF owns ports 80 and 443. If IIS or another web server runs on the same mac
 
 The admin UI currently offers a **dashboard** (firewall state, active configuration version, routes, rules, rate limits and attack detection in plain language), **Routes** (list, add, edit, enable/disable and delete routes), **Rules** (rules with any number of conditions, priority, action, per-rule and global detection-only mode, and IP block/allow lists where you paste addresses and CIDR ranges one per line), **Rate limits** (limit, window, what is counted, routes and conditions), **Certificates** (upload your own PFX or PEM certificates, choose their host names, see expiry warnings), **Templates and presets** (templates open the route, rule or rate-limit editor pre-filled for common cases such as a load-balanced site, an API key header or login attempts; one-click presets such as "Block common attacks", "Lock a path to your IP addresses" and "Protect a login page" first show a preview of exactly what will change, and applying one twice changes nothing), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) the **configuration history** (open any version to see what it changed, compare it with the running configuration and restore it) and **Backup and import** (export the configuration as JSON, import a file with a preview of the changes, download a full backup of every version and restore it). Every change made in the UI is checked, stored as a new configuration version and applied immediately, without a restart; if someone else changed the configuration in the meantime, the change is refused instead of overwriting theirs. The forms work without JavaScript: buttons such as "Add another condition" re-show the form without saving. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
 
-- **Localhost:** always available on `http://127.0.0.1:8900`. It cannot be disabled and needs no hostname or certificate.
+- **Localhost:** always available on `http://127.0.0.1:8900`. It cannot be disabled and needs no hostname or certificate. It answers only when addressed as `127.0.0.1`, `localhost` or `[::1]` (any port, so an SSH tunnel such as `ssh -L 8900:127.0.0.1:8900 pi@raspberrypi` works); any other host name gets 400, so a web page cannot reach it by pointing its own name at 127.0.0.1 (DNS rebinding).
 - **Remote:** off by default. The admin turns it on under **Remote access** by registering an admin URL such as `https://admin.example.com`, or `https://admin.example.com:8443` for a port of its own (see [Remote access](#remote-access)).
 - **Registration requirements:** 2FA enabled for your account, a valid certificate for that hostname, and a hostname not used by any route.
 - **While remote access is on:** HTTPS only, mandatory 2FA, brute-force protection and lockout, an optional IP/CIDR allowlist, idle timeouts, login history, and a generic 404 before login.
@@ -290,6 +290,8 @@ Logging never slows requests down: each entry goes into a bounded in-memory queu
 }
 ```
 
+Blocked and flagged requests (WAF events) are also written to the application log (the service log: journald, or the Windows Event Log for the service), but at most 60 a minute; the rest are counted and summarized in one line ("N more WAF events since …"). So an attack flood can neither flood that log nor slow the gateway down with it. The request log keeps every request.
+
 `FlushIntervalSeconds` turns many small writes into one per interval, which matters on an SD card (see [Raspberry Pi tuning](#raspberry-pi-tuning)). A full batch is still written at once, so a burst never waits for the interval, and what is collecting is written on shutdown. With `LogForwardedRequests` off, a request that was simply forwarded is not recorded; one that matched a rule in detection mode (or any other WAF event) still is.
 
 The **request log** page shows it, newest first: filter by time range, what happened (blocked, would be blocked, forwarded, no route, server errors), client IP, host, route, rule or status, search free text, and page through older entries. Filters are part of the address, so a view can be bookmarked. "Live" adds new requests as they arrive (polling every 2 seconds; also with `?live=1` in the address). Paging works by entry id instead of offset and reads stop as soon as a page is full, so the viewer stays fast at any size: about 1 ms per page with a million entries, and about half a second for the worst case (a search without matches through all of them). From any entry you can turn what you see into configuration: **block its source** (added to your IP block list, or a new one), **allow a false positive** (an exclusion for the attack check that fired, limited to that path and route, or an Allow rule that runs just before the rule that blocked it), **create a route** for a host that had none, or **create a rule** for its path. Each action opens the normal editor pre-filled; nothing changes until you check it and save. Detection exclusions are listed on the Rules page, where they can be removed again. **Retention** keeps the log bounded by age and by size, set on the **Log retention** page (part of the configuration, so versioned and exported with it; defaults: 30 days, 1024 MB). A background job checks every minute: entries older than the age limit are removed, and when the log reaches 90% of its size limit the oldest entries are removed until it is at 80%. Space of removed entries is reused, so the file stops growing; when it is larger than the limit (for example after lowering it) the space is given back to the disk. Deletes run in small chunks, so request logging never waits long. The size limit holds as long as less than about a fifth of it is written per minute (for 1 GB: roughly a million requests a minute); an entry takes about 200–300 bytes.
@@ -490,7 +492,9 @@ src/Waf.Ai        AI provider interface and proposal schema
 src/Waf.Web       Blazor UI, identity, log viewer, sample library
 src/Waf.Host      Startup, Kestrel, service hosting
 src/Waf.Cli       wafctl
-tests/            Unit, integration and benchmark projects
+tests/            Unit, integration and benchmark projects; Waf.LoadTests (waf-loadtest, load tests of a package)
+docs/             Security review, performance results, screenshots
+SECURITY.md       How to report a vulnerability
 deploy/windows    Install.ps1 (service, firewall, IIS), Build-Package.ps1, Test-Install.ps1, Smoke-Test.ps1
 deploy/linux      install.sh, wafgateway.service (systemd), build-package.sh, test-install.sh, smoke-test.sh
 Publish.props     Release build settings for the publish profiles
@@ -531,7 +535,16 @@ dotnet publish src/Waf.Host -c Release -p:PublishProfile=linux-arm64   # artifac
 git tag v1.0.0 && git push origin v1.0.0
 ```
 
-GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds and tests every push to `main` and every pull request on Windows and Ubuntu, then publishes self-contained single-file builds for `win-x64` and `linux-arm64` with the publish profiles as a smoke check. Each run's summary page shows a test report per OS (passed/failed/skipped per test assembly, failure details and code coverage), and failed tests appear as annotations. Test results (TRX, Cobertura coverage) and the builds are also uploaded as workflow artifacts.
+**Load tests.** `tests/Waf.LoadTests` (`waf-loadtest`) measures a published package: it starts a backend and the gateway and sends clean, POST and attack requests, directly and through the gateway. Results and how to run it, also against a Raspberry Pi: [docs/performance.md](docs/performance.md).
+
+```bash
+dotnet build tests/Waf.LoadTests -c Release
+tests/Waf.LoadTests/bin/Release/net11.0/waf-loadtest suite --gateway "$PWD/artifacts/linux/wafgateway-linux-x64/WafGateway"
+```
+
+**Security checks.** Every build runs all security rules of the .NET analyzers (as errors) and a NuGet audit of direct and transitive packages (high and critical advisories fail the build). See [docs/security-review.md](docs/security-review.md).
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds and tests every push to `main` and every pull request on Windows and Ubuntu, then publishes self-contained single-file builds for `win-x64` and `linux-arm64` with the publish profiles as a smoke check. A *Security scan* job reports vulnerable and deprecated packages and checks the installer scripts with ShellCheck and PSScriptAnalyzer; a *Load test* job runs `waf-loadtest` against the `linux-x64` package and puts the report on the run's summary page. Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) proposes package and action updates weekly. Each run's summary page shows a test report per OS (passed/failed/skipped per test assembly, failure details and code coverage), and failed tests appear as annotations. Test results (TRX, Cobertura coverage) and the builds are also uploaded as workflow artifacts.
 
 ## Roadmap
 
@@ -554,7 +567,10 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds a
 - Secrets, authorization headers and full request bodies are not logged by default.
 - Private keys of uploaded certificates are stored encrypted at rest (ASP.NET Core Data Protection, keys protected with DPAPI on Windows) and are only included in a full backup when "Include secrets" is chosen; the AI API key is encrypted the same way, but never leaves the machine, not even in a backup with secrets. The same applies today to the values of header conditions (such as API keys) in exports and backups.
 - Forwarded client-IP headers are trusted only from addresses on the trusted-proxy list.
-- Report vulnerabilities privately; see `SECURITY.md` once it exists.
+- The admin UI listens on loopback only and answers only to `localhost`, `127.0.0.1` and `[::1]` (against DNS rebinding); remote admin access is opt-in, HTTPS only (with HSTS) and needs two-factor sign-in.
+- The [security review](docs/security-review.md) lists what was checked (headers, secrets, fail-closed behavior, admin exposure), the findings and what is accepted. Every build runs the .NET security analyzers and a NuGet vulnerability audit; CI also scans the installer scripts and reports vulnerable packages, and Dependabot proposes updates.
+- Performance: see [docs/performance.md](docs/performance.md) for load-test results and how to measure your own machine or Raspberry Pi.
+- Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 ## Contributing
 

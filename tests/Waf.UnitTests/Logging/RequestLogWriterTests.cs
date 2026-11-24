@@ -184,12 +184,14 @@ public class RequestLogWriterTests
         var store = new TestStore { FailuresLeft = 1 };
         store.Gate.SetResult();
         using var writer = Writer(store, capacity: 1000, batch: 10);
-        await writer.StartAsync(Ct);
 
+        // Queued before the writer starts, so they form one batch (a running writer may take a partial batch).
         for (var i = 0; i < 10; i++)
         {
             writer.Write(Entry(i));
         }
+
+        await writer.StartAsync(Ct);
 
         // The first batch fails; wait until the writer reports it, then send more.
         var deadline = DateTime.UtcNow.AddSeconds(10);

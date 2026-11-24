@@ -1,0 +1,23 @@
+# Dependency updates as pull requests, checked by CI like any other change. Security updates (for packages with a
+# known vulnerability) also need "Dependabot security updates" switched on under Settings > Code security.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One pull request for the .NET and ASP.NET Core packages, which are released together.
+      dotnet:
+        patterns: ["Microsoft.*", "System.*"]
+      testing:
+        patterns: ["xunit*", "bunit", "BenchmarkDotNet", "Microsoft.Testing.*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
