@@ -296,19 +296,47 @@ The **request log** page shows it, newest first: filter by time range, what happ
 }
 ```
 
-## Installation (planned interface)
+## Installation
 
-Windows (PowerShell, as administrator):
+### Windows
+
+Windows 10/11 and Windows Server 2016 or later, x64. Build the package (or take `WafGateway-win-x64.zip` from a CI run), extract it, and run the installer in Windows PowerShell **as Administrator**:
 
 ```powershell
-.\Install.ps1                      # install the service, data folder ACLs, firewall rules for 80/443
+.\deploy\windows\Build-Package.ps1   # creates artifacts\windows\WafGateway-win-x64 (self-contained) and the zip
+
+.\Install.ps1                      # install the service, data folder ACLs, firewall rules for 80/443, start it
 .\Install.ps1 -OpenAdminPort       # also open the remote admin port in Windows Firewall
 .\Install.ps1 -MoveIisBindings     # explicitly rebind IIS sites away from 80/443 (backs up applicationHost.config first)
+.\Install.ps1 -WhatIf              # show what would change, change nothing
+.\Install.ps1 -Uninstall           # remove the service, firewall rules and program files; keep the data folder
 ```
 
-By default the installer only detects IIS and reports which sites use ports 80/443. It never changes IIS silently.
+What `Install.ps1` does:
 
-Ubuntu / Raspberry Pi:
+- **Program files** go to `%ProgramFiles%\WafGateway` (`-InstallPath`), which is added to the `PATH` for `wafctl`. The package is self-contained: no .NET runtime needs to be installed.
+- **Service.** `WafGateway` starts automatically and runs as its own virtual account, `NT SERVICE\WafGateway`, not as LocalSystem. It is restarted after a failure (after 5 s, 10 s, then every minute).
+- **Data folder** `%ProgramData%\WafGateway` (`-DataPath`) is accessible only to that account, SYSTEM and Administrators: no inherited permissions, so other users cannot read the configuration, accounts, keys or request log. Existing files get the same permissions.
+- **Firewall.** Inbound TCP 80 and 443 (or the `HttpPort`/`HttpsPort` from `appsettings.json`) is allowed for `WafGateway.exe` only, in the rule group "WAF Gateway". The local admin port (8900) is never opened: it only listens on `127.0.0.1` and `::1`. `-OpenAdminPort` also opens the port of the registered remote admin URL (read with `wafctl status`; see [Remote access](#remote-access)), or `-RemoteAdminPort <port>` before the URL is registered. When Windows Firewall is not running (another firewall is in use), no rules are made and the installer tells you which ports to open.
+- **Start.** The installer starts the service and waits until the admin UI answers; then open `http://localhost:8900` on that machine to create the admin account. `-NoStart` installs without starting.
+- **Upgrades.** Run the new package's `Install.ps1` again: the service is stopped, the program files are replaced and the service starts again. The data folder is kept, and so is an `appsettings.json` you put there (it overrides the built-in settings).
+
+**IIS and other web servers.** Before starting, the installer lists IIS sites bound to ports 80 and 443 and any other program listening on them (HTTP.sys, used by IIS, shows up as `System`). Then:
+
+- **Without `-MoveIisBindings` IIS is never changed.** The service is installed, but not started while the ports are in use; the installer tells you what holds them.
+- **With `-MoveIisBindings`** the installer first backs up the IIS configuration to `%ProgramData%\WafGateway\backups\iis-<time>`: a verified copy of `applicationHost.config` (IIS is not touched if the copy does not match) and the HTTP.sys certificate bindings, plus, where IIS can make one, an IIS configuration backup named `WafGateway-<time>`. The folder's `README.txt` says how to undo the move. It then moves the sites' bindings on 80 and 443 to `127.0.0.1:8080` (http) and `127.0.0.1:8443` (https), keeping host names, certificates and SNI (other ports with `-IisHttpPort` and `-IisHttpsPort`). It refuses when a target binding is taken already. Add the sites as routes afterwards (the installer prints them, e.g. `www.example.com -> http://127.0.0.1:8080`). The installer waits up to 30 seconds for IIS to release the ports before it starts the gateway. To undo the move: `%windir%\System32\inetsrv\appcmd.exe restore backup "WafGateway-<time>"`, or copy the saved `applicationHost.config` back.
+
+**Uninstalling** (`-Uninstall`) removes the service, the firewall rules, the program folder and the `PATH` entry, and keeps the data folder; `-RemoveData` deletes it too. It never changes IIS.
+
+The installer is tested on every CI run on Windows Server (the `windows-latest` runner, with IIS installed): IIS is reported and left alone, then moved with `-MoveIisBindings`; install, `-OpenAdminPort`, upgrade and uninstall are checked (`deploy/windows/Test-Install.ps1`, which changes the machine it runs on: use it on test machines only). The same test also runs in a Windows Server 2025 container with IIS (no Windows Firewall there, so those checks are skipped):
+
+```powershell
+docker run --rm --isolation=hyperv -v "$PWD\artifacts\windows\WafGateway-win-x64:C:\pkg:ro" -v "$PWD\deploy\windows:C:\scripts:ro" `
+  --entrypoint powershell mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltsc2025 `
+  -Command "Start-Service W3SVC; C:\scripts\Test-Install.ps1 -Package C:\pkg -WithIis; exit `$LASTEXITCODE"
+```
+
+### Ubuntu / Raspberry Pi (planned interface)
 
 ```bash
 sudo ./install.sh                  # install the service under a dedicated non-root user
@@ -370,7 +398,7 @@ src/Waf.Web       Blazor UI, identity, log viewer, sample library
 src/Waf.Host      Startup, Kestrel, service hosting
 src/Waf.Cli       wafctl
 tests/            Unit, integration and benchmark projects
-deploy/windows    Install.ps1, firewall and IIS detection
+deploy/windows    Install.ps1 (service, firewall, IIS), Build-Package.ps1, Test-Install.ps1
 deploy/linux      install.sh, systemd unit, UFW notes
 ```
 

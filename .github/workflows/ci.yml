@@ -144,3 +144,42 @@ jobs:
             publish/${{ matrix.rid }}/
             !publish/${{ matrix.rid }}/*.pdb
           retention-days: 7
+
+  windows-installer:
+    name: Windows installer (Windows Server, with IIS)
+    needs: build-test
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-publish-win-x64-${{ hashFiles('global.json', '**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-publish-win-x64-
+
+      - name: Build the package
+        shell: powershell
+        run: .\deploy\windows\Build-Package.ps1 -Configuration $env:CONFIGURATION
+
+      - name: Install IIS (Default Web Site on port 80)
+        shell: powershell
+        run: Install-WindowsFeature Web-Server | Format-List
+
+      - name: Install, upgrade and uninstall (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\deploy\windows\Test-Install.ps1 -Package artifacts\windows\WafGateway-win-x64 -WithIis
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v7
+        with:
+          name: WafGateway-win-x64
+          path: artifacts/windows/WafGateway-win-x64.zip
+          retention-days: 7
