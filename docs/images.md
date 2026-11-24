@@ -89,6 +89,10 @@ Editing a target: name, address and its ports.
 
 ![Editing a target](images/admin-target-edit.png)
 
+A device with an address from DHCP: its MAC address, filled in with "Look up MAC address", and how often it is looked up.
+
+![A target with a MAC address](images/admin-target-mac.png)
+
 In the route editor, a target is picked under "Add a target" or written as `nas/web` in the backends.
 
 ![A route forwarding to a target](images/admin-route-target.png)

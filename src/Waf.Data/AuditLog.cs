@@ -97,6 +97,8 @@ public static class AuditActions
     public const string CertificateDeleted = "certificate.deleted";
     public const string CertificateIssued = "certificate.issued";
     public const string CertificateRenewed = "certificate.renewed";
+    public const string TargetAddressChanged = "target.address-changed";
+    public const string TargetUnavailable = "target.unavailable";
 }
 
 /// <summary>Who did something, for the audit log.</summary>

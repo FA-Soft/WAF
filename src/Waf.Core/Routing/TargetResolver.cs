@@ -9,6 +9,9 @@ namespace FASoft.Waf.Core.Routing;
 /// </summary>
 public static class TargetResolver
 {
+    /// <summary>Shortest and longest MAC address look-up interval, in seconds.</summary>
+    public const int MinResolveIntervalSeconds = 10, MaxResolveIntervalSeconds = 3600;
+
     /// <summary>"nas · web": how a target destination is shown (UI, request log).</summary>
     public static string Label(string? target, string? port) => $"{target} · {port}";
 
@@ -27,10 +30,16 @@ public static class TargetResolver
     /// The routes of <paramref name="configuration"/> with every target destination replaced by its address, scheme
     /// and port (keeping the target and port label, for display). Routes and destinations without targets are
     /// returned as they are; a destination whose target or port is unknown is left unresolved (validation reports it).
+    /// A target without an address right now (a MAC address not found for too long, see <see cref="ITargetAddressSource"/>)
+    /// is left unresolved too: the proxy leaves such destinations out, so no traffic goes to an address that may now
+    /// belong to another device.
     /// </summary>
-    public static IReadOnlyList<ProxyRouteOptions> Resolve(GatewayConfiguration configuration)
+    /// <param name="configuration">The configuration.</param>
+    /// <param name="addresses">The current address of each target; null: the configured addresses.</param>
+    public static IReadOnlyList<ProxyRouteOptions> Resolve(GatewayConfiguration configuration, ITargetAddressSource? addresses = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        addresses ??= ConfiguredTargetAddresses.Instance;
 
         var routes = new List<ProxyRouteOptions>(configuration.Routes.Count);
         foreach (var route in configuration.Routes)
@@ -53,7 +62,7 @@ public static class TargetResolver
             };
             foreach (var destination in route.Destinations)
             {
-                copy.Destinations.Add(ResolveDestination(configuration.Targets, destination));
+                copy.Destinations.Add(ResolveDestination(configuration.Targets, destination, addresses));
             }
 
             routes.Add(copy);
@@ -62,9 +71,17 @@ public static class TargetResolver
         return routes;
     }
 
-    private static ProxyDestinationOptions ResolveDestination(IList<BackendTarget> targets, ProxyDestinationOptions destination)
+    /// <summary>True for a destination that is left out of the proxy: a target without an address right now.</summary>
+    public static bool IsUnresolved(ProxyDestinationOptions destination)
     {
-        if (!destination.UsesTarget || Find(targets, destination.Target) is not { } target || FindPort(target, destination.TargetPort) is not { } port)
+        ArgumentNullException.ThrowIfNull(destination);
+        return destination.UsesTarget && string.IsNullOrEmpty(destination.Address) && destination.Port == 0;
+    }
+
+    private static ProxyDestinationOptions ResolveDestination(IList<BackendTarget> targets, ProxyDestinationOptions destination, ITargetAddressSource addresses)
+    {
+        if (!destination.UsesTarget || Find(targets, destination.Target) is not { } target || FindPort(target, destination.TargetPort) is not { } port
+            || addresses.CurrentAddress(target) is not { Length: > 0 } address)
         {
             return destination;
         }
@@ -72,7 +89,7 @@ public static class TargetResolver
         return new ProxyDestinationOptions
         {
             Scheme = port.Scheme,
-            Address = target.Address,
+            Address = address,
             Port = port.Port,
             Target = target.Name,
             TargetPort = port.Name,
@@ -109,9 +126,35 @@ public static class TargetResolver
                 errors.Add($"{label}: the name is used by more than one target.");
             }
 
-            if (!ProxyRouteValidator.IsValidAddress(target.Address))
+            var hasMac = !string.IsNullOrWhiteSpace(target.MacAddress);
+            if (hasMac && !Net.MacAddress.TryNormalize(target.MacAddress, out _))
+            {
+                errors.Add($"{label}: '{target.MacAddress}' is not a valid MAC address (use e.g. aa:bb:cc:dd:ee:ff).");
+            }
+
+            // With a MAC address the address is optional (the last known one); without, it is the address.
+            if (string.IsNullOrWhiteSpace(target.Address))
+            {
+                if (!hasMac)
+                {
+                    errors.Add($"{label}: an address or a MAC address is required.");
+                }
+            }
+            else if (!ProxyRouteValidator.IsValidAddress(target.Address))
             {
                 errors.Add($"{label}: '{target.Address}' is not a valid IP address or host name.");
+            }
+
+            if (target.ResolveIntervalSeconds is { } interval)
+            {
+                if (!hasMac)
+                {
+                    errors.Add($"{label}: 'ResolveIntervalSeconds' only applies with a MAC address.");
+                }
+                else if (interval is < MinResolveIntervalSeconds or > MaxResolveIntervalSeconds)
+                {
+                    errors.Add($"{label}: the MAC address look-up interval must be between {MinResolveIntervalSeconds} and {MaxResolveIntervalSeconds} seconds (was {interval}).");
+                }
             }
 
             ValidatePorts(label, target.Ports, errors);

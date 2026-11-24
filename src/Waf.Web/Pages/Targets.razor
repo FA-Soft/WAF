@@ -1,4 +1,5 @@
 @page "/targets"
+@inject ITargetAddressMonitor Addresses
 @inject IGatewayConfigurationService Configurations
 
 <PageTitle>Targets · @ProductInfo.Name</PageTitle>
@@ -40,12 +41,33 @@ else if (_active is not null)
                             <div class="muted">@target.Description</div>
                         }
                     </td>
-                    <td>@target.Address</td>
+                    <td>
+                        @if (Status(target) is { } status)
+                        {
+                            @if (status.Available && status.Address is not null)
+                            {
+                                <span>@status.Address</span>
+                            }
+                            else if (status.Available)
+                            {
+                                <span class="muted">looking for it…</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-danger">Not found: no traffic</span>
+                            }
+                            <div class="muted">MAC @status.MacAddress · @Seen(status)</div>
+                        }
+                        else
+                        {
+                            @target.Address
+                        }
+                    </td>
                     <td>
                         <ul class="plain-list">
                             @foreach (var port in target.Ports)
                             {
-                                <li><strong>@port.Name</strong> @Describe.Address(port.Scheme, target.Address, port.Port)</li>
+                                <li><strong>@port.Name</strong> @Describe.Address(port.Scheme, Addresses.CurrentAddress(target) ?? target.Address, port.Port)</li>
                             }
                         </ul>
                     </td>
@@ -69,4 +91,15 @@ else if (_active is not null)
 
     protected override async Task OnInitializedAsync() =>
         _active = await Configurations.GetActiveAsync(CancellationToken.None);
+
+    /// <summary>What the MAC address resolver knows about <paramref name="target"/>; null for a fixed address.</summary>
+    private TargetAddressStatus? Status(BackendTarget target) =>
+        string.IsNullOrWhiteSpace(target.MacAddress)
+            ? null
+            : Addresses.Statuses.FirstOrDefault(s => string.Equals(s.TargetName, target.Name, StringComparison.OrdinalIgnoreCase))
+              ?? new TargetAddressStatus(target.Name, target.MacAddress, string.IsNullOrWhiteSpace(target.Address) ? null : target.Address, null, true, null);
+
+    /// <summary>"seen 2026-11-24 10:42:07Z" or "not seen yet".</summary>
+    private static string Seen(TargetAddressStatus status) =>
+        status.LastSeen is { } seen ? $"seen {seen.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)}Z" : "not seen yet";
 }

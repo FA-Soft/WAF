@@ -23,8 +23,17 @@ internal sealed class TargetFormModel : IValidatableObject
 
     public string? Description { get; set; }
 
-    [Required(ErrorMessage = "Enter the machine's IP address or host name, e.g. 192.168.1.20.")]
-    public string Address { get; set; } = string.Empty;
+    /// <summary>IP address or host name; optional with a MAC address (then the last known address).</summary>
+    public string? Address { get; set; }
+
+    /// <summary>MAC address of a device whose IP address changes (DHCP); empty for a fixed address.</summary>
+    public string? MacAddress { get; set; }
+
+    /// <summary>Seconds between MAC address look-ups; empty: the default (60).</summary>
+    public int? ResolveIntervalSeconds { get; set; }
+
+    /// <summary>Shown after "Look up MAC address": what was found, or why not.</summary>
+    public string? LookUpResult { get; set; }
 
     public List<TargetPortFormModel> Ports { get; set; } = [];
 
@@ -33,6 +42,22 @@ internal sealed class TargetFormModel : IValidatableObject
         if (!string.IsNullOrWhiteSpace(Name) && !ProxyRouteValidator.IsValidName(Name.Trim()))
         {
             yield return new ValidationResult("The name may only contain letters, digits, '-', '_' and '.', e.g. nas or web-server.", [nameof(Name)]);
+        }
+
+        var hasMac = !string.IsNullOrWhiteSpace(MacAddress);
+        if (hasMac && !Core.Net.MacAddress.TryNormalize(MacAddress, out _))
+        {
+            yield return new ValidationResult($"'{MacAddress!.Trim()}' is not a MAC address. Use e.g. aa:bb:cc:dd:ee:ff.", [nameof(MacAddress)]);
+        }
+
+        if (string.IsNullOrWhiteSpace(Address) && !hasMac)
+        {
+            yield return new ValidationResult("Enter the machine's IP address or host name (e.g. 192.168.1.20), or its MAC address.", [nameof(Address)]);
+        }
+
+        if (ResolveIntervalSeconds is { } interval && (interval < TargetResolver.MinResolveIntervalSeconds || interval > TargetResolver.MaxResolveIntervalSeconds))
+        {
+            yield return new ValidationResult($"Look it up every {TargetResolver.MinResolveIntervalSeconds} to {TargetResolver.MaxResolveIntervalSeconds} seconds.", [nameof(ResolveIntervalSeconds)]);
         }
 
         if (!string.IsNullOrWhiteSpace(Address) && !ProxyRouteValidator.IsValidAddress(Address.Trim()))
@@ -88,6 +113,8 @@ internal sealed class TargetFormModel : IValidatableObject
             Name = target.Name,
             Description = target.Description,
             Address = target.Address,
+            MacAddress = target.MacAddress,
+            ResolveIntervalSeconds = target.ResolveIntervalSeconds,
             Ports = [.. target.Ports.Select(p => new TargetPortFormModel
             {
                 OriginalName = p.Name,
@@ -104,7 +131,9 @@ internal sealed class TargetFormModel : IValidatableObject
         {
             Name = Name.Trim(),
             Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(),
-            Address = Address.Trim().ToLowerInvariant(),
+            Address = Address?.Trim().ToLowerInvariant() ?? string.Empty,
+            MacAddress = Core.Net.MacAddress.TryNormalize(MacAddress, out var mac) ? mac : null,
+            ResolveIntervalSeconds = Core.Net.MacAddress.TryNormalize(MacAddress, out _) ? ResolveIntervalSeconds : null,
         };
         foreach (var port in Ports.Where(p => !p.IsEmpty))
         {

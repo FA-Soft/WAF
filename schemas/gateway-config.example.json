@@ -31,6 +31,17 @@
       "Description": "IIS on this machine",
       "Address": "127.0.0.1",
       "Ports": [ { "Name": "web", "Port": 8080, "Scheme": "http" } ]
+    },
+    {
+      "Name": "nas",
+      "Description": "File server with an address from DHCP",
+      "Address": "192.168.1.20",
+      "MacAddress": "aa:bb:cc:dd:ee:01",
+      "ResolveIntervalSeconds": 60,
+      "Ports": [
+        { "Name": "web", "Port": 5000, "Scheme": "http" },
+        { "Name": "admin", "Port": 5001, "Scheme": "https" }
+      ]
     }
   ],
   "Routes": [

@@ -125,6 +125,11 @@ public static class YarpConfigMapper
         for (var i = 0; i < route.Destinations.Count; i++)
         {
             var destination = route.Destinations[i];
+            if (TargetResolver.IsUnresolved(destination))
+            {
+                continue; // a target without an address right now: no traffic for it (no destinations at all: 503)
+            }
+
             destinations[string.Create(CultureInfo.InvariantCulture, $"{route.Name}-{i + 1}")] = new DestinationConfig
             {
                 Address = ToDestinationUrl(destination),

@@ -1,4 +1,5 @@
 @page "/"
+@inject ITargetAddressMonitor Addresses
 @inject WafEngineHolder Engines
 @inject ConfigurationStore Store
 @inject IRequestLogMonitor RequestLog
@@ -9,6 +10,13 @@
 
 <TwoFactorNotice />
 <CertificateNotice />
+
+@foreach (var lost in Addresses.Statuses.Where(s => !s.Available))
+{
+    <div class="alert alert-warning" role="status">
+        <strong>Target '@lost.TargetName' is not found</strong> (MAC address @lost.MacAddress@(lost.LastSeen is { } seen ? $", last seen {seen.UtcDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)}Z" : string.Empty)): its routes get no traffic until it is back. <a href="targets">Targets</a>
+    </div>
+}
 
 @if (Engines.Current is null)
 {
@@ -117,7 +125,7 @@ else
                         <tr>
                             <td>@route.Name</td>
                             <td>@Describe.Match(route.Match)</td>
-                            <td>@Describe.Destinations(route.Destinations, configuration.Targets)</td>
+                            <td>@Describe.Destinations(route.Destinations, configuration.Targets, Addresses)</td>
                         </tr>
                     }
                 </tbody>

@@ -3,6 +3,7 @@
 @using System.Globalization
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
+@inject ITargetAddressMonitor Addresses
 
 <PageTitle>@(IsNew ? "Add a target" : $"Edit target {TargetName}") · @ProductInfo.Name</PageTitle>
 
@@ -40,11 +41,35 @@ else if (Model is not null)
             <FormField Id="name" Label="Name" Help="A short, unique name, e.g. nas or iis. Renaming it renames it in its routes too." For="() => Model.Name">
                 <InputText id="name" aria-describedby="name-help" @bind-Value="Model.Name" autocomplete="off" />
             </FormField>
-            <FormField Id="address" Label="Address" Help="IP address or host name, e.g. 192.168.1.20 or nas.local." For="() => Model.Address">
+            <FormField Id="address" Label="Address" Help="IP address or host name, e.g. 192.168.1.20 or nas.local. With a MAC address: optional, the address to use until the MAC address is found." For="() => Model.Address">
                 <InputText id="address" aria-describedby="address-help" @bind-Value="Model.Address" autocomplete="off" />
             </FormField>
             <FormField Id="description" Label="Description" Optional Help="A note for yourself, e.g. where the machine is." For="() => Model.Description">
                 <InputText id="description" aria-describedby="description-help" @bind-Value="Model.Description" autocomplete="off" />
+            </FormField>
+        </fieldset>
+
+        <fieldset>
+            <legend>
+                Changing address (DHCP)
+                <HelpTip Title="MAC address">
+                    <p>For a device that gets its IP address from DHCP, which can change: enter its MAC address, and the gateway looks up its current IP address at the interval below. Its routes follow it, without a new configuration version.</p>
+                    <p>Only for devices on the gateway's own network (not behind a router or VPN). Devices with a private (random) Wi-Fi address need that turned off for this network. When the device is not found for 10 minutes, its routes get no traffic until it is back.</p>
+                    <p>Often simpler: a fixed address (DHCP reservation) in your router, or the device's host name.</p>
+                </HelpTip>
+            </legend>
+            <FormField Id="mac" Label="MAC address" Optional Help="e.g. aa:bb:cc:dd:ee:ff. Empty: the address above is fixed." For="() => Model.MacAddress">
+                <div class="inline-controls">
+                    <InputText id="mac" aria-describedby="mac-help" @bind-Value="Model.MacAddress" autocomplete="off" />
+                    <button type="submit" name="Model.Command" value="lookup-mac" class="button button-secondary" formnovalidate>Look up MAC address</button>
+                </div>
+            </FormField>
+            @if (!string.IsNullOrEmpty(Model.LookUpResult))
+            {
+                <p class="field-help" role="status">@Model.LookUpResult</p>
+            }
+            <FormField Id="interval" Label="Look it up every (seconds)" Optional Help="10 to 3600; empty: every 60 seconds." For="() => Model.ResolveIntervalSeconds">
+                <InputNumber id="interval" aria-describedby="interval-help" @bind-Value="Model.ResolveIntervalSeconds" min="10" max="3600" />
             </FormField>
         </fieldset>
 
@@ -129,7 +154,14 @@ else if (Model is not null)
 
         if (Model is not null)
         {
-            return; // posted form
+            // Posted form. Without port fields the binder leaves no list at all; show one empty row instead.
+            Model.Ports ??= [];
+            if (Model.Ports.Count == 0)
+            {
+                Model.Ports.Add(new TargetPortFormModel());
+            }
+
+            return;
         }
 
         var version = active?.Version ?? 0;
@@ -156,10 +188,38 @@ else if (Model is not null)
             return; // only the form changed; nothing is saved
         }
 
+        if (Model.Command == "lookup-mac")
+        {
+            Model.Command = null;
+            await LookUpMacAsync(Model);
+            return;
+        }
+
         if (await editContext.ValidateAsync())
         {
             await SaveAsync();
         }
+    }
+
+    /// <summary>"Look up MAC address": contacts the address in the form and fills in the MAC address it answers with.</summary>
+    private async Task LookUpMacAsync(TargetFormModel model)
+    {
+        var address = model.Address?.Trim();
+        if (string.IsNullOrEmpty(address) || !FASoft.Waf.Core.Net.StrictIpAddress.TryParse(address, out _))
+        {
+            model.LookUpResult = "Enter the device's current IP address above first (not a host name), then look up its MAC address.";
+            return;
+        }
+
+        var mac = await Addresses.LookUpMacAddressAsync(address, CancellationToken.None);
+        if (mac is null)
+        {
+            model.LookUpResult = $"{address} did not answer, or is not on the gateway's own network: no MAC address found.";
+            return;
+        }
+
+        model.MacAddress = mac;
+        model.LookUpResult = $"{address} answers with MAC address {mac}. Save to look it up from now on.";
     }
 
     private async Task SaveAsync()

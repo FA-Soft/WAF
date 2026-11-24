@@ -1,5 +1,6 @@
 @page "/routes/new"
 @page "/routes/{RouteName}/edit"
+@inject ITargetAddressMonitor Addresses
 @inject IGatewayConfigurationService Configurations
 @inject NavigationManager Navigation
 @inject RequestLogReader LogReader
@@ -212,8 +213,9 @@ else if (Model is not null)
     {
         var configuration = (await Configurations.GetActiveAsync(CancellationToken.None))?.Configuration;
         _certificateHosts = [.. configuration?.Certificates.Select(c => c.HostName) ?? []];
-        _targetChoices = [.. (configuration?.Targets ?? []).SelectMany(t => t.Ports.Select(p =>
-            (RouteFormModel.TargetLine(t.Name, p.Name), $"{TargetResolver.Label(t.Name, p.Name)} ({Describe.Address(p.Scheme, t.Address, p.Port)})")))];
+        var targets = configuration?.Targets ?? [];
+        _targetChoices = [.. targets.SelectMany(t => t.Ports.Select(p =>
+            (RouteFormModel.TargetLine(t.Name, p.Name), Describe.Destinations([new ProxyDestinationOptions { Target = t.Name, TargetPort = p.Name }], targets, Addresses))))];
     }
 
     /// <summary>The route being edited; null when adding a route.</summary>
