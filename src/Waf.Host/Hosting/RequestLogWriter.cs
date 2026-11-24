@@ -21,9 +21,30 @@ public sealed class EventLogOptions
     /// <summary>Most entries written in one transaction.</summary>
     public int BatchSize { get; set; } = 500;
 
+    /// <summary>
+    /// Seconds to collect entries before writing them, so a quiet site writes one transaction per interval instead of
+    /// one per request (less wear on an SD card). 0, the default: write as soon as entries arrive. Entries still
+    /// waiting are written on shutdown; a power failure loses at most this interval.
+    /// </summary>
+    public int FlushIntervalSeconds { get; set; }
+
+    /// <summary>
+    /// Record requests that were simply forwarded. False: only requests with something to see are recorded (blocked,
+    /// rate limited, fail-closed, no route, or forwarded with a WAF event such as a rule in detection mode).
+    /// </summary>
+    public bool LogForwardedRequests { get; set; } = true;
+
+    /// <summary>Longest <see cref="FlushIntervalSeconds"/>: five minutes.</summary>
+    public const int MaxFlushIntervalSeconds = 300;
+
     public IReadOnlyList<string> Validate()
     {
         var errors = new List<string>();
+        if (FlushIntervalSeconds is < 0 or > MaxFlushIntervalSeconds)
+        {
+            errors.Add($"{SectionName}:FlushIntervalSeconds must be between 0 and {MaxFlushIntervalSeconds} (is {FlushIntervalSeconds}).");
+        }
+
         if (QueueCapacity is < 100 or > 1_000_000)
         {
             errors.Add($"{SectionName}:QueueCapacity must be between 100 and 1000000 (is {QueueCapacity}).");
@@ -54,6 +75,7 @@ public sealed partial class RequestLogWriter : BackgroundService, IRequestLog, I
 {
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan WarningInterval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan CollectCheckInterval = TimeSpan.FromSeconds(1);
 
     private readonly Channel<RequestLogEntry> _queue;
     private readonly IRequestLogStore _store;
@@ -91,6 +113,12 @@ public sealed partial class RequestLogWriter : BackgroundService, IRequestLog, I
     /// <summary>Queues <paramref name="entry"/>; never blocks. A full queue drops it (counted).</summary>
     public void Write(RequestLogEntry entry)
     {
+        ArgumentNullException.ThrowIfNull(entry);
+        if (!_options.LogForwardedRequests && entry.Action == RequestAction.Forwarded && entry.Event is null)
+        {
+            return; // nothing to see: not recorded, not counted
+        }
+
         if (!_queue.Writer.TryWrite(entry))
         {
             Interlocked.Increment(ref _dropped); // only after shutdown completed the queue
@@ -115,26 +143,70 @@ public sealed partial class RequestLogWriter : BackgroundService, IRequestLog, I
         // Not cancelled by stoppingToken: after StopAsync completed the queue, the loop drains it and ends.
         while (await _queue.Reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false))
         {
-            batch.Clear();
-            while (batch.Count < _options.BatchSize && _queue.Reader.TryRead(out var entry))
-            {
-                batch.Add(entry);
-            }
+            await CollectAsync(stoppingToken).ConfigureAwait(false);
 
-            if (!ready)
+            // Everything queued now, in batches; then wait (and collect) again.
+            do
             {
-                Interlocked.Add(ref _dropped, batch.Count);
-                ready = await InitializeAsync(stoppingToken).ConfigureAwait(false);
+                batch.Clear();
+                while (batch.Count < _options.BatchSize && _queue.Reader.TryRead(out var entry))
+                {
+                    batch.Add(entry);
+                }
+
+                if (batch.Count == 0)
+                {
+                    break;
+                }
+
+                if (!ready)
+                {
+                    Interlocked.Add(ref _dropped, batch.Count);
+                    ready = await InitializeAsync(stoppingToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await WriteBatchAsync(batch, stoppingToken).ConfigureAwait(false);
+                }
             }
-            else
-            {
-                await WriteBatchAsync(batch, stoppingToken).ConfigureAwait(false);
-            }
+            while (batch.Count == _options.BatchSize);
 
             ReportDrops();
         }
 
         ReportDrops(force: true);
+    }
+
+    /// <summary>
+    /// With <see cref="EventLogOptions.FlushIntervalSeconds"/>: waits that long for more entries, unless a full batch
+    /// is waiting already or the gateway is shutting down (then everything is written at once).
+    /// </summary>
+    private async Task CollectAsync(CancellationToken stoppingToken)
+    {
+        if (_options.FlushIntervalSeconds == 0)
+        {
+            return;
+        }
+
+        var deadline = _time.GetUtcNow().AddSeconds(_options.FlushIntervalSeconds);
+        try
+        {
+            // Checked every second, so a burst is written as soon as a batch is full instead of filling the queue.
+            while (_queue.Reader.Count < _options.BatchSize && !stoppingToken.IsCancellationRequested)
+            {
+                var left = deadline - _time.GetUtcNow();
+                if (left <= TimeSpan.Zero)
+                {
+                    break;
+                }
+
+                await Task.Delay(left < CollectCheckInterval ? left : CollectCheckInterval, _time, stoppingToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutting down: write what is queued now.
+        }
     }
 
     private async Task<bool> InitializeAsync(CancellationToken stoppingToken)

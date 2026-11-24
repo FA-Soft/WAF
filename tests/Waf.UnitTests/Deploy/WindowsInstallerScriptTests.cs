@@ -65,6 +65,7 @@ public sealed class WindowsInstallerScriptTests
     [InlineData("Install.ps1")]
     [InlineData("Build-Package.ps1")]
     [InlineData("Test-Install.ps1")]
+    [InlineData("Smoke-Test.ps1")]
     public async Task The_scripts_parse_in_Windows_PowerShell_5_1(string name)
     {
         var output = await PowerShellAsync(ParseErrors, Script(name));

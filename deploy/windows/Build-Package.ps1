@@ -12,6 +12,9 @@
 .PARAMETER Configuration
     Build configuration. Default: Release.
 
+.PARAMETER Version
+    Version number of the programs (for example 1.2.0). Default: the project's version. The release workflow sets it.
+
 .EXAMPLE
     .\deploy\windows\Build-Package.ps1
     Creates artifacts\windows\WafGateway-win-x64\ (run Install.ps1 in it as Administrator) and WafGateway-win-x64.zip.
@@ -20,7 +23,8 @@
 param(
     [string] $Output,
     [string] $Runtime = 'win-x64',
-    [string] $Configuration = 'Release'
+    [string] $Configuration = 'Release',
+    [string] $Version
 )
 
 Set-StrictMode -Version 3.0
@@ -33,10 +37,13 @@ $package = Join-Path $Output "WafGateway-$Runtime"
 if (Test-Path -LiteralPath $package) { Remove-Item -LiteralPath $package -Recurse -Force }
 New-Item -ItemType Directory -Path $package -Force | Out-Null
 
+# The release settings (self-contained, single file) are in the publish profiles: Publish.props.
+$versionArguments = @()
+if ($Version) { $versionArguments = @("-p:Version=$Version") }
 foreach ($project in @('Waf.Host', 'Waf.Cli')) {
-    Write-Host "==> Publishing $project ($Runtime)" -ForegroundColor Cyan
-    & dotnet publish (Join-Path $repository "src\$project\$project.csproj") -c $Configuration -r $Runtime --self-contained `
-        -p:PublishSingleFile=true -o $package --nologo
+    Write-Host "==> Publishing $project ($Runtime$(if ($Version) { ", version $Version" }))" -ForegroundColor Cyan
+    & dotnet publish (Join-Path $repository "src\$project\$project.csproj") -c $Configuration -r $Runtime `
+        "-p:PublishProfile=$Runtime" @versionArguments -o $package --nologo
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish $project failed (exit code $LASTEXITCODE)." }
 }
 

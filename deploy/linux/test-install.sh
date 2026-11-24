@@ -63,12 +63,18 @@ echo '=== Hardening (systemd-analyze security)'
 systemd-analyze security wafgateway --no-pager 2>/dev/null | tail -n 1 || true
 check 'systemd rates the exposure as OK or better' sh -c "systemd-analyze security wafgateway --no-pager 2>/dev/null | tail -n 1 | grep -qE 'OK|SAFE'"
 
-echo '=== Upgrade (run again)'
+echo '=== Upgrade (run again, with a memory limit)'
 size_before="$(stat -c %s /var/lib/wafgateway/config.db)"
-run_installer || failures=$((failures + 1))
+run_installer --memory-max 512M || failures=$((failures + 1))
 check 'the service is active again' systemctl is-active --quiet wafgateway
 check 'the admin UI answers again' sh -c "[ \"$(status_code http://127.0.0.1:8900/healthz)\" = 200 ]"
 check 'the configuration is kept' sh -c "[ \"\$(stat -c %s /var/lib/wafgateway/config.db)\" -ge $size_before ]"
+check 'the memory limit is 512 MB (--memory-max)' sh -c '[ "$(systemctl show -p MemoryMax --value wafgateway)" = 536870912 ]'
+check 'it runs with that limit' sh -c '[ "$(cat /sys/fs/cgroup/system.slice/wafgateway.service/memory.max)" = 536870912 ]'
+
+echo '=== Memory limit removed (--memory-max none --no-start)'
+run_installer --memory-max none --no-start || failures=$((failures + 1))
+check 'the memory limit is gone' sh -c '[ "$(systemctl show -p MemoryMax --value wafgateway)" = infinity ]'
 
 echo '=== Uninstall'
 run_installer --uninstall || failures=$((failures + 1))
