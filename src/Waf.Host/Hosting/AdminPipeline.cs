@@ -73,6 +73,7 @@ internal static class AdminPipeline
             endpoints.MapStaticAssets();
             endpoints.MapHealthChecks("/healthz");
             endpoints.MapAdminAccountEndpoints();
+            endpoints.MapAdminThemeEndpoint();
 
             // Everything else needs a signed-in admin; only the sign-in and first-run pages are marked [AllowAnonymous].
             var signedIn = endpoints.MapGroup(string.Empty).RequireAuthorization();

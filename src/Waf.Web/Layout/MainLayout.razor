@@ -1,12 +1,29 @@
 @inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
 <div class="shell">
     <header class="topbar">
-        <a class="brand" href="">@ProductInfo.Name</a>
+        <a class="brand" href="">
+            @* Both variants; the stylesheet shows the one of the active theme (chosen, or the system setting). *@
+            <img class="brand-mark only-light" src="@Assets["_content/Waf.Web/waf-mark.svg"]" alt="" width="28" height="28" />
+            <img class="brand-mark only-dark" src="@Assets["_content/Waf.Web/waf-mark-dark.svg"]" alt="" width="28" height="28" />
+            <span>@ProductInfo.Name</span>
+        </a>
         <div class="topbar-end">
             <WafStateBadge />
             <AuthorizeView>
                 <Authorized>
+                    @* A plain form (not enhanced): the page loads again in full, in the new theme. *@
+                    <form method="post" action="@AdminTheme.Path.TrimStart('/')" class="theme-switch" aria-label="Color theme">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                        @{ var current = AdminTheme.Of(context.User); }
+                        @foreach (var (value, label) in AdminTheme.Choices)
+                        {
+                            <button type="submit" name="theme" value="@value" aria-pressed="@(value == current ? "true" : "false")"
+                                    title="@(value == AdminTheme.System ? "Follow the system setting" : $"Always {label.ToLowerInvariant()}")">@label</button>
+                        }
+                    </form>
                     <a href="account" class="account-link" aria-label="Your account">@context.User.Identity?.Name</a>
                     @* A plain form (not enhanced): signing out loads the sign-in page in full. *@
                     <form method="post" action="account/logout" class="signout">
@@ -38,3 +55,8 @@
         @Body
     </main>
 </div>
+
+@code {
+    /// <summary>This page (path and query, so filters are kept), to come back to after changing the theme.</summary>
+    private string ReturnUrl => "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+}

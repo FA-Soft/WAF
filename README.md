@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/waf-logo-dark-transparent.svg">
+    <img src="docs/brand/waf-logo-light-transparent.svg" alt="WAF Gateway" width="340" height="160">
+  </picture>
+</p>
+
 # WAF Gateway
 
 A self-hosted **Web Application Firewall and reverse proxy** written in C#, managed through an easy-to-use web UI. It inspects incoming HTTP(S) traffic, blocks malicious requests, and forwards everything else to the backends you configure (any IP address and port).
@@ -73,6 +80,8 @@ The WAF owns ports 80 and 443. If IIS or another web server runs on the same mac
 ![Admin UI dashboard showing the firewall state, the active configuration version, routes and rules](docs/images/admin-dashboard.png)
 
 The admin UI currently offers a **dashboard** (firewall state, active configuration version, routes, rules, rate limits and attack detection in plain language), **Routes** (list, add, edit, enable/disable and delete routes), **Rules** (rules with any number of conditions, priority, action, per-rule and global detection-only mode, and IP block/allow lists where you paste addresses and CIDR ranges one per line), **Rate limits** (limit, window, what is counted, routes and conditions), **Certificates** (upload your own PFX or PEM certificates, choose their host names, see expiry warnings), **Templates and presets** (templates open the route, rule or rate-limit editor pre-filled for common cases such as a load-balanced site, an API key header or login attempts; one-click presets such as "Block common attacks", "Lock a path to your IP addresses" and "Protect a login page" first show a preview of exactly what will change, and applying one twice changes nothing), **Test a request** (describe a request and see whether the firewall would allow or block it, and why, without sending anything) the **configuration history** (open any version to see what it changed, compare it with the running configuration and restore it) and **Backup and import** (export the configuration as JSON, import a file with a preview of the changes, download a full backup of every version and restore it). Every change made in the UI is checked, stored as a new configuration version and applied immediately, without a restart; if someone else changed the configuration in the meantime, the change is refused instead of overwriting theirs. The forms work without JavaScript: buttons such as "Add another condition" re-show the form without saving. The UI is rendered on the server (Blazor, no WebSocket needed), works without JavaScript, has inline help (`?`) next to settings, and is sent with a strict Content-Security-Policy.
+
+**Light and dark theme.** The switch at the top right (**System**, **Light**, **Dark**) sets the UI's colors. **System** (the default) follows the device's light or dark setting. A choice of Light or Dark is stored with your account (in `identity.db`), so it applies again at your next sign-in and on every device you sign in from; a change also reaches your other open sessions at their next page. The sign-in page itself follows the device's setting.
 
 - **Localhost:** always available on `http://127.0.0.1:8900`. It cannot be disabled and needs no hostname or certificate. It answers only when addressed as `127.0.0.1`, `localhost` or `[::1]` (any port, so an SSH tunnel such as `ssh -L 8900:127.0.0.1:8900 pi@raspberrypi` works); any other host name gets 400, so a web page cannot reach it by pointing its own name at 127.0.0.1 (DNS rebinding).
 - **Remote:** off by default. The admin turns it on under **Remote access** by registering an admin URL such as `https://admin.example.com`, or `https://admin.example.com:8443` for a port of its own (see [Remote access](#remote-access)).
@@ -493,7 +502,7 @@ src/Waf.Web       Blazor UI, identity, log viewer, sample library
 src/Waf.Host      Startup, Kestrel, service hosting
 src/Waf.Cli       wafctl
 tests/            Unit, integration and benchmark projects; Waf.LoadTests (waf-loadtest, load tests of a package)
-docs/             Security review, performance results, screenshots
+docs/             Security review, performance results, screenshots; docs/brand: logo, mark, icon and favicon (SVG)
 SECURITY.md       How to report a vulnerability
 deploy/windows    Install.ps1 (service, firewall, IIS), Build-Package.ps1, Test-Install.ps1, Smoke-Test.ps1
 deploy/linux      install.sh, wafgateway.service (systemd), build-package.sh, test-install.sh, smoke-test.sh

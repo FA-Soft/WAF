@@ -119,6 +119,24 @@ public sealed partial class AdminUiTests(AdminUiFixture gateway) : IClassFixture
     }
 
     [Fact]
+    public async Task Favicon_and_logo_marks_referenced_by_the_page_are_served()
+    {
+        var html = await GetPageAsync("/");
+        var assets = SvgPattern().Matches(html).Select(m => m.Groups["url"].Value).Distinct().ToList();
+
+        Assert.Contains(assets, a => a.Contains("favicon", StringComparison.Ordinal));
+        Assert.Contains(assets, a => a.Contains("waf-mark.", StringComparison.Ordinal));
+        Assert.Contains(assets, a => a.Contains("waf-mark-dark", StringComparison.Ordinal));
+        // Status only, as for the stylesheet: the test host has no wwwroot, so it answers with empty files (a published
+        // gateway serves them in full).
+        foreach (var asset in assets)
+        {
+            using var response = await _http.GetAsync(Admin("/" + asset), Ct);
+            Assert.True(response.StatusCode == HttpStatusCode.OK, $"{asset}: {(int)response.StatusCode}");
+        }
+    }
+
+    [Fact]
     public async Task Admin_ui_is_not_served_on_the_public_listener()
     {
         using var response = await _http.GetAsync(new Uri($"http://127.0.0.1:{gateway.HttpPort}/test-request"), Ct);
@@ -187,6 +205,9 @@ public sealed partial class AdminUiTests(AdminUiFixture gateway) : IClassFixture
 
     [GeneratedRegex("""<script src="(?<src>[^"]+)""")]
     private static partial Regex ScriptPattern();
+
+    [GeneratedRegex("""(?:href|src|srcset)="(?<url>[^"]+\.svg)""")]
+    private static partial Regex SvgPattern();
 
     [GeneratedRegex("""name="__RequestVerificationToken" value="(?<token>[^"]+)""")]
     private static partial Regex AntiforgeryPattern();

@@ -3,7 +3,11 @@
 
 <div class="account-shell">
     <main id="main" class="account-card" tabindex="-1">
-        <p class="brand">@ProductInfo.Name</p>
+        <p class="brand-logo">
+            @* Both variants; the stylesheet shows the one of the active theme. *@
+            <img class="only-light" src="@Assets["_content/Waf.Web/waf-logo-light-transparent.svg"]" alt="@ProductInfo.Name" width="204" height="96" />
+            <img class="only-dark" src="@Assets["_content/Waf.Web/waf-logo-dark-transparent.svg"]" alt="@ProductInfo.Name" width="204" height="96" />
+        </p>
         @Body
     </main>
 </div>

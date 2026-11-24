@@ -16,6 +16,7 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 - [Backup and import](#backup-and-import)
 - [Remote access](#remote-access)
 - [Your account](#your-account)
+- [Light and dark theme](#light-and-dark-theme)
 
 ## Signing in
 
@@ -206,3 +207,11 @@ Turning on two-factor sign-in: scan the QR code, or type the key, and enter the 
 The login history: sign-ins, failed attempts (highlighted), lockouts and sign-outs.
 
 ![Login history](images/admin-login-history.png)
+
+## Light and dark theme
+
+The switch at the top right: **System** (the default) follows the device's setting; **Light** or **Dark** is stored with the account, so it applies at the next sign-in on any device. The dashboard and the request log with **Dark** chosen:
+
+![Dashboard in the dark theme](images/admin-dashboard-dark.png)
+
+![Request log in the dark theme](images/admin-logs-dark.png)

@@ -4,6 +4,8 @@
     <Description>wafctl: local recovery tool.</Description>
     <OutputType>Exe</OutputType>
     <AssemblyName>wafctl</AssemblyName>
+    <!-- Icon of wafctl.exe. Drawn from docs/brand/waf-icon.svg. -->
+    <ApplicationIcon>../../docs/brand/waf-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

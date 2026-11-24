@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+@* data-theme: the theme the admin chose (stored with the account); without it the stylesheet follows the system setting. *@
+<html lang="en" data-theme="@AdminTheme.DataAttribute(HttpContext?.User)">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <base href="/" />
+    <link rel="icon" type="image/svg+xml" href="@Assets["_content/Waf.Web/favicon.svg"]" />
     <link rel="stylesheet" href="@Assets["_content/Waf.Web/admin.css"]" />
     <HeadOutlet />
 </head>
@@ -17,3 +19,8 @@
     <script src="@Assets["_content/Waf.Web/logs.js"]"></script>
 </body>
 </html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+}

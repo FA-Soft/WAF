@@ -1,4 +1,4 @@
-/* WAF Gateway admin UI. Plain CSS, no framework; light and dark mode follow the system setting. */
+/* WAF Gateway admin UI. Plain CSS, no framework; light and dark mode follow the system setting or the admin's choice. */
 
 :root {
     --bg: #f6f7f9;
@@ -23,8 +23,42 @@
     line-height: 1.5;
 }
 
+/*
+ * Theme: <html data-theme="light|dark"> when the admin chose one (stored with the account); without the attribute the
+ * system setting applies. The dark colors appear twice: for the system setting, and for the explicit choice.
+ */
+:root[data-theme="light"] { color-scheme: light; }
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #12161c;
+    --surface: #1b2129;
+    --text: #e6e9ee;
+    --muted: #a3acb9;
+    --border: #313a46;
+    --accent: #6ea2ff;
+    --accent-text: #0b1220;
+    --ok: #6fd49a;
+    --ok-bg: #173325;
+    --warn: #f2c35b;
+    --warn-bg: #3a2e12;
+    --danger: #ff8f87;
+    --danger-bg: #3d1a18;
+    --info-bg: #172338;
+}
+
+/* Images in two variants (logo): only the one of the active theme is shown. */
+:root[data-theme="light"] .only-dark,
+:root[data-theme="dark"] .only-light { display: none; }
+
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) .only-dark { display: none; }
+}
+
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme]) .only-light { display: none; }
+
+    :root:not([data-theme]) {
         --bg: #12161c;
         --surface: #1b2129;
         --text: #e6e9ee;
@@ -87,7 +121,25 @@ a { color: var(--accent); }
     border-bottom: 1px solid var(--border);
 }
 
-.brand { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+.brand { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+.brand-mark { width: 28px; height: 28px; }
+
+/* Theme switch: three buttons in one group; the active one is filled. */
+.theme-switch { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.topbar-end .theme-switch button {
+    padding: 0.3rem 0.65rem;
+    border: 0;
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+.topbar-end .theme-switch button:first-of-type { border-left: 0; }
+.topbar-end .theme-switch button:hover { color: var(--text); }
+.topbar-end .theme-switch button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+.topbar-end .theme-switch button:focus-visible { outline: none; box-shadow: var(--focus); position: relative; }
 .topbar-end { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .topbar-end form { margin: 0; }
 .topbar-end .button { padding: 0.35rem 0.9rem; }
@@ -96,7 +148,9 @@ a { color: var(--accent); }
 /* Sign-in and first-run pages. */
 .account-shell { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1rem; }
 .account-card { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 1.75rem; }
-.account-card .brand { margin: 0 0 1rem; }
+/* The logo's own padding (340×160 canvas) is trimmed with negative margins, so it lines up with the card's text. */
+.account-card .brand-logo { margin: -1rem 0 0.25rem -2rem; line-height: 0; }
+.account-card .brand-logo img { width: 204px; height: auto; }
 
 .sidenav {
     grid-area: nav;

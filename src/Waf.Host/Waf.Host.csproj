@@ -3,6 +3,8 @@
   <PropertyGroup>
     <Description>Gateway host: startup, Kestrel and service hosting.</Description>
     <AssemblyName>WafGateway</AssemblyName>
+    <!-- Icon of WafGateway.exe (Explorer, Task Manager). Drawn from docs/brand/waf-icon.svg. -->
+    <ApplicationIcon>../../docs/brand/waf-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
