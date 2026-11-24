@@ -96,7 +96,11 @@ public sealed partial class AdminUiTests(AdminUiFixture gateway) : IClassFixture
         Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
+        Assert.Equal(FASoft.Waf.Host.Hosting.AdminPipeline.PermissionsPolicy, response.Headers.GetValues("Permissions-Policy").Single());
+        Assert.Equal("same-origin", response.Headers.GetValues("Cross-Origin-Opener-Policy").Single());
+        Assert.Equal("same-origin", response.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
         Assert.True(response.Headers.CacheControl?.NoStore);
+        Assert.False(response.Headers.Contains("Strict-Transport-Security"), "HSTS over plain HTTP (loopback) means nothing");
     }
 
     [Fact]

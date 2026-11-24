@@ -18,6 +18,16 @@ internal static class AdminPipeline
         "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; " +
         "form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'";
 
+    /// <summary>Browser features the admin UI never uses, switched off for it.</summary>
+    public const string PermissionsPolicy =
+        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()";
+
+    /// <summary>
+    /// HSTS for remote admin access (HTTPS only): a browser that has seen it never tries plain HTTP for the admin host
+    /// name again, for a year. Not for subdomains: other sites may run under them.
+    /// </summary>
+    public const string StrictTransportSecurity = "max-age=31536000";
+
     public static void Configure(IApplicationBuilder admin)
     {
         // Remote admin access only: the real client IP (trusted proxies), then the allowlist. Before anything else, so
@@ -29,6 +39,9 @@ internal static class AdminPipeline
             branch.UseMiddleware<RemoteAdminGateMiddleware>();
         });
 
+        // The loopback listener: only loopback host names (DNS rebinding). Remote admin requests matched the registered host.
+        admin.UseWhen(context => !remote.IsRemoteAdmin(context), branch => branch.UseMiddleware<LoopbackHostGuardMiddleware>());
+
         admin.Use((context, next) =>
         {
             var headers = context.Response.Headers;
@@ -36,7 +49,15 @@ internal static class AdminPipeline
             headers.XContentTypeOptions = "nosniff";
             headers.XFrameOptions = "DENY";
             headers["Referrer-Policy"] = "no-referrer";
+            headers["Permissions-Policy"] = PermissionsPolicy;
+            headers["Cross-Origin-Opener-Policy"] = "same-origin";
+            headers["Cross-Origin-Resource-Policy"] = "same-origin";
             headers.CacheControl = "no-cache, no-store"; // as antiforgery requires; nothing of the UI is cached
+            if (context.Request.IsHttps)
+            {
+                headers.StrictTransportSecurity = StrictTransportSecurity; // remote admin; the loopback listener is plain HTTP
+            }
+
             return next(context);
         });
 

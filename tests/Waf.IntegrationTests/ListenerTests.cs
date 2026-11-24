@@ -55,6 +55,42 @@ public sealed class ListenerTests(GatewayFixture gateway) : IClassFixture<Gatewa
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("localhost")]
+    [InlineData("LOCALHOST:8900")]
+    [InlineData("127.0.0.1:12345")]
+    [InlineData("[::1]")]
+    public async Task Admin_listener_answers_to_loopback_host_names(string host)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"http://127.0.0.1:{gateway.AdminPort}/healthz"));
+        request.Headers.Host = host;
+
+        using var response = await _http.SendAsync(request, Ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>DNS rebinding: a web page whose host name now points at 127.0.0.1 must not reach the admin UI.</summary>
+    [Theory]
+    [InlineData("/account/setup")]
+    [InlineData("/account/login")]
+    [InlineData("/healthz")]
+    public async Task Admin_listener_refuses_other_host_names(string path)
+    {
+        foreach (var host in new[] { "attacker.example", "attacker.example:8900", "127.0.0.1.attacker.example", "10.0.0.5" })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"http://127.0.0.1:{gateway.AdminPort}{path}"));
+            request.Headers.Host = host;
+
+            using var response = await _http.SendAsync(request, Ct);
+            var body = await response.Content.ReadAsStringAsync(Ct);
+
+            Assert.True(response.StatusCode == HttpStatusCode.BadRequest, $"{host}{path}: {response.StatusCode}");
+            Assert.StartsWith("The admin UI answers only at http://127.0.0.1:", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("form", body, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     [Fact]
     public void Admin_port_is_bound_to_loopback_only()
     {

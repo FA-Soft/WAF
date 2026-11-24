@@ -186,6 +186,7 @@ public sealed partial class RemoteAdminTests
         {
             Assert.Equal(HttpStatusCode.OK, loginStatus);
             Assert.Contains("Sign in", login, StringComparison.Ordinal);
+            Assert.Equal(FASoft.Waf.Host.Hosting.AdminPipeline.StrictTransportSecurity, loginResponse.Headers.GetValues("Strict-Transport-Security").Single());
         }
 
         foreach (var path in new[] { "/", "/routes", "/healthz", "/account/setup", "/history/1", "/nothing" })
@@ -196,6 +197,7 @@ public sealed partial class RemoteAdminTests
                 Assert.True(status == HttpStatusCode.NotFound, $"{path}: {status}");
                 Assert.Empty(body);
                 Assert.False(response.Headers.Contains("Content-Security-Policy"), $"{path} reveals the admin UI's headers");
+                Assert.False(response.Headers.Contains("Strict-Transport-Security"), $"{path} reveals the admin UI's headers");
             }
         }
 
