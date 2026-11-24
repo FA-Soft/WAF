@@ -323,7 +323,7 @@ jobs:
       # runner images no longer have the qemu-user-static apt package.
       - name: Set up QEMU
         if: matrix.emulated
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
 
