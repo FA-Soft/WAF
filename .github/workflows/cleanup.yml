@@ -1,0 +1,79 @@
+name: Cleanup GitHub Actions Storage
+
+on:
+  schedule:
+    # Every 12 hours
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Cleanup artifacts and caches older than 3 days
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -e
+
+          echo "=== CLEANUP STARTED ==="
+
+          #################################################################
+          # Artifacts
+          #################################################################
+
+          ARTIFACT_CUTOFF=$(date -u -d "3 days ago" +"%Y-%m-%dT%H:%M:%SZ")
+
+          echo ""
+          echo "Deleting artifacts older than 3 days..."
+          echo "Cutoff: $ARTIFACT_CUTOFF"
+
+          gh api \
+            "/repos/$REPO/actions/artifacts?per_page=100" \
+            --paginate \
+            --jq '.artifacts[] | "\(.id) \(.created_at)"' |
+          while read ID CREATED; do
+
+            if [[ "$CREATED" < "$ARTIFACT_CUTOFF" ]]; then
+              echo "Deleting artifact $ID ($CREATED)"
+
+              gh api \
+                --method DELETE \
+                "/repos/$REPO/actions/artifacts/$ID" \
+                || true
+            fi
+          done
+
+          #################################################################
+          # Caches
+          #################################################################
+
+          CACHE_CUTOFF=$(date -d "3 days ago" +%s)
+
+          echo ""
+          echo "Deleting caches older than 3 days..."
+
+          gh cache list \
+            --limit 1000 \
+            --json id,createdAt \
+            --jq '.[] | "\(.id) \(.createdAt)"' |
+          while read ID CREATED; do
+
+            CREATED_TS=$(date -d "$CREATED" +%s)
+
+            if [ "$CREATED_TS" -lt "$CACHE_CUTOFF" ]; then
+              echo "Deleting cache $ID ($CREATED)"
+
+              gh cache delete "$ID" --confirm \
+                || true
+            fi
+          done
+
+          echo ""
+          echo "=== CLEANUP COMPLETED ==="
