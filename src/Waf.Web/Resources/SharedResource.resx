@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Admin UI texts in English (the fallback). The key (name) is the English text, which is also the fallback. -->
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Skip to content" xml:space="preserve"><value>Skip to content</value></data>
+  <data name="Main navigation" xml:space="preserve"><value>Main navigation</value></data>
+  <data name="Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Request log" xml:space="preserve"><value>Request log</value></data>
+  <data name="Routes" xml:space="preserve"><value>Routes</value></data>
+  <data name="Targets" xml:space="preserve"><value>Targets</value></data>
+  <data name="Rules" xml:space="preserve"><value>Rules</value></data>
+  <data name="Rate limits" xml:space="preserve"><value>Rate limits</value></data>
+  <data name="Certificates" xml:space="preserve"><value>Certificates</value></data>
+  <data name="Templates and presets" xml:space="preserve"><value>Templates and presets</value></data>
+  <data name="Test a request" xml:space="preserve"><value>Test a request</value></data>
+  <data name="Configuration history" xml:space="preserve"><value>Configuration history</value></data>
+  <data name="Audit log" xml:space="preserve"><value>Audit log</value></data>
+  <data name="Backup and import" xml:space="preserve"><value>Backup and import</value></data>
+  <data name="Remote access" xml:space="preserve"><value>Remote access</value></data>
+  <data name="AI assistant" xml:space="preserve"><value>AI assistant</value></data>
+  <data name="Color theme" xml:space="preserve"><value>Color theme</value></data>
+  <data name="System" xml:space="preserve"><value>System</value></data>
+  <data name="Light" xml:space="preserve"><value>Light</value></data>
+  <data name="Dark" xml:space="preserve"><value>Dark</value></data>
+  <data name="Follow the system setting" xml:space="preserve"><value>Follow the system setting</value></data>
+  <data name="Always light" xml:space="preserve"><value>Always light</value></data>
+  <data name="Always dark" xml:space="preserve"><value>Always dark</value></data>
+  <data name="Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Browser" xml:space="preserve"><value>Browser</value></data>
+  <data name="Follow the browser's language" xml:space="preserve"><value>Follow the browser's language</value></data>
+  <data name="Your account" xml:space="preserve"><value>Your account</value></data>
+  <data name="Sign out" xml:space="preserve"><value>Sign out</value></data>
+</root>

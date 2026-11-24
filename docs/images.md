@@ -18,6 +18,7 @@ Screenshots of every page of the WAF Gateway admin UI at 1280×720. They use the
 - [Remote access](#remote-access)
 - [Your account](#your-account)
 - [Light and dark theme](#light-and-dark-theme)
+- [Language](#language)
 - [When no backend answers](#when-no-backend-answers)
 
 ## Signing in
@@ -239,6 +240,12 @@ The switch at the top right: **System** (the default) follows the device's setti
 ![Dashboard in the dark theme](images/admin-dashboard-dark.png)
 
 ![Request log in the dark theme](images/admin-logs-dark.png)
+
+## Language
+
+The language menu at the top right: **Browser** (the default) follows the browser's language; English, Nederlands, Français or Deutsch is stored with the account, like the theme.
+
+![Language menu](images/admin-language.png)
 
 ## When no backend answers
 

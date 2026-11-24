@@ -1,6 +1,8 @@
 <!DOCTYPE html>
+@inject IStringLocalizer<SharedResource> T
 @* data-theme: the theme the admin chose (stored with the account); without it the stylesheet follows the system setting. *@
-<html lang="en" data-theme="@AdminTheme.DataAttribute(HttpContext?.User)">
+@* lang: the language of the UI for this request (AdminLanguage). *@
+<html lang="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-theme="@AdminTheme.DataAttribute(HttpContext?.User)">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,7 +13,7 @@
     <HeadOutlet />
 </head>
 <body>
-    <a class="skip-link" href="#main">Skip to content</a>
+    <a class="skip-link" href="#main">@T["Skip to content"]</a>
     <Routes />
     @* Enhanced navigation and forms; no inline scripts, so a strict Content-Security-Policy applies. *@
     <script src="@Assets["_framework/blazor.web.js"]"></script>

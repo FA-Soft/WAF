@@ -166,7 +166,7 @@ public partial class GatewayFixture : IAsyncLifetime
             });
             using var response = await client.PostAsync(new Uri($"http://127.0.0.1:{AdminPort}{path}"), content, TestContext.Current.CancellationToken);
             var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-            if (response.StatusCode != HttpStatusCode.OK || !html.Contains("Sign out", StringComparison.Ordinal))
+            if (response.StatusCode != HttpStatusCode.OK || !html.Contains("action=\"account/logout\"", StringComparison.Ordinal)) // the sign-out form, in any language
             {
                 throw new InvalidOperationException($"Signing in to the admin UI failed ({(int)response.StatusCode}): {html}");
             }

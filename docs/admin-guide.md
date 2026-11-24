@@ -64,6 +64,9 @@ ssh -L 8900:127.0.0.1:8900 pi@raspberrypi     # then open http://localhost:8900 
 
 3. **Choose the theme** if you like: **System**, **Light** or **Dark** at the top right. Light and Dark are stored with
    your account and apply on every device you sign in from.
+4. **Choose the language** if you like. The admin UI follows your browser's language (English, Dutch, French or
+   German; English for any other language). The language menu at the top right sets one for your account, on every
+   device; **Browser** goes back to following the browser.
 
 **Sign-in rules worth knowing:**
 

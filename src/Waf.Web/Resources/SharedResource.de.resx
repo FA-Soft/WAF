@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Admin UI texts in German. The key (name) is the English text, which is also the fallback. -->
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Skip to content" xml:space="preserve"><value>Zum Inhalt springen</value></data>
+  <data name="Main navigation" xml:space="preserve"><value>Hauptnavigation</value></data>
+  <data name="Dashboard" xml:space="preserve"><value>Übersicht</value></data>
+  <data name="Request log" xml:space="preserve"><value>Anfrageprotokoll</value></data>
+  <data name="Routes" xml:space="preserve"><value>Routen</value></data>
+  <data name="Targets" xml:space="preserve"><value>Ziele</value></data>
+  <data name="Rules" xml:space="preserve"><value>Regeln</value></data>
+  <data name="Rate limits" xml:space="preserve"><value>Ratenlimits</value></data>
+  <data name="Certificates" xml:space="preserve"><value>Zertifikate</value></data>
+  <data name="Templates and presets" xml:space="preserve"><value>Vorlagen und Voreinstellungen</value></data>
+  <data name="Test a request" xml:space="preserve"><value>Anfrage testen</value></data>
+  <data name="Configuration history" xml:space="preserve"><value>Konfigurationsverlauf</value></data>
+  <data name="Audit log" xml:space="preserve"><value>Audit-Protokoll</value></data>
+  <data name="Backup and import" xml:space="preserve"><value>Sicherung und Import</value></data>
+  <data name="Remote access" xml:space="preserve"><value>Fernzugriff</value></data>
+  <data name="AI assistant" xml:space="preserve"><value>KI-Assistent</value></data>
+  <data name="Color theme" xml:space="preserve"><value>Farbschema</value></data>
+  <data name="System" xml:space="preserve"><value>System</value></data>
+  <data name="Light" xml:space="preserve"><value>Hell</value></data>
+  <data name="Dark" xml:space="preserve"><value>Dunkel</value></data>
+  <data name="Follow the system setting" xml:space="preserve"><value>Der Systemeinstellung folgen</value></data>
+  <data name="Always light" xml:space="preserve"><value>Immer hell</value></data>
+  <data name="Always dark" xml:space="preserve"><value>Immer dunkel</value></data>
+  <data name="Language" xml:space="preserve"><value>Sprache</value></data>
+  <data name="Browser" xml:space="preserve"><value>Browser</value></data>
+  <data name="Follow the browser's language" xml:space="preserve"><value>Der Sprache des Browsers folgen</value></data>
+  <data name="Your account" xml:space="preserve"><value>Ihr Konto</value></data>
+  <data name="Sign out" xml:space="preserve"><value>Abmelden</value></data>
+</root>

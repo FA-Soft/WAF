@@ -26,7 +26,7 @@
     <div class="alert @(cleaned.Error is null ? "alert-ok" : "alert-danger")" role="status">
         @if (cleaned.Error is null)
         {
-            <span>Cleanup finished: @cleaned.Deleted.ToString("N0", Culture) entries removed.</span>
+            <span>Cleanup finished: @cleaned.Deleted.ToString("N0", CultureInfo.CurrentCulture) entries removed.</span>
         }
         else
         {
@@ -41,7 +41,7 @@
         @if (_info is { } info)
         {
             <p class="metric">@Megabytes(info.FileBytes)</p>
-            <p class="muted">of at most @_settings.MaxDatabaseSizeMb.ToString("N0", Culture) MB (@Percent(info.FileBytes))</p>
+            <p class="muted">of at most @_settings.MaxDatabaseSizeMb.ToString("N0", CultureInfo.CurrentCulture) MB (@Percent(info.FileBytes))</p>
             <meter class="size-meter" min="0" max="1" low="@RequestLogMaintenance.LowWatermark" high="@RequestLogMaintenance.HighWatermark" optimum="0" value="@Math.Clamp(Fraction(info.FileBytes), 0, 1).ToString("0.###", Culture)" aria-label="Share of the size limit in use">@Percent(info.FileBytes)</meter>
         }
         else
@@ -52,7 +52,7 @@
     </div>
     <div class="card">
         <h2>Entries</h2>
-        <p class="metric">@((_info?.Entries ?? 0).ToString("N0", Culture))</p>
+        <p class="metric">@((_info?.Entries ?? 0).ToString("N0", CultureInfo.CurrentCulture))</p>
         <p class="muted">
             @if (_info?.Oldest is { } oldest)
             {
@@ -64,9 +64,9 @@
         <h2>Last cleanup</h2>
         @if (Retention.LastRun is { } last)
         {
-            <p class="metric">@last.Deleted.ToString("N0", Culture) removed</p>
+            <p class="metric">@last.Deleted.ToString("N0", CultureInfo.CurrentCulture) removed</p>
             <p class="muted">
-                @last.FinishedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture) UTC: @last.DeletedByAge.ToString("N0", Culture) by age, @last.DeletedBySize.ToString("N0", Culture) by size
+                @last.FinishedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture) UTC: @last.DeletedByAge.ToString("N0", CultureInfo.CurrentCulture) by age, @last.DeletedBySize.ToString("N0", CultureInfo.CurrentCulture) by size
             </p>
             @if (last.Error is not null)
             {
@@ -197,8 +197,8 @@
 
     private double Fraction(long bytes) => (double)bytes / ((long)_settings.MaxDatabaseSizeMb * 1024 * 1024);
 
-    private string Percent(long bytes) => Fraction(bytes).ToString("P0", Culture);
+    private string Percent(long bytes) => Fraction(bytes).ToString("P0", CultureInfo.CurrentCulture);
 
     private static string Megabytes(long bytes) =>
-        bytes < 1024 * 1024 ? (bytes / 1024.0).ToString("N0", Culture) + " KB" : (bytes / (1024.0 * 1024)).ToString("N1", Culture) + " MB";
+        bytes < 1024 * 1024 ? (bytes / 1024.0).ToString("N0", CultureInfo.CurrentCulture) + " KB" : (bytes / (1024.0 * 1024)).ToString("N1", CultureInfo.CurrentCulture) + " MB";
 }
