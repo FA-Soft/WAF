@@ -22,6 +22,9 @@ public static class YarpConfigMapper
     /// <summary>Route metadata key: "true" when HTTPS responses carry the HSTS header.</summary>
     public const string HstsMetadataKey = "WafHsts";
 
+    /// <summary>Route metadata key: the route's message for visitors when no backend answers.</summary>
+    public const string ErrorMessageMetadataKey = "WafErrorMessage";
+
     /// <summary>Destination metadata key: the target label ("nas · web") of a destination that uses a target.</summary>
     public const string TargetMetadataKey = "WafTarget";
 
@@ -87,6 +90,11 @@ public static class YarpConfigMapper
             if (route.Https?.Hsts == true)
             {
                 metadata[HstsMetadataKey] = "true";
+            }
+
+            if (!string.IsNullOrWhiteSpace(route.ErrorMessage))
+            {
+                metadata[ErrorMessageMetadataKey] = route.ErrorMessage.Trim();
             }
 
             yarpRoutes.Add(MapRoute(route) with { Metadata = metadata });

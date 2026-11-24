@@ -1,6 +1,7 @@
 @page "/"
 @inject ITargetAddressMonitor Addresses
 @inject IRouteFailoverMonitor Failover
+@inject IBackendErrorStatistics BackendErrors
 @inject WafEngineHolder Engines
 @inject ConfigurationStore Store
 @inject IRequestLogMonitor RequestLog
@@ -140,6 +141,34 @@ else
             </table>
         }
     </section>
+
+    @if (BackendErrors.Routes is { Count: > 0 } errors)
+    {
+        <section aria-labelledby="backend-errors-heading">
+            <h2 id="backend-errors-heading">
+                Backend errors since the start
+                <HelpTip Title="Backend errors">
+                    <p>Requests that got an error because no backend answered: <strong>no backend</strong> (503, none was healthy), <strong>backend error</strong> (502, the connection failed or the answer was invalid) and <strong>time-out</strong> (504). The request log has each request, with the backend that was tried.</p>
+                </HelpTip>
+                <a class="heading-link" href="logs?show=Errors">View in the request log</a>
+            </h2>
+            <table>
+                <thead><tr><th scope="col">Route</th><th scope="col">No backend (503)</th><th scope="col">Backend error (502)</th><th scope="col">Time-out (504)</th><th scope="col">Last</th></tr></thead>
+                <tbody>
+                    @foreach (var route in errors)
+                    {
+                        <tr>
+                            <td>@route.RouteName</td>
+                            <td>@route.NoBackend.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@route.BackendError.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@route.Timeout.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@Describe.Time(route.Last)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    }
 
     <section aria-labelledby="rules-heading">
         <h2 id="rules-heading">Rules <a class="heading-link" href="rules">Manage rules</a></h2>

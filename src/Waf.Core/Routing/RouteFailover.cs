@@ -21,3 +21,18 @@ public sealed class NoRouteFailover : IRouteFailoverMonitor
 
     public IReadOnlyList<RouteFailoverStatus> Statuses => [];
 }
+
+/// <summary>How often a route's requests got an error because no backend answered, since the gateway started.</summary>
+/// <param name="RouteName">The route.</param>
+/// <param name="NoBackend">503: no healthy backend.</param>
+/// <param name="BackendError">502: the connection failed or the answer was invalid.</param>
+/// <param name="Timeout">504: the backend did not answer in time.</param>
+/// <param name="Last">When the last of them happened.</param>
+public sealed record RouteBackendErrors(string RouteName, long NoBackend, long BackendError, long Timeout, DateTimeOffset Last);
+
+/// <summary>Backend errors per route since the gateway started (runtime state).</summary>
+public interface IBackendErrorStatistics
+{
+    /// <summary>Routes with at least one backend error, by name.</summary>
+    IReadOnlyList<RouteBackendErrors> Routes { get; }
+}

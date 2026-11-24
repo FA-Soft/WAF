@@ -295,6 +295,12 @@
               }
             },
             "additionalProperties": false
+          },
+          "ErrorMessage": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": false

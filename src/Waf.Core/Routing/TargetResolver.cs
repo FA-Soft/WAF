@@ -59,6 +59,7 @@ public static class TargetResolver
                 AllowInvalidBackendCertificate = route.AllowInvalidBackendCertificate,
                 HealthCheck = route.HealthCheck,
                 Https = route.Https,
+                ErrorMessage = route.ErrorMessage,
             };
             foreach (var destination in route.Destinations)
             {

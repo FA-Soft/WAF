@@ -100,6 +100,10 @@ internal sealed class RouteFormModel : IValidatableObject
 
     public string? HealthCheckPath { get; set; }
 
+    /// <summary>Optional text for visitors when no backend answers, e.g. "Planned maintenance until 14:00".</summary>
+    [StringLength(ProxyRouteValidator.MaxErrorMessageLength, ErrorMessage = "Keep the message to 300 characters or fewer.")]
+    public string? ErrorMessage { get; set; }
+
     [Range(1, 3600, ErrorMessage = "Use a value between 1 and 3600 seconds.")]
     public int HealthCheckIntervalSeconds { get; set; } = 10;
 
@@ -162,6 +166,11 @@ internal sealed class RouteFormModel : IValidatableObject
             }
         }
 
+        if (ErrorMessage is { } message && message.Any(char.IsControl))
+        {
+            yield return new ValidationResult("Write the message on one line.", [nameof(ErrorMessage)]);
+        }
+
         if (!string.IsNullOrWhiteSpace(HealthCheckPath) && HealthCheckPath.Trim()[0] != '/')
         {
             yield return new ValidationResult("The health check path must start with /, e.g. /health.", [nameof(HealthCheckPath)]);
@@ -206,6 +215,7 @@ internal sealed class RouteFormModel : IValidatableObject
             HealthCheckPath = route.HealthCheck.Path,
             HealthCheckIntervalSeconds = route.HealthCheck.IntervalSeconds,
             HealthCheckTimeoutSeconds = route.HealthCheck.TimeoutSeconds,
+            ErrorMessage = route.ErrorMessage,
         };
     }
 
@@ -219,6 +229,7 @@ internal sealed class RouteFormModel : IValidatableObject
             PreserveHost = PreserveHost,
             AllowInvalidBackendCertificate = AllowInvalidBackendCertificate,
             Https = new RouteHttpsOptions { RedirectHttp = RedirectHttp, Hsts = Hsts },
+            ErrorMessage = string.IsNullOrWhiteSpace(ErrorMessage) ? null : ErrorMessage.Trim(),
             HealthCheck = new RouteHealthCheckOptions
             {
                 Path = string.IsNullOrWhiteSpace(HealthCheckPath) ? null : HealthCheckPath.Trim(),

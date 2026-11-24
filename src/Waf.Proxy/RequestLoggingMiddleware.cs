@@ -21,6 +21,19 @@ public sealed class RequestLogFeature(DateTimeOffset startedAt, long startTimest
 
     public string? Detail { get; private set; }
 
+    /// <summary>Why no backend answered, e.g. "Backend timeout"; null when one did.</summary>
+    public string? BackendError { get; private set; }
+
+    /// <summary>Records on the request's log feature that no backend answered, if request logging is on.</summary>
+    public static void RecordBackendError(HttpContext context, string text)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (context.Features.Get<RequestLogFeature>() is { } feature)
+        {
+            feature.BackendError = text;
+        }
+    }
+
     /// <summary>Keeps <paramref name="wafEvent"/> when it is more important than the event recorded so far.</summary>
     public void Record(WafEvent wafEvent)
     {
@@ -100,6 +113,7 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
             WafEventKind.RateLimited => RequestAction.RateLimited,
             WafEventKind.FailClosed => RequestAction.FailClosed,
             _ when context.Items.ContainsKey(HttpsEnforcementMiddleware.RedirectedItemKey) => RequestAction.Redirected,
+            _ when feature.BackendError is not null => RequestAction.BackendUnavailable,
             _ when destination is not null => RequestAction.Forwarded,
             _ when route is not null => RequestAction.BackendUnavailable,
             _ when status == StatusCodes.Status404NotFound => RequestAction.NoRoute,
@@ -116,7 +130,7 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
             action,
             feature.Event,
             feature.RuleName,
-            Truncate(feature.Detail, MaxDetailLength),
+            Truncate(feature.BackendError is null ? feature.Detail : feature.Detail is null ? feature.BackendError : $"{feature.BackendError} · {feature.Detail}", MaxDetailLength),
             Truncate(destination, MaxDestinationLength),
             status,
             Math.Round(elapsed.TotalMilliseconds, 3));
