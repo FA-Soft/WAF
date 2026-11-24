@@ -301,6 +301,15 @@
               "string",
               "null"
             ]
+          },
+          "ErrorMessageTranslations": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false
