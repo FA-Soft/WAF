@@ -111,6 +111,23 @@ public class RateLimiterTests
         Assert.Equal(5, CountAllowed(limiter, client, 20));
     }
 
+    /// <summary>
+    /// Requests just before a window boundary still count in full just after it: no extra request slips through at the
+    /// boundary (this once made the integration test of a 3-per-minute limit flaky).
+    /// </summary>
+    [Fact]
+    public void A_window_boundary_does_not_let_one_request_too_many_through()
+    {
+        var limiter = Limiter(Limit("per-ip", permits: 3));
+        var client = From("198.51.100.1");
+        _time.Advance(TimeSpan.FromSeconds(59.9));
+        Assert.Equal(3, CountAllowed(limiter, client, 3));
+
+        _time.Advance(TimeSpan.FromSeconds(0.2)); // into the next window: 3 × 0.998 still counts as 3
+
+        Assert.True(limiter.Check(client).IsLimited);
+    }
+
     [Fact]
     public void Limit_lifts_once_the_client_slows_down()
     {

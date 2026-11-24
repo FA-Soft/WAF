@@ -35,7 +35,8 @@ public sealed record RateLimitDecision(RateLimitOutcome Outcome, string? RuleNam
 /// <remarks>
 /// <para>
 /// Sliding window: the count is the current fixed window plus the previous window weighted by how much of
-/// it still overlaps. Every request is counted, including rejected ones.
+/// it still overlaps (rounded up, so a window boundary never lets one request too many through). Every request is
+/// counted, including rejected ones.
 /// </para>
 /// <para>
 /// Memory bound: at most <see cref="Capacity"/> counters exist. When the table is full, counters whose
@@ -339,10 +340,16 @@ public sealed class RateLimiter
             _window = window;
         }
 
+        /// <remarks>
+        /// The weighted part of the previous window is rounded up: a request from it counts in full until enough of the
+        /// window has passed. Otherwise a limit of 3 with three requests just before a window boundary would let a
+        /// fourth through just after it (3 × 0.998 = 2.99 &lt; 3), four requests within a second.
+        /// </remarks>
         private double Estimate(long now, long windowTicks)
         {
             var elapsed = (double)(now % windowTicks) / windowTicks;
-            return (_previous * (1 - elapsed)) + _current;
+            // The small tolerance keeps exact values exact (10 × 0.5 stays 5, not 6 through rounding noise).
+            return Math.Ceiling((_previous * (1 - elapsed)) - 1e-9) + _current;
         }
     }
 }
