@@ -105,7 +105,7 @@ public sealed class LayoutTests
             .Select(c => new Microsoft.Playwright.Cookie { Name = c.Name, Value = c.Value, Domain = "127.0.0.1", Path = "/", HttpOnly = c.HttpOnly })
             .ToList();
         var problems = new List<string>();
-        foreach (var (width, height, mobile) in new[] { (360, 780, true), (390, 844, true), (1280, 720, false) })
+        foreach (var (width, height, mobile) in new[] { (320, 640, true), (360, 780, true), (390, 844, true), (1280, 720, false) })
         {
             foreach (var locale in new[] { "en-US", "de-DE" })
             {
