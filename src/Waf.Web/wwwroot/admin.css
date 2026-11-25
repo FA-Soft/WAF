@@ -554,3 +554,6 @@ td .badge {
 .pie-legend li { display: grid; grid-template-columns: 0.9rem 1fr auto; gap: 0.5rem; align-items: baseline; overflow-wrap: anywhere; }
 .pie-swatch { width: 0.9rem; height: 0.9rem; border-radius: 3px; align-self: center; }
 .pie-figures { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+.row-warning > th, .row-warning > td { background: var(--warn-bg); }
+.failover-periods { margin: 0.25rem 0 0.5rem; padding-left: 1.25rem; }
+.failover-periods li { overflow-wrap: anywhere; }

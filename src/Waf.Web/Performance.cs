@@ -187,6 +187,18 @@ internal sealed record PerformanceReport(
     long SourceTotal = 0,
     long DestinationTotal = 0)
 {
+    /// <summary>Response time percentiles per bucket (per minute and coarser).</summary>
+    public IReadOnlyList<LatencyPoint> Latency { get; init; } = [];
+
+    /// <summary>Response times over the whole period.</summary>
+    public LatencySummary? LatencySummary { get; init; }
+
+    /// <summary>What each backend did, per route.</summary>
+    public IReadOnlyList<BackendSummary> Backends { get; init; } = [];
+
+    /// <summary>Periods in which a route ran on a failover destination.</summary>
+    public IReadOnlyList<FailoverPeriod> Failovers { get; init; } = [];
+
     /// <summary>The requested destinations with the most bad requests.</summary>
     public IReadOnlyList<LiveSourceCount> TopDestinations => Destinations ?? [];
 
@@ -233,9 +245,20 @@ internal sealed record PerformanceReport(
         var destinations = await store.ReadTopDestinationsAsync(request, TopSources, cancellationToken).ConfigureAwait(false);
         var sourceTotal = await store.ReadSourceTotalAsync(request, cancellationToken).ConfigureAwait(false);
         var destinationTotal = await store.ReadDestinationTotalAsync(request, cancellationToken).ConfigureAwait(false);
+        // Response times and backends are kept per route only: the route filter applies, the others do not.
+        var responses = new TrafficQuery(from, to, tier, query.Route);
+        var (latency, latencySummary) = await store.ReadLatencyAsync(responses, cancellationToken).ConfigureAwait(false);
+        var backends = await store.ReadBackendsAsync(responses, cancellationToken).ConfigureAwait(false);
+        var failovers = await store.ReadFailoversAsync(from, to, query.Route, cancellationToken).ConfigureAwait(false);
         return new PerformanceReport(
             from, to, series.Count > 0 && series[0].Seconds > 1 && tier == MetricsTier.Second ? MetricsTier.Minute : tier,
-            series, previous, kinds, sources, destinations, sourceTotal, destinationTotal);
+            series, previous, kinds, sources, destinations, sourceTotal, destinationTotal)
+        {
+            Latency = latency,
+            LatencySummary = latencySummary,
+            Backends = backends,
+            Failovers = failovers,
+        };
     }
 
     /// <summary>The chart's data, for the page's script: buckets as [start, good, bad, failed, peak], the previous period shifted onto this one.</summary>
@@ -249,9 +272,23 @@ internal sealed record PerformanceReport(
             tier = Tier.ToString(),
             buckets = Series.Select(b => new object?[] { b.Start, b.Seconds, b.Good, b.Bad, b.Failed, b.Peak }),
             previous = Previous?.Select(b => new object[] { b.Start + span, b.Seconds, b.Total }),
+            failovers = FailoverBands(),
         };
         return JsonSerializer.Serialize(data);
     }
+
+    /// <summary>The response time chart's data: points as [start, p50, p95, p99, gateway p50] in milliseconds, and the failover bands.</summary>
+    public string LatencyJson() => JsonSerializer.Serialize(new
+    {
+        points = Latency.Select(p => new object?[] { p.Start, Round(p.P50), Round(p.P95), Round(p.P99), Round(p.GatewayP50) }),
+        failovers = FailoverBands(),
+    });
+
+    /// <summary>Failover periods as [start, end (null: still running), route, failover number].</summary>
+    private IEnumerable<object?[]> FailoverBands() =>
+        Failovers.Select(f => new object?[] { f.Start.ToUnixTimeSeconds(), f.End?.ToUnixTimeSeconds(), f.Route, f.Failover });
+
+    private static double? Round(double? milliseconds) => milliseconds is { } value ? Math.Round(value, value < 10 ? 2 : 0) : null;
 
     /// <summary>The series as CSV (UTC times, invariant numbers).</summary>
     public string ToCsv()

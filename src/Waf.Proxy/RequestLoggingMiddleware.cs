@@ -24,6 +24,12 @@ public sealed class RequestLogFeature(DateTimeOffset startedAt, long startTimest
     /// <summary>Why no backend answered, e.g. "Backend timeout"; null when one did.</summary>
     public string? BackendError { get; private set; }
 
+    /// <summary>Time spent forwarding to backends (all attempts); null when the request was not forwarded.</summary>
+    public TimeSpan? BackendTime { get; private set; }
+
+    /// <summary>Adds the time of one forwarding attempt (a failover can make several).</summary>
+    public void AddBackendTime(TimeSpan time) => BackendTime = (BackendTime ?? TimeSpan.Zero) + time;
+
     /// <summary>Records on the request's log feature that no backend answered, if request logging is on.</summary>
     public static void RecordBackendError(HttpContext context, string text)
     {
@@ -137,7 +143,8 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
             Truncate(feature.BackendError is null ? feature.Detail : feature.Detail is null ? feature.BackendError : $"{feature.BackendError} · {feature.Detail}", MaxDetailLength),
             Truncate(destination, MaxDestinationLength),
             status,
-            Math.Round(elapsed.TotalMilliseconds, 3));
+            Math.Round(elapsed.TotalMilliseconds, 3),
+            feature.BackendTime is { } backend ? Math.Round(backend.TotalMilliseconds, 3) : null);
     }
 
     private static string? Truncate(string? text, int max) =>

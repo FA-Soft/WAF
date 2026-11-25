@@ -246,6 +246,13 @@ The **Performance** page shows how much traffic the gateway handles, and how muc
   bookmarked or shared.
 - **Every number links to the request log**, showing the same requests (same period, route and kind), as long as
   the request log still has them (see Log retention).
+- **Response times**: the median, the 95th and the 99th percentile over the period and over time, and what the
+  gateway itself adds (WAF, routing, logging) apart from the backend's time. Kept per minute and coarser, accurate to
+  about 12 %. Choose a route to see only its response times.
+- **Backends**: per route and backend, the requests and the backend's answers (2xx to 5xx), and the 502, 503 and 504
+  the gateway answered because the backend did not (a row with errors is marked). **Failovers in this period** lists
+  when a route ran on its failover, and the charts shade those periods: a backend that went down shows as rising
+  failed requests with a shaded band on its route.
 - **Download as CSV** saves the shown series. **Show as table** lists the numbers of the chart (also for screen
   readers).
 

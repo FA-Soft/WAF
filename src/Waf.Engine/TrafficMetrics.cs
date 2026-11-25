@@ -215,7 +215,8 @@ public static class TrafficClassifier
         return destination.Length <= MaxDestinationLength ? destination : destination[..MaxDestinationLength];
     }
 
-    internal static string Name(string? name) =>
+    /// <summary>A rule, limit or route name as stored: empty for none, cut at <see cref="MaxNameLength"/>.</summary>
+    public static string Name(string? name) =>
         string.IsNullOrEmpty(name) ? string.Empty : name.Length <= MaxNameLength ? name : name[..MaxNameLength];
 }
 
@@ -243,11 +244,15 @@ public sealed class TrafficCounter
     private readonly ConcurrentDictionary<CountKey, Cell> _counts = new();
     private readonly ConcurrentDictionary<SourceKey, Cell> _sources = new();
     private readonly ConcurrentDictionary<SourceKey, Cell> _destinations = new();
+    private readonly ConcurrentDictionary<LatencyKey, Cell> _latencies = new();
+    private readonly ConcurrentDictionary<BackendKey, Cell> _backends = new();
     private readonly int _maxCells;
     private readonly int _maxSourceCells;
     private int _countCells;
     private int _sourceCells;
     private int _destinationCells;
+    private int _latencyCells;
+    private int _backendCells;
 
     /// <param name="maxCells">Most counts waiting in memory; beyond that, requests are not counted (see <see cref="Add"/>).</param>
     /// <param name="maxSourceCells">Most source counts waiting in memory; beyond that, new sources count as <see cref="OtherSource"/>.</param>
@@ -260,7 +265,34 @@ public sealed class TrafficCounter
     }
 
     /// <summary>Counts waiting in memory.</summary>
-    public int Pending => Volatile.Read(ref _countCells) + Volatile.Read(ref _sourceCells) + Volatile.Read(ref _destinationCells);
+    public int Pending =>
+        Volatile.Read(ref _countCells) + Volatile.Read(ref _sourceCells) + Volatile.Read(ref _destinationCells)
+        + Volatile.Read(ref _latencyCells) + Volatile.Read(ref _backendCells);
+
+    /// <summary>
+    /// Counts the response times of a forwarded request, per minute: the total, and when known the backend's time and
+    /// what the gateway added. Beyond the memory limit they are left out (the request itself is counted by <see cref="Add"/>).
+    /// </summary>
+    public void AddResponse(DateTimeOffset timestamp, string? route, double totalMs, double? backendMs)
+    {
+        var second = timestamp.ToUnixTimeSeconds();
+        var minute = second - (second % 60);
+        var name = TrafficClassifier.Name(route);
+        Increment(_latencies, new LatencyKey(minute, name, LatencySeries.Total, LatencyHistogram.Bin(totalMs)), ref _latencyCells, _maxSourceCells);
+        if (backendMs is { } backend)
+        {
+            Increment(_latencies, new LatencyKey(minute, name, LatencySeries.Backend, LatencyHistogram.Bin(backend)), ref _latencyCells, _maxSourceCells);
+            Increment(_latencies, new LatencyKey(minute, name, LatencySeries.Gateway, LatencyHistogram.Bin(Math.Max(0, totalMs - backend))), ref _latencyCells, _maxSourceCells);
+        }
+    }
+
+    /// <summary>Counts what a backend did with a request (its status class, or the error when it did not answer), per minute.</summary>
+    public void AddBackend(DateTimeOffset timestamp, string? route, string? destination, BackendMetric metric)
+    {
+        var second = timestamp.ToUnixTimeSeconds();
+        var key = new BackendKey(second - (second % 60), TrafficClassifier.Name(route), destination ?? string.Empty, metric);
+        Increment(_backends, key, ref _backendCells, _maxSourceCells);
+    }
 
     /// <summary>
     /// Counts one request. Returns false when it could not be counted because too many counts are waiting (the
@@ -306,7 +338,7 @@ public sealed class TrafficCounter
     /// Everything when <paramref name="all"/> (shutdown). Sources are limited to the top <see cref="TopSources"/>
     /// per minute.
     /// </summary>
-    public (List<TrafficCount> Counts, List<SourceCount> Sources, List<SourceCount> Destinations) TakeCompleted(DateTimeOffset now, TimeSpan sourceGrace, bool all = false)
+    public TrafficTake TakeCompleted(DateTimeOffset now, TimeSpan sourceGrace, bool all = false)
     {
         var second = now.ToUnixTimeSeconds();
         var counts = new List<TrafficCount>();
@@ -337,7 +369,25 @@ public sealed class TrafficCounter
             }
         }
 
-        return (counts, LimitSources(sources, TopSources), LimitSources(destinations, TopSources));
+        var latencies = new List<LatencyCount>();
+        foreach (var key in _latencies.Keys)
+        {
+            if ((all || key.Minute + 60 <= sourceCutoff) && Take(_latencies, key, ref _latencyCells) is { } value)
+            {
+                latencies.Add(new LatencyCount(key.Minute, key.Route, key.Series, key.Bin, value));
+            }
+        }
+
+        var backends = new List<BackendCount>();
+        foreach (var key in _backends.Keys)
+        {
+            if ((all || key.Minute + 60 <= sourceCutoff) && Take(_backends, key, ref _backendCells) is { } value)
+            {
+                backends.Add(new BackendCount(key.Minute, key.Route, key.Destination, key.Metric, value));
+            }
+        }
+
+        return new TrafficTake(counts, LimitSources(sources, TopSources), LimitSources(destinations, TopSources), latencies, backends);
     }
 
     /// <summary>
@@ -423,6 +473,10 @@ public sealed class TrafficCounter
     private readonly record struct CountKey(long Second, TrafficKind Kind, string Name, string Route);
 
     private readonly record struct SourceKey(long Minute, string Source, TrafficKind Kind);
+
+    private readonly record struct LatencyKey(long Minute, string Route, LatencySeries Series, int Bin);
+
+    private readonly record struct BackendKey(long Minute, string Route, string Destination, BackendMetric Metric);
 }
 
 /// <summary>

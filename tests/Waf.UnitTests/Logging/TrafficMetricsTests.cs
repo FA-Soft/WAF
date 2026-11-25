@@ -337,6 +337,25 @@ public sealed class TrafficMetricsTests : IDisposable
             Writes++;
             return Task.CompletedTask;
         }
+
+        public List<LatencyCount> Latencies { get; } = [];
+
+        public List<BackendCount> Backends { get; } = [];
+
+        public List<IReadOnlyList<FASoft.Waf.Core.Routing.RouteFailoverStatus>> Failovers { get; } = [];
+
+        public async Task WriteAsync(TrafficTake take, CancellationToken cancellationToken)
+        {
+            await WriteAsync(take.Counts, take.Sources, take.Destinations, cancellationToken);
+            Latencies.AddRange(take.Latencies);
+            Backends.AddRange(take.Backends);
+        }
+
+        public Task RecordFailoversAsync(IReadOnlyList<FASoft.Waf.Core.Routing.RouteFailoverStatus> current, DateTimeOffset now, CancellationToken cancellationToken)
+        {
+            Failovers.Add(current);
+            return Task.CompletedTask;
+        }
     }
 
     private static RequestMetricsWriter Writer(IMetricsStore store, ManualTimeProvider time, int maxPending = 100_000) =>

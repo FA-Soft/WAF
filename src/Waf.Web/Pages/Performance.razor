@@ -215,6 +215,114 @@ else if (_report is { } report)
         }
     </details>
 
+    <section aria-labelledby="latency-heading" class="perf-latency">
+        <h2 id="latency-heading">
+            @T("Response times")
+            <HelpTip Title="@T("Response times")"><p>@T("How long forwarded requests took, from arrival until the response was complete: the median (half were faster), the 95th and the 99th percentile (the slowest 5 and 1 in 100). The part the gateway itself adds (WAF, routing, logging) is measured apart from the backend's time. Kept per minute and coarser, as a histogram, so the values are accurate to about 12 %.")</p></HelpTip>
+        </h2>
+        @if (report.LatencySummary is not { Requests: > 0 } latency)
+        {
+            <p class="muted">@T("No forwarded requests in this period.")</p>
+        }
+        else
+        {
+            <section class="cards" aria-label="@T("Response times")">
+                <div class="card"><h3 class="card-heading">@T("Median")</h3><p class="metric">@Milliseconds(latency.P50)</p><p class="muted">@T("half of the requests were faster")</p></div>
+                <div class="card"><h3 class="card-heading">@T("95th percentile")</h3><p class="metric">@Milliseconds(latency.P95)</p><p class="muted">@T("95 of 100 requests were faster")</p></div>
+                <div class="card"><h3 class="card-heading">@T("99th percentile")</h3><p class="metric">@Milliseconds(latency.P99)</p><p class="muted">@T("99 of 100 requests were faster")</p></div>
+                <div class="card"><h3 class="card-heading">@T("Added by the gateway")</h3><p class="metric">@Milliseconds(latency.GatewayP50)</p><p class="muted">@T("median; 95th percentile {0}", Milliseconds(latency.GatewayP95))</p></div>
+            </section>
+            <figure class="perf-chart-figure">
+                <figcaption>@T("Response time in milliseconds ({0}, logarithmic scale)", PerformanceText.Tier(report.Tier == MetricsTier.Second ? MetricsTier.Minute : report.Tier)) · <span data-tz>@T("times in UTC")</span></figcaption>
+                <div id="perf-latency" class="perf-chart" role="img" aria-label="@T("Chart of the response times: median {0}, 95th percentile {1}, 99th percentile {2}.", Milliseconds(latency.P50), Milliseconds(latency.P95), Milliseconds(latency.P99))"
+                     data-chart="@report.LatencyJson()" data-text-p50="@T("Median")" data-text-p95="@T("95th percentile")" data-text-p99="@T("99th percentile")" data-text-gateway="@T("Added by the gateway")"></div>
+            </figure>
+            <details class="perf-table">
+                <summary>@T("Show as table")</summary>
+                <div class="table-scroll">
+                    <table>
+                        <thead><tr><th scope="col">@T("Time")</th><th scope="col">@T("Requests")</th><th scope="col">@T("Median")</th><th scope="col">@T("95th percentile")</th><th scope="col">@T("99th percentile")</th><th scope="col">@T("Added by the gateway")</th></tr></thead>
+                        <tbody>
+                            @foreach (var point in report.Latency.Where(p => p.Requests > 0).TakeLast(MaxTableRows))
+                            {
+                                <tr>
+                                    <th scope="row"><time datetime="@Iso(point.Start)" data-local>@Utc(point.Start)</time></th>
+                                    <td>@point.Requests.ToString("N0", CultureInfo.CurrentCulture)</td>
+                                    <td>@Milliseconds(point.P50)</td>
+                                    <td>@Milliseconds(point.P95)</td>
+                                    <td>@Milliseconds(point.P99)</td>
+                                    <td>@Milliseconds(point.GatewayP50)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        }
+    </section>
+
+    <section aria-labelledby="backends-heading">
+        <h2 id="backends-heading">@T("Backends")</h2>
+        @if (report.Failovers.Count > 0)
+        {
+            <h3>@T("Failovers in this period")</h3>
+            <ul class="failover-periods">
+                @foreach (var period in report.Failovers)
+                {
+                    <li>
+                        <strong>@period.Route</strong> · @T("failover {0}: {1}", period.Failover, period.Destinations) ·
+                        <time datetime="@Iso(period.Start.ToUnixTimeSeconds())" data-local>@Utc(period.Start.ToUnixTimeSeconds())</time>
+                        –
+                        @if (period.End is { } end)
+                        {
+                            <time datetime="@Iso(end.ToUnixTimeSeconds())" data-local>@Utc(end.ToUnixTimeSeconds())</time>
+                        }
+                        else
+                        {
+                            @T("still running")
+                        }
+                    </li>
+                }
+            </ul>
+            <p class="muted">@T("The charts shade the periods in which a route ran on its failover.")</p>
+        }
+        @if (report.Backends.Count == 0)
+        {
+            <p class="muted">@T("No requests reached a backend in this period.")</p>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">@T("Route")</th><th scope="col">@T("Backend")</th><th scope="col">@T("Requests")</th>
+                            <th scope="col">2xx</th><th scope="col">3xx</th><th scope="col">4xx</th><th scope="col">5xx</th>
+                            <th scope="col"><abbr title="@T("The backend refused the connection or answered invalidly")">502</abbr></th>
+                            <th scope="col"><abbr title="@T("No backend available")">503</abbr></th>
+                            <th scope="col"><abbr title="@T("The backend did not answer in time")">504</abbr></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var backend in report.Backends)
+                        {
+                            <tr class="@(backend.Errors > 0 ? "row-warning" : null)">
+                                <td>@backend.Route</td>
+                                <th scope="row">@(backend.Destination.Length == 0 ? T("(none available)") : backend.Destination)</th>
+                                <td>@backend.Total.ToString("N0", CultureInfo.CurrentCulture)</td>
+                                @foreach (var metric in new[] { BackendMetric.Status2xx, BackendMetric.Status3xx, BackendMetric.Status4xx, BackendMetric.Status5xx, BackendMetric.BackendError, BackendMetric.NoBackend, BackendMetric.BackendTimeout })
+                                {
+                                    <td>@backend.Get(metric).ToString("N0", CultureInfo.CurrentCulture)</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="muted">@T("2xx to 5xx: the backend's own answers. 502, 503 and 504: the gateway answered because the backend did not.")</p>
+        }
+    </section>
+
     <div class="two-columns">
         <section aria-labelledby="kinds-heading">
             <h2 id="kinds-heading">@T("Bad traffic by kind")</h2>
@@ -400,6 +508,15 @@ else if (_report is { } report)
         builder.AddAttribute(3, "title", T("Show these requests in the request log"));
         builder.AddContent(4, text);
         builder.CloseElement();
+    };
+
+    /// <summary>A response time: "0.8 ms", "35 ms", "1.2 s".</summary>
+    private static string Milliseconds(double? value) => value switch
+    {
+        null => "–",
+        >= 1000 => (value.Value / 1000).ToString("N1", CultureInfo.CurrentCulture) + " s",
+        >= 10 => value.Value.ToString("N0", CultureInfo.CurrentCulture) + " ms",
+        _ => value.Value.ToString("N1", CultureInfo.CurrentCulture) + " ms",
     };
 
     private static string Iso(long start) => DateTimeOffset.FromUnixTimeSeconds(start).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", Culture);
