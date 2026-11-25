@@ -15,6 +15,10 @@
 .PARAMETER Version
     Version number of the programs (for example 1.2.0). Default: the project's version. The release workflow sets it.
 
+.PARAMETER ZipOnly
+    Only makes the zip again from the package folder, which was built before. The release workflow uses it after
+    signing the programs in the folder, so the zip holds the signed files.
+
 .EXAMPLE
     .\deploy\windows\Build-Package.ps1
     Creates artifacts\windows\WafGateway-win-x64\ (run Install.ps1 in it as Administrator) and WafGateway-win-x64.zip.
@@ -24,7 +28,8 @@ param(
     [string] $Output,
     [string] $Runtime = 'win-x64',
     [string] $Configuration = 'Release',
-    [string] $Version
+    [string] $Version,
+    [switch] $ZipOnly
 )
 
 Set-StrictMode -Version 3.0
@@ -34,6 +39,16 @@ $repository = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 if (-not $Output) { $Output = Join-Path $repository 'artifacts\windows' }
 $Output = [IO.Path]::GetFullPath($Output)
 $package = Join-Path $Output "WafGateway-$Runtime"
+$zip = "$package.zip"
+
+if ($ZipOnly) {
+    if (-not (Test-Path -LiteralPath $package)) { throw "There is no package folder to zip: $package. Build the package first." }
+    if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
+    Compress-Archive -Path (Join-Path $package '*') -DestinationPath $zip
+    Write-Host "==> Zip: $zip" -ForegroundColor Cyan
+    return
+}
+
 if (Test-Path -LiteralPath $package) { Remove-Item -LiteralPath $package -Recurse -Force }
 New-Item -ItemType Directory -Path $package -Force | Out-Null
 
@@ -59,7 +74,6 @@ foreach ($file in @('appsettings.Development.json', 'web.config', 'aspnetcorev2_
     if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
 }
 
-$zip = "$package.zip"
 if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
 Compress-Archive -Path (Join-Path $package '*') -DestinationPath $zip
 Write-Host "==> Package: $package" -ForegroundColor Cyan
