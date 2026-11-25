@@ -117,6 +117,10 @@ else if (Model is not null)
     [SupplyParameterFromQuery]
     public string? Template { get; set; }
 
+    /// <summary>An address or network to limit, from the Performance page.</summary>
+    [SupplyParameterFromQuery(Name = LogActions.SourceParameter)]
+    public string? Source { get; set; }
+
     [SupplyParameterFromForm(FormName = "rate-limit-edit")]
     private RateLimitFormModel? Model { get; set; }
 
@@ -133,7 +137,9 @@ else if (Model is not null)
 
         if (LimitName is null)
         {
-            Model = RateLimitFormModel.ForNewLimit(version, routes, Template);
+            Model = LogActions.ParseSource(Source) is { } source && active is not null
+                ? LogActions.NewRateLimit(source, active.Configuration, version)
+                : RateLimitFormModel.ForNewLimit(version, routes, Template);
             return;
         }
 

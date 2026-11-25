@@ -122,7 +122,12 @@ public sealed partial class SqliteMetricsStore
     /// Rolls up every completed bucket and removes rows beyond their tier's retention, as of <paramref name="now"/>.
     /// Each tier is rolled up in its own transaction.
     /// </summary>
-    public async Task<MetricsMaintenanceResult> MaintainAsync(MetricsRetention retention, DateTimeOffset now, CancellationToken cancellationToken)
+    /// <param name="clientIpRetention">
+    /// How long client IPs are kept, in every tier: as long as the request log keeps its entries (its age limit); null
+    /// for no limit. Networks and countries are kept as long as their tier.
+    /// </param>
+    public async Task<MetricsMaintenanceResult> MaintainAsync(
+        MetricsRetention retention, DateTimeOffset now, CancellationToken cancellationToken, TimeSpan? clientIpRetention = null)
     {
         ArgumentNullException.ThrowIfNull(retention);
 
@@ -166,6 +171,14 @@ public sealed partial class SqliteMetricsStore
         }
 
         deleted += await DeleteOldFailoversAsync(connection, now - retention.Month, cancellationToken).ConfigureAwait(false);
+        deleted += await DeleteOldAlertsAsync(connection, now - retention.Month, cancellationToken).ConfigureAwait(false);
+        if (clientIpRetention is { } keep && keep > TimeSpan.Zero)
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM SourceCounts WHERE BucketStart < $cutoff";
+            command.Parameters.AddWithValue("$cutoff", (now - keep).ToUnixTimeSeconds());
+            deleted += await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         if (deleted > 0)
         {
@@ -321,7 +334,7 @@ public sealed partial class SqliteMetricsStore
     {
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         long deleted = 0;
-        foreach (var table in new[] { "TrafficCounts", "SourceCounts", "DestinationCounts", "LatencyCounts", "BackendCounts", "TrafficPeaks" })
+        foreach (var table in new[] { "TrafficCounts", "SourceCounts", "DestinationCounts", "NetworkCounts", "CountryCounts", "LatencyCounts", "BackendCounts", "TrafficPeaks" })
         {
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;

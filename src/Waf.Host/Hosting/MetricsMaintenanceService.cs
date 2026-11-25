@@ -13,6 +13,8 @@ internal sealed partial class MetricsMaintenanceService(
     SqliteMetricsStore store,
     IMetricsStore writerStore,
     MetricsOptions options,
+    ConfigurationStore configurations,
+    CountryDatabase countries,
     TimeProvider time,
     ILogger<MetricsMaintenanceService> logger) : BackgroundService, IMetricsHistory
 {
@@ -31,6 +33,8 @@ internal sealed partial class MetricsMaintenanceService(
     public SqliteMetricsStore? Store => store;
 
     public MetricsRetention Retention => options.Retention;
+
+    public string? CountrySource => countries.Lookup?.Source;
 
     public MetricsMaintenanceResult? LastRun => Volatile.Read(ref _lastRun);
 
@@ -53,7 +57,10 @@ internal sealed partial class MetricsMaintenanceService(
                     _initialized = true;
                 }
 
-                result = await store.MaintainAsync(options.Retention, time.GetUtcNow(), cancellationToken).ConfigureAwait(false);
+                // Client IPs are kept no longer than the request log keeps its entries (its age limit; 0: no limit).
+                var maxAgeDays = (await configurations.GetLastKnownGoodAsync(cancellationToken).ConfigureAwait(false))?.Configuration.Settings.LogRetention.MaxAgeDays ?? 0;
+                result = await store.MaintainAsync(
+                    options.Retention, time.GetUtcNow(), cancellationToken, maxAgeDays > 0 ? TimeSpan.FromDays(maxAgeDays) : null).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or IOException or InvalidOperationException or UnauthorizedAccessException)
             {

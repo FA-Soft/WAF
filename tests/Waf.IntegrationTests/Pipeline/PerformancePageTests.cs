@@ -203,16 +203,17 @@ public sealed class PerformancePageTests
             await SendAsync(gateway, "dead.example.com");
         }
 
-        // After the flush: a flush records the real failover state (no route on failover), which would end this period.
+        // A failover period that has ended: the gateway's own flush (every few seconds) records the real failover
+        // state, which would end a period that is still open at any moment, so the test does not rely on one.
         await gateway.App.Services.GetRequiredService<RequestMetricsWriter>().FlushAsync(all: true, Ct);
         var store = gateway.App.Services.GetRequiredService<SqliteMetricsStore>();
-        await store.RecordFailoversAsync(
-            [new FASoft.Waf.Core.Routing.RouteFailoverStatus("dead", 1, "http://10.0.0.99:8080/", DateTimeOffset.UtcNow.AddMinutes(-2))], DateTimeOffset.UtcNow, Ct);
+        var since = DateTimeOffset.UtcNow.AddMinutes(-2);
+        await store.RecordFailoversAsync([new FASoft.Waf.Core.Routing.RouteFailoverStatus("dead", 1, "http://10.0.0.99:8080/", since)], since.AddSeconds(5), Ct);
+        await store.RecordFailoversAsync([], since.AddMinutes(1), Ct);
 
         var html = WebUtility.HtmlDecode(await gateway.GetPageAsync("/performance?period=1h"));
         Assert.Contains("Failovers in this period", html, StringComparison.Ordinal);
         Assert.Contains("failover 1: http://10.0.0.99:8080/", html, StringComparison.Ordinal);
-        Assert.Contains("still running", html, StringComparison.Ordinal);
         Assert.Contains("\"failovers\":[[", html, StringComparison.Ordinal); // drawn as a band on the charts
 
         // The dead route's backend: three 502s, marked.
@@ -220,6 +221,138 @@ public sealed class PerformancePageTests
         Assert.True(row.Success, "the dead route's backend row");
         var cells = System.Text.RegularExpressions.Regex.Matches(row.Groups["cells"].Value, "<td>(?<v>[^<]*)</td>").Select(m => m.Groups["v"].Value).ToList();
         Assert.Equal(["3", "0", "0", "0", "0", "3", "0", "0"], cells); // requests, 2xx..5xx, 502, 503, 504
+    }
+
+    [Fact]
+    public async Task A_network_can_be_blocked_from_the_page_as_a_new_configuration_version()
+    {
+        await using var gateway = new Gateway();
+        await gateway.InitializeAsync();
+        await WithTrafficAsync(gateway);
+        var before = (await gateway.Store.GetLastKnownGoodAsync(Ct))!.Version;
+
+        var html = WebUtility.HtmlDecode(await gateway.GetPageAsync("/performance?period=1h&sources=network"));
+        Assert.Contains("<code>127.0.0.0/24</code>", html, StringComparison.Ordinal);
+        Assert.Contains("network=127.0.0.0%2F24", html, StringComparison.Ordinal); // "only this"
+        Assert.Contains("q=127.0.0.", html, StringComparison.Ordinal);               // the request log, by prefix
+        Assert.Contains("rate-limits/new?source=127.0.0.0%2F24", html, StringComparison.Ordinal);
+        var block = System.Text.RegularExpressions.Regex.Match(html, "href=\"(?<url>rules/new\\?source=127.0.0.0%2F24[^\"]*)\"").Groups["url"].Value;
+        Assert.NotEmpty(block);
+
+        // The rule editor opens pre-filled; saving it is an ordinary change: a new version, which can be rolled back.
+        var form = await gateway.GetPageAsync("/" + block);
+        Assert.Contains("127.0.0.0/24", form, StringComparison.Ordinal);
+        await gateway.PostAsync("/" + block, "rule-edit", AdminGateway.ScrapeForm(form, "rule-edit"));
+        var after = (await gateway.Store.GetLastKnownGoodAsync(Ct))!;
+        Assert.Equal(before + 1, after.Version);
+        Assert.Contains(after.Configuration.Rules, r => r.Conditions.Any(c => c.Values.Contains("127.0.0.0/24")));
+        using (var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"http://127.0.0.1:{gateway.HttpPort}/")))
+        {
+            request.Headers.Host = "www.example.com";
+            using var response = await gateway.Public.SendAsync(request, Ct);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        Assert.True((await gateway.App.Services.GetRequiredService<IGatewayConfigurationService>().RollbackAsync(before, after.Version, AuditActor.System("test"), Ct)).Succeeded);
+        Assert.DoesNotContain((await gateway.Store.GetLastKnownGoodAsync(Ct))!.Configuration.Rules, r => r.Conditions.Any(c => c.Values.Contains("127.0.0.0/24")));
+
+        // The rate limit editor opens pre-filled too.
+        var limit = WebUtility.HtmlDecode(await gateway.GetPageAsync("/rate-limits/new?source=127.0.0.0%2F24"));
+        Assert.Contains("limit-127-0-0-0-24", limit, StringComparison.Ordinal);
+        Assert.Contains("127.0.0.0/24", limit, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task With_a_country_file_the_sources_can_be_listed_by_country()
+    {
+        var file = Path.Combine(Path.GetTempPath(), "waf-tests", Guid.NewGuid().ToString("N"), "countries.csv");
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        await File.WriteAllTextAsync(file, "127.0.0.0,127.255.255.255,NL\n", Ct);
+        try
+        {
+            await using var gateway = new Gateway($"--Gateway:Metrics:GeoIpFile={file}");
+            await gateway.InitializeAsync();
+            var history = gateway.App.Services.GetRequiredService<IMetricsHistory>();
+            var deadline = DateTime.UtcNow.AddSeconds(20);
+            while (history.CountrySource is null && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(50, Ct); // read in the background at start
+            }
+
+            Assert.Equal("countries.csv", history.CountrySource);
+            await WithTrafficAsync(gateway);
+
+            var html = WebUtility.HtmlDecode(await gateway.GetPageAsync("/performance?period=1h&sources=country"));
+            Assert.Contains("(NL)</th>", html, StringComparison.Ordinal);
+            Assert.Contains("country=NL", html, StringComparison.Ordinal);
+            Assert.Contains("Countries from countries.csv", html, StringComparison.Ordinal);
+            Assert.Contains(">3<", WebUtility.HtmlDecode(await gateway.GetPageAsync("/performance?period=1h&country=NL")), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            File.Delete(file);
+        }
+    }
+
+    [Fact]
+    public async Task Without_a_country_file_countries_are_not_offered()
+    {
+        await using var gateway = new Gateway();
+        await gateway.InitializeAsync();
+        var html = await gateway.GetPageAsync("/performance?period=1h");
+        Assert.Contains("sources=network", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("sources=country", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_simulated_attack_shows_a_notice_on_the_dashboard_until_notices_are_switched_off()
+    {
+        await using var gateway = new Gateway();
+        await gateway.InitializeAsync();
+
+        // Two days of history: 1 request a second, nothing bad.
+        var store = gateway.App.Services.GetRequiredService<SqliteMetricsStore>();
+        await store.InitializeAsync(Ct);
+        var thisHour = DateTimeOffset.FromUnixTimeSeconds(MetricsBuckets.Start(MetricsTier.Hour, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={store.DatabasePath}"))
+        {
+            await connection.OpenAsync(Ct);
+            for (var hour = thisHour.AddDays(-2); hour < thisHour; hour = hour.AddHours(1))
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = "INSERT INTO TrafficCounts VALUES (2, $start, 1, '', 'website', 0, 3600)";
+                command.Parameters.AddWithValue("$start", hour.ToUnixTimeSeconds());
+                await command.ExecuteNonQueryAsync(Ct);
+            }
+        }
+
+        // The attack: 90 requests for a host without a route, at once.
+        await Task.WhenAll(Enumerable.Range(0, 90).Select(i => SendAsync(gateway, "unknown.example.com", $"/.env?{i}")));
+        await gateway.App.Services.GetRequiredService<RequestMetricsWriter>().FlushAsync(all: true, Ct);
+        await Task.Delay(TimeSpan.FromSeconds(6), Ct); // the check leaves out the last seconds (counts are written every few)
+        var alerts = gateway.App.Services.GetRequiredService<TrafficAlertService>();
+        await alerts.CheckAsync(Ct);
+
+        var dashboard = WebUtility.HtmlDecode(await gateway.GetPageAsync("/"));
+        Assert.Contains("Bad traffic: up to", dashboard, StringComparison.Ordinal);
+        // "/.env" is caught by attack detection before "no route" applies.
+        Assert.Contains("Mostly Blocked by attack detection: path traversal, from 127.0.0.0/24.", dashboard, StringComparison.Ordinal);
+        Assert.Contains("Show it on the Performance page", dashboard, StringComparison.Ordinal);
+        var performance = WebUtility.HtmlDecode(await gateway.GetPageAsync("/performance?period=1h"));
+        Assert.Contains("Notices of unusual traffic", performance, StringComparison.Ordinal);
+        Assert.Contains("class=\"running\"", performance, StringComparison.Ordinal);
+        Assert.Contains("\"usual\":[[", performance, StringComparison.Ordinal); // the band on the chart
+
+        // Switched off in the settings (a new configuration version): the notice ends at the next check.
+        var settings = await gateway.GetPageAsync("/performance/settings");
+        var form = AdminGateway.ScrapeForm(settings, "traffic-alerts");
+        form.Remove("Model.Enabled");
+        await gateway.PostAsync("/performance/settings", "traffic-alerts", form);
+        Assert.False((await gateway.Store.GetLastKnownGoodAsync(Ct))!.Configuration.Settings.TrafficAlerts.Enabled);
+        await alerts.CheckAsync(Ct);
+        Assert.DoesNotContain("Bad traffic: up to", WebUtility.HtmlDecode(await gateway.GetPageAsync("/")), StringComparison.Ordinal);
+        Assert.NotNull(Assert.Single(await alerts.RecentAsync(10, Ct)).End);
     }
 
     [Fact]

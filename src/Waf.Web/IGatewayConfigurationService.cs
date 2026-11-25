@@ -87,6 +87,9 @@ public interface IMetricsHistory
 
     /// <summary>How long each tier is kept (host settings).</summary>
     MetricsRetention Retention { get; }
+
+    /// <summary>The country database's file name, for its attribution; null without one (then countries are not shown).</summary>
+    string? CountrySource { get; }
 }
 
 /// <summary>Traffic history that is switched off.</summary>
@@ -101,4 +104,34 @@ public sealed class DisabledMetricsHistory : IMetricsHistory
     public SqliteMetricsStore? Store => null;
 
     public MetricsRetention Retention { get; } = new();
+
+    public string? CountrySource => null;
+}
+
+/// <summary>Notices of unusual traffic, for the dashboard and the Performance page.</summary>
+public interface ITrafficAlerts
+{
+    /// <summary>False when the traffic counts are switched off (then there are no notices).</summary>
+    bool Enabled { get; }
+
+    /// <summary>The usual traffic per hour of the week; null until the first check.</summary>
+    UsualProfile? Profile { get; }
+
+    /// <summary>The notices that are running now.</summary>
+    Task<IReadOnlyList<TrafficAlert>> RunningAsync(CancellationToken cancellationToken);
+
+    /// <summary>The newest notices, running ones first.</summary>
+    Task<IReadOnlyList<TrafficAlert>> RecentAsync(int limit, CancellationToken cancellationToken);
+}
+
+/// <summary>No notices: the traffic counts are switched off.</summary>
+public sealed class DisabledTrafficAlerts : ITrafficAlerts
+{
+    public bool Enabled => false;
+
+    public UsualProfile? Profile => null;
+
+    public Task<IReadOnlyList<TrafficAlert>> RunningAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TrafficAlert>>([]);
+
+    public Task<IReadOnlyList<TrafficAlert>> RecentAsync(int limit, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<TrafficAlert>>([]);
 }

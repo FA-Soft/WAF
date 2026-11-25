@@ -121,7 +121,15 @@ public sealed record TrafficTake(
     List<LatencyCount> Latencies,
     List<BackendCount> Backends)
 {
-    public bool IsEmpty => Counts.Count == 0 && Sources.Count == 0 && Destinations.Count == 0 && Latencies.Count == 0 && Backends.Count == 0;
+    /// <summary>Bad requests per minute by network (/24 or /48) of their source.</summary>
+    public List<SourceCount> Networks { get; init; } = [];
+
+    /// <summary>Bad requests per minute by country of their source (with a country database).</summary>
+    public List<SourceCount> Countries { get; init; } = [];
+
+    public bool IsEmpty =>
+        Counts.Count == 0 && Sources.Count == 0 && Destinations.Count == 0 && Networks.Count == 0 && Countries.Count == 0
+        && Latencies.Count == 0 && Backends.Count == 0;
 
     /// <summary>The first three parts, for callers that need only those.</summary>
     public void Deconstruct(out List<TrafficCount> counts, out List<SourceCount> sources, out List<SourceCount> destinations)

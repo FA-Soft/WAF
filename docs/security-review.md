@@ -143,6 +143,10 @@ event, or at shutdown. The request log (`events.db`) still records every request
   - Certificate private keys are encrypted at rest.
   - The traffic counts (`metrics.db`) store only counts per kind, rule name and route, and for bad requests the
     client IP and the requested host and path (as the request log does): no query strings, headers or bodies.
+    Client IPs are removed when the request log's age limit removes the request log's entries; networks (/24, /48)
+    and countries stay. Countries come from a file on the gateway (`Gateway:Metrics:GeoIpFile`); no address is sent to
+    an outside service. "Block" and "Rate limit" on the Performance page only open the editors pre-filled: nothing
+    changes until the admin saves, which creates an audited configuration version.
     Response times are kept as counts per histogram bin, route and minute; backends by the address the request log
     shows; nothing per request.
 - **Traffic counts cannot be used to exhaust memory or disk.** Counts wait in memory up to a fixed limit

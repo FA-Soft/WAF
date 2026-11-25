@@ -55,6 +55,10 @@ Bad traffic by kind and its sources as pie charts ("Chart / Table" switches to t
 
 ![Bad traffic by kind and by source](images/admin-performance-breakdown.png)
 
+Sources by network (IPv4 /24, IPv6 /48), as a table, with "Only this", "Block" and "Rate limit" (which open the editors pre-filled).
+
+![Sources of bad traffic by network](images/admin-performance-networks.png)
+
 The requested destinations of bad traffic (host and path), for example a scanner trying `/wp-login.php`.
 
 ![Requested destinations of bad traffic](images/admin-performance-destinations.png)
@@ -66,6 +70,12 @@ Response times: median, 95th and 99th percentile and what the gateway adds, on a
 Backends per route (status classes, 502/503/504) and the failover periods.
 
 ![Backends and failovers](images/admin-performance-backends.png)
+
+Notices of unusual traffic: the list of past notices (here still learning what is usual), and their settings.
+
+![Notices of unusual traffic](images/admin-performance-notices.png)
+
+![Notice settings](images/admin-notice-settings.png)
 
 The same in the dark theme.
 

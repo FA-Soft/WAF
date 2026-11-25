@@ -34,6 +34,80 @@ internal static class LogActions
 
     public const string ActionParameter = "action";
 
+    /// <summary>A client IP or network to block or rate-limit, from the Performance page: <c>?source=203.0.113.0/24</c>.</summary>
+    public const string SourceParameter = "source";
+
+    /// <summary>The address or network of a <see cref="SourceParameter"/>, normalised ("203.0.113.0/24"); null when it is neither.</summary>
+    public static string? ParseSource(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source) || source.Length > 64)
+        {
+            return null;
+        }
+
+        if (System.Net.IPAddress.TryParse(source.Trim(), out var address) && !source.Contains('/', StringComparison.Ordinal))
+        {
+            return address.ToString();
+        }
+
+        return StrictCidr.TryParse(source.Trim(), out var network) ? network.ToString() : null;
+    }
+
+    /// <summary>
+    /// Adds <paramref name="source"/> (an address or a network) to the IP list of a block list rule; false when the
+    /// rule has no IP list or the list covers it already.
+    /// </summary>
+    public static bool AddToBlockList(RuleFormModel model, string source)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(source);
+
+        var list = model.Conditions.FirstOrDefault(c => c.Field == ConditionField.ClientIp && c.Operator == ConditionOperator.InCidr && !c.Negate);
+        if (list is null)
+        {
+            return false;
+        }
+
+        var network = System.Net.IPAddress.TryParse(source, out var single)
+            ? new System.Net.IPNetwork(single, single.GetAddressBytes().Length * 8)
+            : System.Net.IPNetwork.Parse(source);
+        if (list.ValueList.Any(v => StrictCidr.TryParse(v, out var range, out _) && range.PrefixLength <= network.PrefixLength && range.Contains(network.BaseAddress)))
+        {
+            return false;
+        }
+
+        list.Values = string.IsNullOrWhiteSpace(list.Values) ? source : list.Values.TrimEnd() + Environment.NewLine + source;
+        return true;
+    }
+
+    /// <summary>A new IP block list rule with <paramref name="source"/>, from the Performance page.</summary>
+    public static RuleFormModel NewBlockList(string source, GatewayConfiguration configuration, long baseVersion)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var model = RuleFormModel.ForNewRule(baseVersion, [.. configuration.Routes.Select(r => r.Name)], "block-ips");
+        model.Name = UniqueName(model.Name, configuration.Rules.Select(r => r.Name));
+        model.Conditions[0].Values = source;
+        model.Description = Text.T("Block these IP addresses and ranges. {0}", Text.T("From the Performance page."));
+        return model;
+    }
+
+    /// <summary>A new rate limit for requests from <paramref name="source"/> (an address or a network), per client IP.</summary>
+    public static RateLimitFormModel NewRateLimit(string source, GatewayConfiguration configuration, long baseVersion)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var model = RateLimitFormModel.ForNewLimit(baseVersion, configuration.Routes.Select(r => r.Name));
+        model.Name = UniqueName($"limit-{Slug(source, "source")}", configuration.RateLimits.Select(l => l.Name));
+        model.Description = Text.T("Requests from {0}, per client. {1}", source, Text.T("From the Performance page."));
+        model.PermitLimit = 60;
+        model.WindowAmount = 1;
+        model.WindowUnitSeconds = 60;
+        model.Key = RateLimitKey.ClientIp;
+        model.Conditions = [new ConditionFormModel { Field = ConditionField.ClientIp, Operator = ConditionOperator.InCidr, Values = source }];
+        return model;
+    }
+
     /// <summary>A link to the editor for <paramref name="action"/> on <paramref name="entry"/>.</summary>
     public static string Url(RequestEvent entry, LogAction action, GatewayConfiguration configuration)
     {

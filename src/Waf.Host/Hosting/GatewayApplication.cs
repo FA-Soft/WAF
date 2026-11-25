@@ -279,6 +279,7 @@ internal static partial class GatewayApplication
             builder.Services.AddSingleton<IRequestMetrics>(sp => sp.GetRequiredService<NullRequestMetrics>());
             builder.Services.AddSingleton<IRequestMetricsMonitor>(sp => sp.GetRequiredService<NullRequestMetrics>());
             builder.Services.AddSingleton<FASoft.Waf.Web.IMetricsHistory, FASoft.Waf.Web.DisabledMetricsHistory>();
+            builder.Services.AddSingleton<FASoft.Waf.Web.ITrafficAlerts, FASoft.Waf.Web.DisabledTrafficAlerts>();
             return;
         }
 
@@ -286,13 +287,28 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(store);
         builder.Services.AddSingleton<IMetricsStore>(store);
-        builder.Services.AddSingleton<RequestMetricsWriter>();
+        builder.Services.AddSingleton<CountryDatabase>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<CountryDatabase>());
+        builder.Services.AddSingleton(sp =>
+        {
+            var countries = sp.GetRequiredService<CountryDatabase>();
+            return new RequestMetricsWriter(
+                sp.GetRequiredService<IMetricsStore>(),
+                options,
+                sp.GetRequiredService<TimeProvider>(),
+                sp.GetRequiredService<ILogger<RequestMetricsWriter>>(),
+                sp.GetService<FASoft.Waf.Core.Routing.IRouteFailoverMonitor>(),
+                () => countries.Lookup);
+        });
         builder.Services.AddSingleton<IRequestMetrics>(sp => sp.GetRequiredService<RequestMetricsWriter>());
         builder.Services.AddSingleton<IRequestMetricsMonitor>(sp => sp.GetRequiredService<RequestMetricsWriter>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<RequestMetricsWriter>());
         builder.Services.AddSingleton<MetricsMaintenanceService>();
         builder.Services.AddSingleton<FASoft.Waf.Web.IMetricsHistory>(sp => sp.GetRequiredService<MetricsMaintenanceService>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<MetricsMaintenanceService>());
+        builder.Services.AddSingleton<TrafficAlertService>();
+        builder.Services.AddSingleton<FASoft.Waf.Web.ITrafficAlerts>(sp => sp.GetRequiredService<TrafficAlertService>());
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<TrafficAlertService>());
     }
 
     /// <summary>

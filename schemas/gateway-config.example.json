@@ -23,6 +23,11 @@
     "LogRetention": {
       "MaxAgeDays": 30,
       "MaxDatabaseSizeMb": 1024
+    },
+    "TrafficAlerts": {
+      "Enabled": true,
+      "Sensitivity": 5,
+      "MinimumPerMinute": 60
     }
   },
   "Targets": [

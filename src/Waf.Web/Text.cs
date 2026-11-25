@@ -80,7 +80,16 @@ public static partial class Text
 
         foreach (var (template, pattern) in Templates.Value)
         {
-            var match = pattern.Match(message);
+            Match match;
+            try
+            {
+                match = pattern.Match(message);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                continue; // a slow match (a very busy machine): this template does not translate it; never fail the page
+            }
+
             if (match.Success)
             {
                 var values = match.Groups.Cast<Group>().Skip(1).OrderBy(g => g.Name, StringComparer.Ordinal).Select(g => (object?)Message(g.Value)).ToArray();
@@ -110,7 +119,7 @@ public static partial class Text
             .OrderByDescending(k => k.Literal.Length)
             .Select(k => (k.Key, new Regex(
                 "^" + PlaceholderPattern().Replace(Regex.Escape(k.Key).Replace(@"\{", "{", StringComparison.Ordinal), m => $"(?<a{m.Groups[1].Value.PadLeft(2, '0')}>.+?)") + "$",
-                RegexOptions.CultureInvariant | RegexOptions.Singleline, TimeSpan.FromMilliseconds(50))))];
+                RegexOptions.CultureInvariant | RegexOptions.Singleline, TimeSpan.FromMilliseconds(250))))];
     });
 
     [GeneratedRegex(@"\{(\d+)\}")]

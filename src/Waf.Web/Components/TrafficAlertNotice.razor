@@ -1,0 +1,31 @@
+@* Notices of unusual traffic that are running now, with links to the filtered Performance view and the request log. *@
+@inject ITrafficAlerts Alerts
+
+@foreach (var alert in _running)
+{
+    <div class="alert alert-warning traffic-alert" role="status">
+        <strong>@TrafficAlertText.Headline(alert)</strong>
+        @if (TrafficAlertText.Mostly(alert) is { } mostly)
+        {
+            <span>@mostly</span>
+        }
+        <a href="@TrafficAlertText.ViewUrl(alert)">@T("Show it on the Performance page")</a>
+        · <a href="@TrafficAlertText.LogUrl(alert)">@T("Request log")</a>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<TrafficAlert> _running = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _running = await Alerts.RunningAsync(CancellationToken.None);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            _running = []; // metrics.db is being created or upgraded
+        }
+    }
+}
