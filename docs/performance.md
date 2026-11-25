@@ -61,6 +61,11 @@ One connection, 10 s per scenario after 3 s warm-up. This shows the latency the 
   flood costs less than normal traffic.
   - Before step 36 every blocked request also wrote a line to the application log. That held blocked requests at about
     7,000/s and slowed all traffic (security review SR-2). The log is now capped at 60 such lines a minute.
+- **Traffic counts (step 45) cost next to nothing:** counting a forwarded request takes about 27 ns, with no
+  allocation. A blocked attack takes about 170 ns: it also reads the attack category and counts the source. At 2,000
+  requests per second that is well under 0.1 ms of CPU per second. The numbers come from
+  `dotnet run -c Release --project tests/Waf.Benchmarks -- --filter *TrafficCounter* --inProcess`, on the Windows
+  machine above. Storing the counts happens in the background, once every 5 seconds.
 - **Memory:** the Windows build uses the server garbage collector, with heaps per core. On a 20-thread machine it
   starts at about 240 MB and stays below 420 MB under load. The `linux-arm64` build uses the workstation collector,
   which needs much less (see [Raspberry Pi tuning](../README.md#raspberry-pi-tuning)).

@@ -113,6 +113,12 @@ event, or at shutdown. The request log (`events.db`) still records every request
     chosen.
   - The AI API key never leaves the machine.
   - Certificate private keys are encrypted at rest.
+  - The traffic counts (`metrics.db`) store only counts per kind, rule name and route, and the client IPs of bad
+    requests: no hosts, paths, headers or bodies.
+- **Traffic counts cannot be used to exhaust memory or disk.** Counts wait in memory up to a fixed limit
+  (`Gateway:Metrics:MaxPendingCounts`); beyond it requests are still served but not counted (and that is counted).
+  Sources are limited to 100 per minute plus "other", and in memory to a fifth of that limit, so an attack from many
+  addresses cannot grow either. Counting never blocks or throws on the request path (`TrafficMetricsTests`).
 - **Proxy.**
   - `X-Forwarded-For/Proto/Host` are always overwritten, and a client's `Forwarded` header is removed.
   - The client IP comes from forwarded headers only when the request comes from a trusted proxy.

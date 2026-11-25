@@ -5,6 +5,7 @@
 @inject WafEngineHolder Engines
 @inject ConfigurationStore Store
 @inject IRequestLogMonitor RequestLog
+@inject IRequestMetricsMonitor Metrics
 
 <PageTitle>@T("Dashboard") · @ProductInfo.Name</PageTitle>
 
@@ -122,6 +123,30 @@ else
             {
                 <p class="metric">@T("Off")</p>
                 <p class="muted">@T("Switched off in the host settings (Gateway:EventLog:Enabled).")</p>
+            }
+        </div>
+        <div class="card">
+            <h2>
+                @T("Traffic counts")
+                <HelpTip Title="@T("Traffic counts")"><p>@T("Every public request is counted per second (good, bad or failed) and stored in metrics.db every few seconds, for the performance dashboard. If storing cannot keep up, counts are dropped rather than slowing down requests; the number shows here.")</p></HelpTip>
+            </h2>
+            @if (Metrics.Statistics is { } counts)
+            {
+                <p class="metric">@counts.Counted.ToString("N0", CultureInfo.CurrentCulture)</p>
+                <p class="muted">@T("requests counted since start")</p>
+                @if (counts.Dropped > 0)
+                {
+                    <p><span class="badge badge-warning">@T("{0} not counted", counts.Dropped.ToString("N0", CultureInfo.CurrentCulture))</span></p>
+                }
+                @if (counts.LastError is not null)
+                {
+                    <p class="field-error">@T("Writing fails: {0}", counts.LastError)</p>
+                }
+            }
+            else
+            {
+                <p class="metric">@T("Off")</p>
+                <p class="muted">@T("Switched off in the host settings (Gateway:Metrics:Enabled).")</p>
             }
         </div>
     </section>

@@ -1,0 +1,363 @@
+using System.Collections.Concurrent;
+using FASoft.Waf.Core.Configuration;
+
+namespace FASoft.Waf.Engine;
+
+/// <summary>The three groups of traffic on the performance dashboard.</summary>
+public enum TrafficOutcome
+{
+    /// <summary>Handled as intended: forwarded, redirected to HTTPS, or answered by the gateway.</summary>
+    Good = 0,
+
+    /// <summary>Refused because of the visitor's request: blocked, rate limited, fail-closed or no route.</summary>
+    Bad = 1,
+
+    /// <summary>Not answered because of the gateway or a backend, not the visitor: no backend, backend error or timeout.</summary>
+    Failed = 2,
+}
+
+/// <summary>
+/// What a request is counted as. The numbers are stored in <c>metrics.db</c>: never change them, only add new ones.
+/// The tens digit is the <see cref="TrafficOutcome"/>.
+/// </summary>
+public enum TrafficKind
+{
+    /// <summary>Forwarded to a backend.</summary>
+    Forwarded = 1,
+
+    /// <summary>Redirected from HTTP to HTTPS.</summary>
+    Redirected = 2,
+
+    /// <summary>Answered by the gateway itself (a Let's Encrypt challenge).</summary>
+    Answered = 3,
+
+    /// <summary>Forwarded, but a rule, attack check or rate limit in detection-only mode would have blocked it.</summary>
+    WouldBeBlocked = 4,
+
+    /// <summary>Blocked by a rule (403). Name: the rule.</summary>
+    RuleBlocked = 10,
+
+    /// <summary>Blocked by attack detection (403). Name: the attack category.</summary>
+    AttackBlocked = 11,
+
+    /// <summary>Rejected by a rate limit (429). Name: the limit.</summary>
+    RateLimited = 12,
+
+    /// <summary>Refused because the firewall was unavailable (503, fail-closed).</summary>
+    FailClosed = 13,
+
+    /// <summary>No route matched (404).</summary>
+    NoRoute = 14,
+
+    /// <summary>A route matched, but it had no available backend (503).</summary>
+    NoBackend = 20,
+
+    /// <summary>The backend refused the connection or sent an invalid answer (502).</summary>
+    BackendError = 21,
+
+    /// <summary>The backend did not answer in time (504).</summary>
+    BackendTimeout = 22,
+
+    /// <summary>The gateway failed while handling the request (500).</summary>
+    GatewayError = 23,
+}
+
+/// <summary>Resolution of stored traffic counts. The numbers are stored in <c>metrics.db</c>.</summary>
+public enum MetricsTier
+{
+    Second = 0,
+    Minute = 1,
+    Hour = 2,
+    Day = 3,
+    Week = 4,
+    Month = 5,
+}
+
+/// <summary>Requests of one kind, route and name within one bucket.</summary>
+/// <param name="BucketStart">Start of the bucket, in Unix seconds (UTC).</param>
+/// <param name="Kind">What the requests were counted as.</param>
+/// <param name="Name">Rule, attack category or rate limit; empty for the other kinds.</param>
+/// <param name="Route">Route; empty when no route matched.</param>
+/// <param name="Count">Number of requests.</param>
+public sealed record TrafficCount(long BucketStart, TrafficKind Kind, string Name, string Route, long Count)
+{
+    public TrafficOutcome Outcome => TrafficClassifier.OutcomeOf(Kind);
+}
+
+/// <summary>Bad requests from one source (client IP) of one kind within one bucket.</summary>
+/// <param name="BucketStart">Start of the bucket, in Unix seconds (UTC).</param>
+/// <param name="Source">Client IP, or <see cref="TrafficCounter.OtherSource"/> for all sources outside the top.</param>
+/// <param name="Kind">What the requests were counted as (always a bad kind).</param>
+/// <param name="Count">Number of requests.</param>
+public sealed record SourceCount(long BucketStart, string Source, TrafficKind Kind, long Count);
+
+/// <summary>Sorts a request into a <see cref="TrafficKind"/>.</summary>
+public static class TrafficClassifier
+{
+    /// <summary>Longest name or route kept; longer ones are cut (names come from the configuration, so this is rare).</summary>
+    public const int MaxNameLength = 100;
+
+    public static TrafficOutcome OutcomeOf(TrafficKind kind) => (TrafficOutcome)((int)kind / 10);
+
+    /// <summary>
+    /// What <paramref name="entry"/> counts as, and its name (rule, attack category or rate limit).
+    /// <paramref name="failed"/>: the pipeline threw an exception.
+    /// </summary>
+    public static (TrafficKind Kind, string Name) Classify(RequestLogEntry entry, bool failed)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        return entry.Action switch
+        {
+            RequestAction.Blocked when entry.Event == WafEventKind.AttackBlocked => (TrafficKind.AttackBlocked, AttackCategoryOf(entry.Detail)),
+            RequestAction.Blocked => (TrafficKind.RuleBlocked, Name(entry.RuleName)),
+            RequestAction.RateLimited => (TrafficKind.RateLimited, Name(entry.RuleName)),
+            RequestAction.FailClosed => (TrafficKind.FailClosed, string.Empty),
+            RequestAction.NoRoute => (TrafficKind.NoRoute, string.Empty),
+            RequestAction.BackendUnavailable => (entry.StatusCode switch
+            {
+                502 => TrafficKind.BackendError,
+                504 => TrafficKind.BackendTimeout,
+                _ => TrafficKind.NoBackend,
+            }, string.Empty),
+            _ when failed => (TrafficKind.GatewayError, string.Empty),
+            RequestAction.Redirected => (TrafficKind.Redirected, string.Empty),
+            RequestAction.Answered => (TrafficKind.Answered, string.Empty),
+            _ => entry.Event switch
+            {
+                WafEventKind.RuleDetected or WafEventKind.RateLimitDetected => (TrafficKind.WouldBeBlocked, Name(entry.RuleName)),
+                WafEventKind.AttackDetected => (TrafficKind.WouldBeBlocked, AttackCategoryOf(entry.Detail)),
+                _ => (TrafficKind.Forwarded, string.Empty),
+            },
+        };
+    }
+
+    /// <summary>The attack category at the start of an attack event's detail ("SqlInjection in QueryString …").</summary>
+    private static string AttackCategoryOf(string? detail)
+    {
+        var first = detail?.Split(' ', 2)[0];
+        return Enum.TryParse<AttackCategory>(first, out var category) && Enum.IsDefined(category) ? category.ToString() : string.Empty;
+    }
+
+    internal static string Name(string? name) =>
+        string.IsNullOrEmpty(name) ? string.Empty : name.Length <= MaxNameLength ? name : name[..MaxNameLength];
+}
+
+/// <summary>
+/// Counts requests in memory: per second by kind, name and route, and bad requests per minute by source. Adding is
+/// lock-free and never waits; a background writer takes the completed buckets (<see cref="TakeCompleted"/>).
+/// </summary>
+/// <remarks>
+/// Each count is a cell in a concurrent dictionary, incremented with <see cref="Interlocked"/>. Taking a bucket
+/// removes its cell and swaps its value for a "taken" mark; a request that still held the cell sees the mark and
+/// counts again in a new cell, so no request is lost or counted twice. A request that arrives late (counted by its
+/// start time, after its bucket was taken) lands in a new cell of that bucket; the store adds it to the stored count.
+/// </remarks>
+public sealed class TrafficCounter
+{
+    /// <summary>The source that stands for all sources outside the top of a bucket.</summary>
+    public const string OtherSource = "other";
+
+    /// <summary>Sources kept per minute; the rest are added up as <see cref="OtherSource"/>.</summary>
+    public const int TopSources = 100;
+
+    private const long Taken = long.MinValue / 2;
+
+    private readonly ConcurrentDictionary<CountKey, Cell> _counts = new();
+    private readonly ConcurrentDictionary<SourceKey, Cell> _sources = new();
+    private readonly int _maxCells;
+    private readonly int _maxSourceCells;
+    private int _countCells;
+    private int _sourceCells;
+
+    /// <param name="maxCells">Most counts waiting in memory; beyond that, requests are not counted (see <see cref="Add"/>).</param>
+    /// <param name="maxSourceCells">Most source counts waiting in memory; beyond that, new sources count as <see cref="OtherSource"/>.</param>
+    public TrafficCounter(int maxCells = 100_000, int maxSourceCells = 20_000)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxCells, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxSourceCells, 1);
+        _maxCells = maxCells;
+        _maxSourceCells = maxSourceCells;
+    }
+
+    /// <summary>Counts waiting in memory.</summary>
+    public int Pending => Volatile.Read(ref _countCells) + Volatile.Read(ref _sourceCells);
+
+    /// <summary>
+    /// Counts one request. Returns false when it could not be counted because too many counts are waiting (the
+    /// store is not keeping up).
+    /// </summary>
+    public bool Add(DateTimeOffset timestamp, TrafficKind kind, string name, string? route, string? source)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        var second = timestamp.ToUnixTimeSeconds();
+        if (!Increment(_counts, new CountKey(second, kind, name, TrafficClassifier.Name(route)), ref _countCells, _maxCells))
+        {
+            return false;
+        }
+
+        if (source is not null && TrafficClassifier.OutcomeOf(kind) == TrafficOutcome.Bad)
+        {
+            var minute = second - (second % 60);
+            if (!Increment(_sources, new SourceKey(minute, source, kind), ref _sourceCells, _maxSourceCells))
+            {
+                // Many addresses at once (a distributed attack): the request is still counted, as "other".
+                Increment(_sources, new SourceKey(minute, OtherSource, kind), ref _sourceCells, int.MaxValue);
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Takes the counts of completed buckets: seconds before <paramref name="now"/>'s second, and minutes of sources
+    /// that ended at least <paramref name="sourceGrace"/> ago (so slow requests that started in them are included).
+    /// Everything when <paramref name="all"/> (shutdown). Sources are limited to the top <see cref="TopSources"/>
+    /// per minute.
+    /// </summary>
+    public (List<TrafficCount> Counts, List<SourceCount> Sources) TakeCompleted(DateTimeOffset now, TimeSpan sourceGrace, bool all = false)
+    {
+        var second = now.ToUnixTimeSeconds();
+        var counts = new List<TrafficCount>();
+        foreach (var key in _counts.Keys)
+        {
+            if ((all || key.Second < second) && Take(_counts, key, ref _countCells) is { } value)
+            {
+                counts.Add(new TrafficCount(key.Second, key.Kind, key.Name, key.Route, value));
+            }
+        }
+
+        var sourceCutoff = (now - sourceGrace).ToUnixTimeSeconds();
+        var sources = new List<SourceCount>();
+        foreach (var key in _sources.Keys)
+        {
+            if ((all || key.Minute + 60 <= sourceCutoff) && Take(_sources, key, ref _sourceCells) is { } value)
+            {
+                sources.Add(new SourceCount(key.Minute, key.Source, key.Kind, value));
+            }
+        }
+
+        return (counts, LimitSources(sources, TopSources));
+    }
+
+    /// <summary>
+    /// Keeps the <paramref name="top"/> sources with the most requests per bucket and adds up the rest as
+    /// <see cref="OtherSource"/> (per kind).
+    /// </summary>
+    public static List<SourceCount> LimitSources(IReadOnlyCollection<SourceCount> sources, int top)
+    {
+        ArgumentNullException.ThrowIfNull(sources);
+
+        var result = new List<SourceCount>();
+        foreach (var bucket in sources.GroupBy(s => s.BucketStart).OrderBy(b => b.Key))
+        {
+            var kept = bucket
+                .Where(s => s.Source != OtherSource)
+                .GroupBy(s => s.Source, StringComparer.Ordinal)
+                .Select(g => (Source: g.Key, Total: g.Sum(s => s.Count)))
+                .OrderByDescending(s => s.Total)
+                .ThenBy(s => s.Source, StringComparer.Ordinal)
+                .Take(top)
+                .Select(s => s.Source)
+                .ToHashSet(StringComparer.Ordinal);
+
+            result.AddRange(bucket.Where(s => kept.Contains(s.Source)).OrderBy(s => s.Source, StringComparer.Ordinal).ThenBy(s => s.Kind));
+            result.AddRange(bucket
+                .Where(s => !kept.Contains(s.Source))
+                .GroupBy(s => s.Kind)
+                .OrderBy(g => g.Key)
+                .Select(g => new SourceCount(bucket.Key, OtherSource, g.Key, g.Sum(s => s.Count))));
+        }
+
+        return result;
+    }
+
+    private static bool Increment<TKey>(ConcurrentDictionary<TKey, Cell> cells, TKey key, ref int size, int max)
+        where TKey : notnull
+    {
+        while (true)
+        {
+            if (!cells.TryGetValue(key, out var cell))
+            {
+                if (Volatile.Read(ref size) >= max)
+                {
+                    return false;
+                }
+
+                cell = new Cell();
+                if (!cells.TryAdd(key, cell))
+                {
+                    continue; // another request added it first: use that one
+                }
+
+                Interlocked.Increment(ref size);
+            }
+
+            if (Interlocked.Increment(ref cell.Value) > 0)
+            {
+                return true;
+            }
+
+            // Taken by the writer after we found it: count again in a new cell.
+        }
+    }
+
+    private static long? Take<TKey>(ConcurrentDictionary<TKey, Cell> cells, TKey key, ref int size)
+        where TKey : notnull
+    {
+        if (!cells.TryRemove(key, out var cell))
+        {
+            return null;
+        }
+
+        Interlocked.Decrement(ref size);
+        var value = Interlocked.Exchange(ref cell.Value, Taken);
+        return value > 0 ? value : null;
+    }
+
+    private sealed class Cell
+    {
+        public long Value;
+    }
+
+    private readonly record struct CountKey(long Second, TrafficKind Kind, string Name, string Route);
+
+    private readonly record struct SourceKey(long Minute, string Source, TrafficKind Kind);
+}
+
+/// <summary>
+/// Receives every public request when its response is complete, for the traffic counts. <see cref="Record"/> must
+/// never block or throw: it is called on the request path.
+/// </summary>
+public interface IRequestMetrics
+{
+    /// <param name="entry">The request, as the request log sees it.</param>
+    /// <param name="failed">The pipeline threw an exception.</param>
+    void Record(RequestLogEntry entry, bool failed);
+}
+
+/// <summary>Current state of the traffic counts.</summary>
+public interface IRequestMetricsMonitor
+{
+    /// <summary>The counters; null when the traffic counts are switched off.</summary>
+    RequestMetricsStatistics? Statistics { get; }
+}
+
+/// <summary>Traffic counts that count nothing (switched off).</summary>
+public sealed class NullRequestMetrics : IRequestMetrics, IRequestMetricsMonitor
+{
+    public RequestMetricsStatistics? Statistics => null;
+
+    public void Record(RequestLogEntry entry, bool failed)
+    {
+    }
+}
+
+/// <summary>Counters of the traffic counts themselves, for the dashboard.</summary>
+/// <param name="Counted">Requests counted since start.</param>
+/// <param name="Dropped">Requests whose count was lost: too many counts waiting, or storing failed.</param>
+/// <param name="Pending">Counts waiting in memory to be stored.</param>
+/// <param name="LastWrite">When counts were last stored; null when not yet.</param>
+/// <param name="LastError">The last storage error, if storing currently fails.</param>
+public sealed record RequestMetricsStatistics(long Counted, long Dropped, int Pending, DateTimeOffset? LastWrite, string? LastError);
