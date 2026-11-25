@@ -19,7 +19,8 @@ from __future__ import annotations
 import os
 import sys
 from dataclasses import dataclass, field
-from datetime import timedelta
+import re
+from datetime import datetime, timedelta
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -42,13 +43,21 @@ class Assembly:
     passed: int = 0
     failed: int = 0
     skipped: int = 0
-    duration: timedelta = field(default_factory=timedelta)
+    start: datetime | None = None   # when the test run started (wall clock)
+    finish: datetime | None = None  # when it finished
     failures: list[TestCase] = field(default_factory=list)
     skips: list[TestCase] = field(default_factory=list)
 
     @property
     def total(self) -> int:
         return self.passed + self.failed + self.skipped
+
+    @property
+    def elapsed(self) -> timedelta | None:
+        """Wall-clock time of the run. Not the sum of the test durations: tests run in parallel."""
+        if self.start is None or self.finish is None:
+            return None
+        return max(self.finish - self.start, timedelta())
 
 
 def parse_duration(text: str | None) -> timedelta:
@@ -60,6 +69,20 @@ def parse_duration(text: str | None) -> timedelta:
         return timedelta(hours=int(hours), minutes=int(minutes), seconds=float(seconds))
     except ValueError:
         return timedelta()
+
+
+_FRACTION = re.compile(r"(\.\d{6})\d+")
+
+
+def parse_time(text: str | None) -> datetime | None:
+    """Parse a TRX timestamp such as '2026-11-25T10:16:48.7852459+00:00' (7 fraction digits, an offset or Z)."""
+    if not text:
+        return None
+    text = _FRACTION.sub(r"\1", text.strip()).replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
 
 
 def text_of(element: ElementTree.Element | None, path: str) -> str:
@@ -79,9 +102,22 @@ def parse_trx(path: Path) -> Assembly:
     name = next(iter(assembly_names.values()), path.stem)
     assembly = Assembly(name=name)
 
+    # The run's own start and finish; without them, the first test's start and the last test's end.
+    times = root.find("t:Times", TRX_NS)
+    if times is not None:
+        assembly.start = parse_time(times.get("start"))
+        assembly.finish = parse_time(times.get("finish"))
+    starts: list[datetime] = []
+    ends: list[datetime] = []
+
     for result in root.iterfind("t:Results/t:UnitTestResult", TRX_NS):
         outcome = result.get("outcome", "")
-        assembly.duration += parse_duration(result.get("duration"))
+        if (started := parse_time(result.get("startTime"))) is not None:
+            starts.append(started)
+        if (ended := parse_time(result.get("endTime"))) is not None:
+            ends.append(ended)
+        elif started is not None:
+            ends.append(started + parse_duration(result.get("duration")))
         case = TestCase(
             name=result.get("testName", "(unnamed)"),
             outcome=outcome,
@@ -97,7 +133,20 @@ def parse_trx(path: Path) -> Assembly:
             assembly.skipped += 1
             assembly.skips.append(case)
 
+    if assembly.start is None and starts:
+        assembly.start = min(starts)
+    if assembly.finish is None and ends:
+        assembly.finish = max(ends)
     return assembly
+
+
+def total_elapsed(assemblies: list[Assembly]) -> timedelta | None:
+    """From the earliest start to the latest finish: the assemblies run at the same time, so their times overlap."""
+    starts = [a.start for a in assemblies if a.start is not None]
+    finishes = [a.finish for a in assemblies if a.finish is not None]
+    if not starts or not finishes or any(a.elapsed is None for a in assemblies):
+        return None
+    return max(max(finishes) - min(starts), timedelta())
 
 
 def find_coverage(results: Path) -> Path | None:
@@ -130,9 +179,14 @@ def coverage_section(path: Path) -> list[str]:
     return lines
 
 
-def format_duration(value: timedelta) -> str:
+def format_duration(value: timedelta | None) -> str:
+    if value is None:
+        return "—"
     seconds = value.total_seconds()
-    return f"{seconds:.1f}s" if seconds < 60 else f"{int(seconds // 60)}m {seconds % 60:.0f}s"
+    if seconds < 59.95:
+        return f"{seconds:.1f}s"
+    minutes, rest = divmod(round(seconds), 60)  # round first, so 599.9 s is 10m 0s, not 9m 60s
+    return f"{minutes}m {rest}s"
 
 
 def escape_cell(text: str) -> str:
@@ -165,13 +219,18 @@ def build_report(results: Path, title: str) -> tuple[str, list[TestCase]]:
         "|---|---:|---:|---:|---:|---:|",
     ]
     for a in assemblies:
-        lines.append(f"| {a.name} | {a.total} | {a.passed} | {a.failed} | {a.skipped} | {format_duration(a.duration)} |")
+        lines.append(f"| {a.name} | {a.total} | {a.passed} | {a.failed} | {a.skipped} | {format_duration(a.elapsed)} |")
     lines.append(
         f"| **Total** | **{sum(a.total for a in assemblies)}** | **{sum(a.passed for a in assemblies)}** "
         f"| **{failed}** | **{sum(a.skipped for a in assemblies)}** "
-        f"| **{format_duration(sum((a.duration for a in assemblies), timedelta()))}** |"
+        f"| **{format_duration(total_elapsed(assemblies))}** |"
     )
-    lines.append("")
+    lines += [
+        "",
+        "<sub>Duration: elapsed time of each test run, from its start to its end. Tests run in parallel and the "
+        "assemblies at the same time, so the total runs from the first start to the last end, not the sum of the rows.</sub>",
+        "",
+    ]
 
     failures = [f for a in assemblies for f in a.failures]
     if failures:
