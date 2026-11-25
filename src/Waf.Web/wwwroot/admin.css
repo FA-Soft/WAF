@@ -188,6 +188,11 @@ h2 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; display: flex; align-items: ce
     /* Wide tables scroll inside the page instead of widening it. */
     .content { padding: 1rem; min-width: 0; }
     .content table { display: block; max-width: 100%; overflow-x: auto; }
+    /* An open help spans the screen (with a margin) instead of starting at its "?", which may be near the edge. */
+    .help-body { position: fixed; left: 1rem; right: 1rem; top: auto; width: auto; }
+    /* Long names in headings (a host and path) wrap. */
+    .content h1 { flex-wrap: wrap; overflow-wrap: anywhere; }
+    .content h1 > * { min-width: 0; }
 }
 
 /* ---- Badges, alerts, cards ---- */
@@ -288,6 +293,9 @@ tr.disabled td { color: var(--muted); }
 
 .help-body p { margin: 0.25rem 0 0; }
 
+/* A closed help takes no room (some browsers lay out the hidden content, which could widen the page). */
+.help:not([open]) > .help-body { display: none; }
+
 /* ---- Forms ---- */
 
 .form { max-width: 720px; }
@@ -340,7 +348,8 @@ input.invalid, select.invalid, textarea.invalid { border-color: var(--danger); }
 
 /* ---- Editing (routes) ---- */
 
-fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem 0.25rem; margin: 0 0 1rem; background: var(--surface); }
+/* min-width: 0 — a fieldset is as wide as its content by default, which can be wider than a phone screen. */
+fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem 0.25rem; margin: 0 0 1rem; background: var(--surface); min-width: 0; }
 legend { font-weight: 700; padding: 0 0.35rem; display: flex; align-items: center; gap: 0.5rem; }
 .label { display: block; font-weight: 600; margin-bottom: 0.15rem; }
 .checkbox-field { display: grid; grid-template-columns: auto 1fr; column-gap: 0.5rem; align-items: center; }
@@ -359,9 +368,10 @@ input[type="number"] { width: 100%; padding: 0.5rem 0.6rem; font: inherit; color
 .badge-muted { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
 .alert-ok { background: var(--ok-bg); border-color: var(--ok); }
 .heading-link { font-size: 0.9rem; font-weight: normal; margin-left: auto; }
-.details { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
+/* minmax(0, 1fr): long unbroken values (paths, destinations, details) wrap instead of widening the page. */
+.details { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 1rem; }
 .details dt { font-weight: 600; }
-.details dd { margin: 0; }
+.details dd { margin: 0; overflow-wrap: anywhere; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---- Rules and rate limits ---- */
