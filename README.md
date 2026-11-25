@@ -429,6 +429,36 @@ Counting never slows requests down: a request only increments a counter in memor
 }
 ```
 
+**History up to three years.** The older the counts, the coarser they are kept, so three years fit in little space:
+
+| Age | Stored per |
+|---|---|
+| last 3 days | second |
+| last week | minute (with the sources of bad traffic) |
+| last 4 weeks | hour |
+| last 3 months | day |
+| last year | week (Monday to Sunday) |
+| up to 3 years | month |
+
+All buckets are in UTC. Every minute a background job adds up completed periods into the next coarser tier (hours from minutes, days from hours, weeks and months from days) and removes what is older than its tier keeps; a tier is removed only after the coarser one holds it, so totals stay equal across tiers (a day's total is the sum of its hours). The job remembers how far it got, so after the gateway was off it catches up on the next run. A request that takes long (a large download) is counted in the second it arrived; when that period was added up already, it is added up again. Each coarser bucket also keeps its **peak**: the highest requests per second inside it (in total and per group), so a spike of a few seconds stays visible in the monthly view. Sources stay limited to the top 100 plus "other" in every coarser bucket.
+
+**Size.** A stored row takes about 36 bytes. A busy site (5 routes, about 15 counts per second, and more than 100 attacking addresses every minute, all the time) needs about 140 MB for the seconds, 80 MB for the minutes and a few MB for everything coarser: about 220 MB for three years. A quiet site needs a few tens of MB. The **Log retention** page shows the size of `metrics.db`, how long each tier is kept and the oldest and newest data in each. To keep less (on a small SD card), shorten the tiers in the host settings; a tier is kept at least as long as the finer one:
+
+```json
+"Gateway": {
+  "Metrics": {
+    "Retention": {                 // how long each tier is kept (days.hours:minutes:seconds; 1 hour to 10 years)
+      "Second": "3.00:00:00",
+      "Minute": "7.00:00:00",
+      "Hour": "28.00:00:00",
+      "Day": "92.00:00:00",
+      "Week": "366.00:00:00",
+      "Month": "1096.00:00:00"     // nothing is kept longer
+    }
+  }
+}
+```
+
 ## Installation
 
 ### Windows
@@ -552,7 +582,7 @@ Choose the limit from what the gateway really uses on your site: `systemctl stat
 
 Restart the service after changing it (`sudo systemctl restart wafgateway`). With `FlushIntervalSeconds`, a power failure loses at most that many seconds of the request log; the configuration database is not affected. Lower the **Log retention** size (for example 200 MB) so the log stays small.
 
-**Fewer writes: the traffic counts.** `metrics.db` gets at most one small transaction every 5 seconds, however busy the site is (see [Traffic counts](#traffic-counts)). For even fewer writes, set `"Metrics": { "FlushIntervalSeconds": 30 }` under `Gateway`; a power failure then loses at most the last 30 seconds of counts.
+**Fewer writes: the traffic counts.** `metrics.db` gets at most one small transaction every 5 seconds, however busy the site is, plus the history job once a minute (see [Traffic counts](#traffic-counts)). To keep it smaller, shorten `Gateway:Metrics:Retention:Second` (for example `"1.00:00:00"`): the seconds are most of the file. For even fewer writes, set `"Metrics": { "FlushIntervalSeconds": 30 }` under `Gateway`; a power failure then loses at most the last 30 seconds of counts.
 
 **The journal.** The gateway's own messages go to the systemd journal, which Ubuntu keeps on disk. To keep it in memory only (lost at reboot), set `Storage=volatile` and, for example, `RuntimeMaxUse=50M` in `/etc/systemd/journald.conf`, then `sudo systemctl restart systemd-journald`.
 

@@ -25,11 +25,13 @@ public interface IMetricsStore
 /// <remarks>
 /// Tables (all without row id; one row per bucket and dimension):
 /// <c>TrafficCounts(Tier, BucketStart, Kind, Name, Route, Outcome, Count)</c> and
-/// <c>SourceCounts(Tier, BucketStart, Source, Kind, Outcome, Count)</c>. <c>Tier</c> is a <see cref="MetricsTier"/>,
+/// <c>SourceCounts(Tier, BucketStart, Source, Kind, Outcome, Count)</c>, <c>TrafficPeaks(Tier, BucketStart, Total, Good, Bad, Failed)</c>
+/// (the highest requests per second inside a bucket of the minute tier and coarser) and <c>RollupState(Tier, DoneUntil,
+/// DeletedBefore)</c> (see <c>MetricsRollup.cs</c>). <c>Tier</c> is a <see cref="MetricsTier"/>,
 /// <c>BucketStart</c> Unix seconds (UTC), <c>Kind</c> a <see cref="TrafficKind"/> and <c>Outcome</c> a
 /// <see cref="TrafficOutcome"/>. The schema version is <c>PRAGMA user_version</c>.
 /// </remarks>
-public sealed class SqliteMetricsStore : IMetricsStore
+public sealed partial class SqliteMetricsStore : IMetricsStore
 {
     /// <summary>File name of the metrics database in the data folder.</summary>
     public const string FileName = "metrics.db";
@@ -38,7 +40,8 @@ public sealed class SqliteMetricsStore : IMetricsStore
     public const int BusyTimeoutSeconds = 5;
 
     /// <summary>Schema version written to <c>PRAGMA user_version</c>.</summary>
-    public const int SchemaVersion = 1;
+    /// <remarks>1: counts and sources (step 45). 2: rollup state and peaks (step 46).</remarks>
+    public const int SchemaVersion = 2;
 
     private const string CreateSql = """
         CREATE TABLE IF NOT EXISTS TrafficCounts (
@@ -59,6 +62,20 @@ public sealed class SqliteMetricsStore : IMetricsStore
             Outcome INTEGER NOT NULL,
             Count INTEGER NOT NULL,
             PRIMARY KEY (Tier, BucketStart, Source, Kind)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS TrafficPeaks (
+            Tier INTEGER NOT NULL,
+            BucketStart INTEGER NOT NULL,
+            Total INTEGER NOT NULL,
+            Good INTEGER NOT NULL,
+            Bad INTEGER NOT NULL,
+            Failed INTEGER NOT NULL,
+            PRIMARY KEY (Tier, BucketStart)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS RollupState (
+            Tier INTEGER NOT NULL PRIMARY KEY,
+            DoneUntil INTEGER NOT NULL,
+            DeletedBefore INTEGER NOT NULL
         ) WITHOUT ROWID;
         """;
 
@@ -197,6 +214,8 @@ public sealed class SqliteMetricsStore : IMetricsStore
             }
         }
 
+        // Counts for buckets that were rolled up already (a slow request is counted by its start): roll them up again.
+        await ReopenRollupsAsync(connection, transaction, counts, sources, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 

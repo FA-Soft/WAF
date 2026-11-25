@@ -23,6 +23,9 @@ public sealed class MetricsOptions
     /// <summary>Most counts waiting in memory (one per second, kind and route). Beyond it, requests are not counted (and that is counted).</summary>
     public int MaxPendingCounts { get; set; } = 100_000;
 
+    /// <summary>How long each tier (per second, minute, hour, day, week, month) is kept (<c>Gateway:Metrics:Retention</c>).</summary>
+    public MetricsRetention Retention { get; set; } = new();
+
     /// <summary>Longest <see cref="FlushIntervalSeconds"/>: one minute.</summary>
     public const int MaxFlushIntervalSeconds = 60;
 
@@ -43,6 +46,8 @@ public sealed class MetricsOptions
         {
             errors.Add($"{SectionName}:DatabasePath is not a valid path.");
         }
+
+        errors.AddRange((Retention ?? new MetricsRetention()).Validate($"{SectionName}:Retention"));
 
         return errors;
     }

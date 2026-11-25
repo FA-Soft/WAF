@@ -59,6 +59,10 @@ Log retention: size, entries, the last cleanup and the age and size limits.
 
 ![Log retention](images/admin-log-retention.png)
 
+Further down the same page, the traffic history: the size of metrics.db, the last rollup, and how long each tier (per second up to per month) is kept, with the oldest and newest data in it.
+
+![Traffic history](images/admin-traffic-history.png)
+
 "Allow this (false positive)" from that entry: the exclusion form, pre-filled with the path, route and the check that fired.
 
 ![Exclusion pre-filled from a log entry](images/admin-exclusion-from-log.png)

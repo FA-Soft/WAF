@@ -73,6 +73,66 @@ public enum MetricsTier
     Month = 5,
 }
 
+/// <summary>Bucket boundaries of the tiers, in Unix seconds (UTC). Weeks start on Monday; months are calendar months.</summary>
+public static class MetricsBuckets
+{
+    /// <summary>The tiers from fine to coarse.</summary>
+    public static IReadOnlyList<MetricsTier> Tiers { get; } =
+        [MetricsTier.Second, MetricsTier.Minute, MetricsTier.Hour, MetricsTier.Day, MetricsTier.Week, MetricsTier.Month];
+
+    /// <summary>
+    /// The tier a tier is made from. Weeks and months are both made from days (a month does not consist of whole
+    /// weeks); seconds are not made from anything.
+    /// </summary>
+    public static MetricsTier? FinerOf(MetricsTier tier) => tier switch
+    {
+        MetricsTier.Minute => MetricsTier.Second,
+        MetricsTier.Hour => MetricsTier.Minute,
+        MetricsTier.Day => MetricsTier.Hour,
+        MetricsTier.Week or MetricsTier.Month => MetricsTier.Day,
+        _ => null,
+    };
+
+    /// <summary>The tiers made from <paramref name="tier"/>.</summary>
+    public static IEnumerable<MetricsTier> CoarserOf(MetricsTier tier) => Tiers.Where(t => FinerOf(t) == tier);
+
+    /// <summary>Start of the bucket of <paramref name="tier"/> that holds <paramref name="unixSeconds"/>.</summary>
+    public static long Start(MetricsTier tier, long unixSeconds) => tier switch
+    {
+        MetricsTier.Second => unixSeconds,
+        MetricsTier.Minute => Floor(unixSeconds, 60),
+        MetricsTier.Hour => Floor(unixSeconds, 3600),
+        MetricsTier.Day => Floor(unixSeconds, 86400),
+        // 1 January 1970 was a Thursday: 3 days after a Monday.
+        MetricsTier.Week => Floor(unixSeconds + (3 * 86400), 7 * 86400) - (3 * 86400),
+        MetricsTier.Month => MonthStart(DateTimeOffset.FromUnixTimeSeconds(unixSeconds)),
+        _ => throw new ArgumentOutOfRangeException(nameof(tier)),
+    };
+
+    /// <summary>Start of the bucket after the one that starts at <paramref name="bucketStart"/>.</summary>
+    public static long Next(MetricsTier tier, long bucketStart) => tier switch
+    {
+        MetricsTier.Second => bucketStart + 1,
+        MetricsTier.Minute => bucketStart + 60,
+        MetricsTier.Hour => bucketStart + 3600,
+        MetricsTier.Day => bucketStart + 86400,
+        MetricsTier.Week => bucketStart + (7 * 86400),
+        MetricsTier.Month => DateTimeOffset.FromUnixTimeSeconds(bucketStart).AddMonths(1).ToUnixTimeSeconds(),
+        _ => throw new ArgumentOutOfRangeException(nameof(tier)),
+    };
+
+    /// <summary>The first bucket start of <paramref name="tier"/> at or after <paramref name="unixSeconds"/>.</summary>
+    public static long Ceiling(MetricsTier tier, long unixSeconds)
+    {
+        var start = Start(tier, unixSeconds);
+        return start == unixSeconds ? start : Next(tier, start);
+    }
+
+    private static long Floor(long value, long size) => value - (((value % size) + size) % size);
+
+    private static long MonthStart(DateTimeOffset time) => new DateTimeOffset(time.Year, time.Month, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds();
+}
+
 /// <summary>Requests of one kind, route and name within one bucket.</summary>
 /// <param name="BucketStart">Start of the bucket, in Unix seconds (UTC).</param>
 /// <param name="Kind">What the requests were counted as.</param>

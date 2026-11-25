@@ -484,6 +484,7 @@
   <data name="Keep the message to 300 characters or fewer." xml:space="preserve"><value>Halten Sie die Nachricht bei höchstens 300 Zeichen.</value></data>
   <data name="Keep the reason under 300 characters." xml:space="preserve"><value>Halten Sie den Grund unter 300 Zeichen.</value></data>
   <data name="Keep this on for IIS and other servers that host several sites. Off: the backend receives its own address as host name." xml:space="preserve"><value>Lassen Sie dies für IIS und andere Server mit mehreren Websites an. Aus: Das Backend erhält seine eigene Adresse als Hostnamen.</value></data>
+  <data name="Kept for" xml:space="preserve"><value>Aufbewahrt</value></data>
   <data name="Key must be ClientIp, ClientIpAndRoute or Route." xml:space="preserve"><value>Key muss ClientIp, ClientIpAndRoute oder Route sein.</value></data>
   <data name="Label" xml:space="preserve"><value>Bezeichnung</value></data>
   <data name="Language" xml:space="preserve"><value>Sprache</value></data>
@@ -495,6 +496,7 @@
   <data name="Last 7 days" xml:space="preserve"><value>Letzte 7 Tage</value></data>
   <data name="Last cleanup" xml:space="preserve"><value>Letzte Bereinigung</value></data>
   <data name="Last hour" xml:space="preserve"><value>Letzte Stunde</value></data>
+  <data name="Last rollup" xml:space="preserve"><value>Letzte Verdichtung</value></data>
   <data name="Latency" xml:space="preserve"><value>Latenz</value></data>
   <data name="Let's Encrypt" xml:space="preserve"><value>Let's Encrypt</value></data>
   <data name="Let's Encrypt cannot issue wildcard certificates with HTTP validation; use your own certificate file." xml:space="preserve"><value>Let's Encrypt kann mit HTTP-Validierung keine Wildcard-Zertifikate ausstellen; verwenden Sie eine eigene Zertifikatsdatei.</value></data>
@@ -550,6 +552,7 @@
   <data name="New recovery codes" xml:space="preserve"><value>Neue Wiederherstellungscodes</value></data>
   <data name="New recovery codes made; the old ones no longer work." xml:space="preserve"><value>Neue Wiederherstellungscodes erstellt; die alten funktionieren nicht mehr.</value></data>
   <data name="Newer" xml:space="preserve"><value>Neuer</value></data>
+  <data name="Newest stored" xml:space="preserve"><value>Neuester</value></data>
   <data name="No API key is configured." xml:space="preserve"><value>Es ist kein API-Schlüssel eingerichtet.</value></data>
   <data name="No API key is configured: nothing AI-related runs and nothing is sent anywhere." xml:space="preserve"><value>Es ist kein API-Schlüssel eingerichtet: Nichts mit KI läuft, und nichts wird irgendwohin gesendet.</value></data>
   <data name="No API key: the AI features are off and nothing is sent." xml:space="preserve"><value>Kein API-Schlüssel: Die KI-Funktionen sind aus, und nichts wird gesendet.</value></data>
@@ -603,6 +606,7 @@
   <data name="Often simpler: a fixed address (DHCP reservation) in your router, or the device's host name." xml:space="preserve"><value>Oft einfacher: eine feste Adresse (DHCP-Reservierung) in Ihrem Router oder der Hostname des Geräts.</value></data>
   <data name="Older" xml:space="preserve"><value>Älter</value></data>
   <data name="Older entries are removed. 0 keeps entries regardless of age; the size limit still applies." xml:space="preserve"><value>Ältere Einträge werden entfernt. 0 behält Einträge unabhängig vom Alter; die Größengrenze gilt weiterhin.</value></data>
+  <data name="Oldest stored" xml:space="preserve"><value>Ältester</value></data>
   <data name="On" xml:space="preserve"><value>Ein</value></data>
   <data name="On failover {0} since {1}" xml:space="preserve"><value>Auf Ausweichziel {0} seit {1}</value></data>
   <data name="One address or range per line, e.g. 203.0.113.0/24. Empty: any address. Others get &quot;not found&quot;." xml:space="preserve"><value>Eine Adresse oder ein Bereich pro Zeile, z. B. 203.0.113.0/24. Leer: jede Adresse. Andere erhalten „nicht gefunden“.</value></data>
@@ -847,6 +851,7 @@
   <data name="Stop aggressive bots: each client IP gets a fair number of requests per minute." xml:space="preserve"><value>Aggressive Bots stoppen: Jede Client-IP erhält eine faire Anzahl Anfragen pro Minute.</value></data>
   <data name="Stored (UTC)" xml:space="preserve"><value>Gespeichert (UTC)</value></data>
   <data name="Stored encrypted on this machine; never shown again, never exported or included in backups." xml:space="preserve"><value>Verschlüsselt auf diesem Rechner gespeichert; nie wieder angezeigt, nie exportiert und nie in Sicherungen enthalten.</value></data>
+  <data name="Stored per" xml:space="preserve"><value>Gespeichert pro</value></data>
   <data name="Subject" xml:space="preserve"><value>Antragsteller</value></data>
   <data name="Summary" xml:space="preserve"><value>Zusammenfassung</value></data>
   <data name="Switch off {0} detection for {1} and below." xml:space="preserve"><value>Erkennung von {0} für {1} und darunter ausschalten.</value></data>
@@ -973,6 +978,7 @@
   <data name="The site name in the address, e.g. www.example.com." xml:space="preserve"><value>Der Name der Website in der Adresse, z. B. www.example.com.</value></data>
   <data name="The target was not deleted." xml:space="preserve"><value>Das Ziel wurde nicht gelöscht.</value></data>
   <data name="The target was not saved." xml:space="preserve"><value>Das Ziel wurde nicht gespeichert.</value></data>
+  <data name="The traffic counts of the performance dashboard are kept in metrics.db in the data folder, apart from the request log. The older the data, the coarser it is kept: per second for the last days, then per minute, hour, day, week and month. A background job adds up completed periods into the coarser ones every minute and removes what is older than its tier keeps, so the file stays small. The tiers are host settings (Gateway:Metrics:Retention)." xml:space="preserve"><value>Die Verkehrszählungen des Leistungs-Dashboards liegen in metrics.db im Datenordner, getrennt vom Anfrageprotokoll. Je älter die Daten, desto gröber werden sie aufbewahrt: pro Sekunde für die letzten Tage, danach pro Minute, Stunde, Tag, Woche und Monat. Ein Hintergrundjob addiert jede Minute abgeschlossene Zeiträume in die gröberen Stufen und entfernt, was älter ist als die Stufe aufbewahrt, damit die Datei klein bleibt. Die Stufen sind Host-Einstellungen (Gateway:Metrics:Retention).</value></data>
   <data name="The uploaded certificate is not in the certificate store (deleted, or a backup was restored without secrets). Upload it again." xml:space="preserve"><value>Das hochgeladene Zertifikat ist nicht im Zertifikatsspeicher (gelöscht, oder eine Sicherung wurde ohne Geheimnisse wiederhergestellt). Laden Sie es erneut hoch.</value></data>
   <data name="The user name or password is not correct." xml:space="preserve"><value>Benutzername oder Passwort ist falsch.</value></data>
   <data name="The version was not restored." xml:space="preserve"><value>Die Version wurde nicht wiederhergestellt.</value></data>
@@ -1017,6 +1023,8 @@
   <data name="Too many failed attempts: this account is locked for another minute. Try again later." xml:space="preserve"><value>Zu viele Fehlversuche: Dieses Konto ist noch eine Minute gesperrt. Versuchen Sie es später erneut.</value></data>
   <data name="Too many failed attempts: this account is locked for another {0} minutes. Try again later." xml:space="preserve"><value>Zu viele Fehlversuche: Dieses Konto ist noch {0} Minuten gesperrt. Versuchen Sie es später erneut.</value></data>
   <data name="Traffic counts" xml:space="preserve"><value>Verkehrszählung</value></data>
+  <data name="Traffic history" xml:space="preserve"><value>Verkehrsverlauf</value></data>
+  <data name="Traffic history size" xml:space="preserve"><value>Größe des Verkehrsverlaufs</value></data>
   <data name="Trusted proxies" xml:space="preserve"><value>Vertrauenswürdige Proxys</value></data>
   <data name="Trusted proxy '{0}'" xml:space="preserve"><value>Vertrauenswürdiger Proxy „{0}“</value></data>
   <data name="Try it without risk: matches are logged as &quot;would block&quot; and the requests continue. Switch it off later in the editor." xml:space="preserve"><value>Probieren Sie es ohne Risiko: Treffer werden als „würde blockieren“ protokolliert, und die Anfragen laufen weiter. Schalten Sie es später im Editor aus.</value></data>
@@ -1094,6 +1102,7 @@
   <data name="What" xml:space="preserve"><value>Was</value></data>
   <data name="What happened" xml:space="preserve"><value>Was geschah</value></data>
   <data name="What happens when all conditions match." xml:space="preserve"><value>Was passiert, wenn alle Bedingungen zutreffen.</value></data>
+  <data name="What is kept, from fine to coarse" xml:space="preserve"><value>Was aufbewahrt wird, von fein nach grob</value></data>
   <data name="What is sent" xml:space="preserve"><value>Was gesendet wird</value></data>
   <data name="What should change?" xml:space="preserve"><value>Was soll sich ändern?</value></data>
   <data name="What this version changed" xml:space="preserve"><value>Was diese Version geändert hat</value></data>
@@ -1193,12 +1202,15 @@
   <data name="is not in" xml:space="preserve"><value>ist nicht in</value></data>
   <data name="looking for it…" xml:space="preserve"><value>wird gesucht…</value></data>
   <data name="matches the pattern" xml:space="preserve"><value>entspricht dem Muster</value></data>
+  <data name="metrics.db; at most a few hundred MB for three years of a busy site" xml:space="preserve"><value>metrics.db; höchstens einige hundert MB für drei Jahre einer stark besuchten Website</value></data>
   <data name="minute" xml:space="preserve"><value>Minute</value></data>
+  <data name="month" xml:space="preserve"><value>Monat</value></data>
   <data name="more than one certificate is configured for this host name." xml:space="preserve"><value>für diesen Hostnamen ist mehr als ein Zertifikat eingerichtet.</value></data>
   <data name="no certificate could be loaded; HTTPS connections for it are refused." xml:space="preserve"><value>es konnte kein Zertifikat geladen werden; HTTPS-Verbindungen dafür werden abgelehnt.</value></data>
   <data name="none" xml:space="preserve"><value>keine</value></data>
   <data name="not forwarded" xml:space="preserve"><value>nicht weitergeleitet</value></data>
   <data name="not seen yet" xml:space="preserve"><value>noch nicht gesehen</value></data>
+  <data name="nothing yet" xml:space="preserve"><value>noch nichts</value></data>
   <data name="of at most {0} MB ({1})" xml:space="preserve"><value>von höchstens {0} MB ({1})</value></data>
   <data name="off" xml:space="preserve"><value>aus</value></data>
   <data name="oldest from {0} UTC" xml:space="preserve"><value>älteste vom {0} UTC</value></data>
@@ -1264,6 +1276,7 @@
   <data name="unknown operator." xml:space="preserve"><value>unbekannter Operator.</value></data>
   <data name="use either a target or an address, not both (the address, port and scheme come from the target)." xml:space="preserve"><value>verwenden Sie entweder ein Ziel oder eine Adresse, nicht beides (Adresse, Port und Schema kommen vom Ziel).</value></data>
   <data name="values must not be empty." xml:space="preserve"><value>Werte dürfen nicht leer sein.</value></data>
+  <data name="week (from Monday)" xml:space="preserve"><value>Woche (ab Montag)</value></data>
   <data name="written since start" xml:space="preserve"><value>seit dem Start geschrieben</value></data>
   <data name="written since start, {0} waiting" xml:space="preserve"><value>seit dem Start geschrieben, {0} wartend</value></data>
   <data name="{0} (detection only: logged, not enforced)" xml:space="preserve"><value>{0} (nur erkennen: protokolliert, nicht durchgesetzt)</value></data>
@@ -1272,9 +1285,12 @@
   <data name="{0} (version {1})." xml:space="preserve"><value>{0} (Version {1}).</value></data>
   <data name="{0} UTC by {1}, for &lt;a href=&quot;history/{2}&quot;&gt;version {2}&lt;/a&gt;" xml:space="preserve"><value>{0} UTC von {1}, für &lt;a href="history/{2}"&gt;Version {2}&lt;/a&gt;</value></data>
   <data name="{0} UTC: {1} by age, {2} by size" xml:space="preserve"><value>{0} UTC: {1} nach Alter, {2} nach Größe</value></data>
+  <data name="{0} UTC: {1} rows added up" xml:space="preserve"><value>{0} UTC: {1} Zeilen verdichtet</value></data>
   <data name="{0} answers with MAC address {1}. Save to look it up from now on." xml:space="preserve"><value>{0} antwortet mit MAC-Adresse {1}. Speichern Sie, um sie ab jetzt zu ermitteln.</value></data>
   <data name="{0} certificate needs attention." xml:space="preserve"><value>{0} Zertifikat braucht Aufmerksamkeit.</value></data>
   <data name="{0} certificates need attention." xml:space="preserve"><value>{0} Zertifikate brauchen Aufmerksamkeit.</value></data>
+  <data name="{0} day" xml:space="preserve"><value>{0} Tag</value></data>
+  <data name="{0} days" xml:space="preserve"><value>{0} Tage</value></data>
   <data name="{0} detected in {1} (signature {2}): {3}" xml:space="preserve"><value>{0} erkannt in {1} (Signatur {2}): {3}</value></data>
   <data name="{0} did not answer, or is not on the gateway's own network: no MAC address found." xml:space="preserve"><value>{0} hat nicht geantwortet oder ist nicht im eigenen Netzwerk des Gateways: keine MAC-Adresse gefunden.</value></data>
   <data name="{0} disabled" xml:space="preserve"><value>{0} deaktiviert</value></data>
@@ -1282,6 +1298,8 @@
   <data name="{0} failed attempts since then" xml:space="preserve"><value>{0} Fehlversuche seitdem</value></data>
   <data name="{0} gets its certificate from Let's Encrypt" xml:space="preserve"><value>{0} erhält sein Zertifikat von Let's Encrypt</value></data>
   <data name="{0} has no certificate any more (version {1})." xml:space="preserve"><value>{0} hat kein Zertifikat mehr (Version {1}).</value></data>
+  <data name="{0} hour" xml:space="preserve"><value>{0} Stunde</value></data>
+  <data name="{0} hours" xml:space="preserve"><value>{0} Stunden</value></data>
   <data name="{0} is already covered by this list." xml:space="preserve"><value>{0} ist bereits durch diese Liste abgedeckt.</value></data>
   <data name="{0} is used by route {1}. Use a host name of its own for the admin UI." xml:space="preserve"><value>{0} wird von Route {1} verwendet. Verwenden Sie einen eigenen Hostnamen für die Verwaltungsoberfläche.</value></data>
   <data name="{0} not counted" xml:space="preserve"><value>{0} nicht gezählt</value></data>

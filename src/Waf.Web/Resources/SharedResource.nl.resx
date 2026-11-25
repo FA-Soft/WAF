@@ -484,6 +484,7 @@
   <data name="Keep the message to 300 characters or fewer." xml:space="preserve"><value>Houd het bericht op 300 tekens of minder.</value></data>
   <data name="Keep the reason under 300 characters." xml:space="preserve"><value>Houd de reden onder 300 tekens.</value></data>
   <data name="Keep this on for IIS and other servers that host several sites. Off: the backend receives its own address as host name." xml:space="preserve"><value>Laat dit aan voor IIS en andere servers met meerdere sites. Uit: de backend krijgt zijn eigen adres als hostnaam.</value></data>
+  <data name="Kept for" xml:space="preserve"><value>Bewaard</value></data>
   <data name="Key must be ClientIp, ClientIpAndRoute or Route." xml:space="preserve"><value>Key moet ClientIp, ClientIpAndRoute of Route zijn.</value></data>
   <data name="Label" xml:space="preserve"><value>Label</value></data>
   <data name="Language" xml:space="preserve"><value>Taal</value></data>
@@ -495,6 +496,7 @@
   <data name="Last 7 days" xml:space="preserve"><value>Laatste 7 dagen</value></data>
   <data name="Last cleanup" xml:space="preserve"><value>Laatste keer opgeschoond</value></data>
   <data name="Last hour" xml:space="preserve"><value>Laatste uur</value></data>
+  <data name="Last rollup" xml:space="preserve"><value>Laatste optelling</value></data>
   <data name="Latency" xml:space="preserve"><value>Vertraging</value></data>
   <data name="Let's Encrypt" xml:space="preserve"><value>Let's Encrypt</value></data>
   <data name="Let's Encrypt cannot issue wildcard certificates with HTTP validation; use your own certificate file." xml:space="preserve"><value>Let's Encrypt kan geen wildcardcertificaten uitgeven met HTTP-validatie; gebruik een eigen certificaatbestand.</value></data>
@@ -550,6 +552,7 @@
   <data name="New recovery codes" xml:space="preserve"><value>Nieuwe herstelcodes</value></data>
   <data name="New recovery codes made; the old ones no longer work." xml:space="preserve"><value>Nieuwe herstelcodes gemaakt; de oude werken niet meer.</value></data>
   <data name="Newer" xml:space="preserve"><value>Nieuwer</value></data>
+  <data name="Newest stored" xml:space="preserve"><value>Nieuwste</value></data>
   <data name="No API key is configured." xml:space="preserve"><value>Er is geen API-sleutel ingesteld.</value></data>
   <data name="No API key is configured: nothing AI-related runs and nothing is sent anywhere." xml:space="preserve"><value>Er is geen API-sleutel ingesteld: er draait niets met AI en er wordt nergens iets naartoe gestuurd.</value></data>
   <data name="No API key: the AI features are off and nothing is sent." xml:space="preserve"><value>Geen API-sleutel: de AI-functies staan uit en er wordt niets verzonden.</value></data>
@@ -603,6 +606,7 @@
   <data name="Often simpler: a fixed address (DHCP reservation) in your router, or the device's host name." xml:space="preserve"><value>Vaak eenvoudiger: een vast adres (DHCP-reservering) in uw router, of de hostnaam van het apparaat.</value></data>
   <data name="Older" xml:space="preserve"><value>Ouder</value></data>
   <data name="Older entries are removed. 0 keeps entries regardless of age; the size limit still applies." xml:space="preserve"><value>Oudere regels worden verwijderd. 0 bewaart regels ongeacht hun leeftijd; de groottegrens geldt nog steeds.</value></data>
+  <data name="Oldest stored" xml:space="preserve"><value>Oudste</value></data>
   <data name="On" xml:space="preserve"><value>Aan</value></data>
   <data name="On failover {0} since {1}" xml:space="preserve"><value>Op failover {0} sinds {1}</value></data>
   <data name="One address or range per line, e.g. 203.0.113.0/24. Empty: any address. Others get &quot;not found&quot;." xml:space="preserve"><value>Eén adres of bereik per regel, bijv. 203.0.113.0/24. Leeg: elk adres. Andere krijgen "niet gevonden".</value></data>
@@ -847,6 +851,7 @@
   <data name="Stop aggressive bots: each client IP gets a fair number of requests per minute." xml:space="preserve"><value>Agressieve bots tegenhouden: elk client-IP krijgt een redelijk aantal verzoeken per minuut.</value></data>
   <data name="Stored (UTC)" xml:space="preserve"><value>Opgeslagen (UTC)</value></data>
   <data name="Stored encrypted on this machine; never shown again, never exported or included in backups." xml:space="preserve"><value>Versleuteld opgeslagen op deze machine; wordt nooit meer getoond, nooit geëxporteerd en nooit in back-ups opgenomen.</value></data>
+  <data name="Stored per" xml:space="preserve"><value>Opgeslagen per</value></data>
   <data name="Subject" xml:space="preserve"><value>Onderwerp</value></data>
   <data name="Summary" xml:space="preserve"><value>Overzicht</value></data>
   <data name="Switch off {0} detection for {1} and below." xml:space="preserve"><value>Detectie van {0} uitzetten voor {1} en alles daaronder.</value></data>
@@ -973,6 +978,7 @@
   <data name="The site name in the address, e.g. www.example.com." xml:space="preserve"><value>De naam van de site in het adres, bijv. www.example.com.</value></data>
   <data name="The target was not deleted." xml:space="preserve"><value>Het doel is niet verwijderd.</value></data>
   <data name="The target was not saved." xml:space="preserve"><value>Het doel is niet opgeslagen.</value></data>
+  <data name="The traffic counts of the performance dashboard are kept in metrics.db in the data folder, apart from the request log. The older the data, the coarser it is kept: per second for the last days, then per minute, hour, day, week and month. A background job adds up completed periods into the coarser ones every minute and removes what is older than its tier keeps, so the file stays small. The tiers are host settings (Gateway:Metrics:Retention)." xml:space="preserve"><value>De verkeerstellingen van het prestatiedashboard staan in metrics.db in de datamap, los van het aanvraaglogboek. Hoe ouder de gegevens, hoe grover ze bewaard worden: per seconde voor de laatste dagen, daarna per minuut, uur, dag, week en maand. Een achtergrondtaak telt afgelopen perioden elke minuut op in de grovere en verwijdert wat ouder is dan het niveau bewaart, zodat het bestand klein blijft. De niveaus zijn hostinstellingen (Gateway:Metrics:Retention).</value></data>
   <data name="The uploaded certificate is not in the certificate store (deleted, or a backup was restored without secrets). Upload it again." xml:space="preserve"><value>Het geüploade certificaat staat niet in de certificaatopslag (verwijderd, of er is een back-up zonder geheimen teruggezet). Upload het opnieuw.</value></data>
   <data name="The user name or password is not correct." xml:space="preserve"><value>De gebruikersnaam of het wachtwoord klopt niet.</value></data>
   <data name="The version was not restored." xml:space="preserve"><value>De versie is niet teruggezet.</value></data>
@@ -1017,6 +1023,8 @@
   <data name="Too many failed attempts: this account is locked for another minute. Try again later." xml:space="preserve"><value>Te veel mislukte pogingen: dit account is nog een minuut vergrendeld. Probeer het later opnieuw.</value></data>
   <data name="Too many failed attempts: this account is locked for another {0} minutes. Try again later." xml:space="preserve"><value>Te veel mislukte pogingen: dit account is nog {0} minuten vergrendeld. Probeer het later opnieuw.</value></data>
   <data name="Traffic counts" xml:space="preserve"><value>Verkeerstellingen</value></data>
+  <data name="Traffic history" xml:space="preserve"><value>Verkeersgeschiedenis</value></data>
+  <data name="Traffic history size" xml:space="preserve"><value>Grootte van de verkeersgeschiedenis</value></data>
   <data name="Trusted proxies" xml:space="preserve"><value>Vertrouwde proxy's</value></data>
   <data name="Trusted proxy '{0}'" xml:space="preserve"><value>Vertrouwde proxy '{0}'</value></data>
   <data name="Try it without risk: matches are logged as &quot;would block&quot; and the requests continue. Switch it off later in the editor." xml:space="preserve"><value>Probeer het zonder risico: overeenkomsten worden gelogd als "zou blokkeren" en de verzoeken gaan door. Zet het later uit in de editor.</value></data>
@@ -1094,6 +1102,7 @@
   <data name="What" xml:space="preserve"><value>Wat</value></data>
   <data name="What happened" xml:space="preserve"><value>Wat er gebeurde</value></data>
   <data name="What happens when all conditions match." xml:space="preserve"><value>Wat er gebeurt als alle voorwaarden kloppen.</value></data>
+  <data name="What is kept, from fine to coarse" xml:space="preserve"><value>Wat bewaard wordt, van fijn naar grof</value></data>
   <data name="What is sent" xml:space="preserve"><value>Wat er wordt verzonden</value></data>
   <data name="What should change?" xml:space="preserve"><value>Wat moet er veranderen?</value></data>
   <data name="What this version changed" xml:space="preserve"><value>Wat deze versie wijzigde</value></data>
@@ -1193,12 +1202,15 @@
   <data name="is not in" xml:space="preserve"><value>staat niet in</value></data>
   <data name="looking for it…" xml:space="preserve"><value>wordt gezocht…</value></data>
   <data name="matches the pattern" xml:space="preserve"><value>komt overeen met het patroon</value></data>
+  <data name="metrics.db; at most a few hundred MB for three years of a busy site" xml:space="preserve"><value>metrics.db; hooguit enkele honderden MB voor drie jaar van een drukke site</value></data>
   <data name="minute" xml:space="preserve"><value>minuut</value></data>
+  <data name="month" xml:space="preserve"><value>maand</value></data>
   <data name="more than one certificate is configured for this host name." xml:space="preserve"><value>er is meer dan één certificaat ingesteld voor deze hostnaam.</value></data>
   <data name="no certificate could be loaded; HTTPS connections for it are refused." xml:space="preserve"><value>er kon geen certificaat worden geladen; HTTPS-verbindingen ervoor worden geweigerd.</value></data>
   <data name="none" xml:space="preserve"><value>geen</value></data>
   <data name="not forwarded" xml:space="preserve"><value>niet doorgestuurd</value></data>
   <data name="not seen yet" xml:space="preserve"><value>nog niet gezien</value></data>
+  <data name="nothing yet" xml:space="preserve"><value>nog niets</value></data>
   <data name="of at most {0} MB ({1})" xml:space="preserve"><value>van hoogstens {0} MB ({1})</value></data>
   <data name="off" xml:space="preserve"><value>uit</value></data>
   <data name="oldest from {0} UTC" xml:space="preserve"><value>oudste van {0} UTC</value></data>
@@ -1264,6 +1276,7 @@
   <data name="unknown operator." xml:space="preserve"><value>onbekende vergelijking.</value></data>
   <data name="use either a target or an address, not both (the address, port and scheme come from the target)." xml:space="preserve"><value>gebruik een doel of een adres, niet allebei (adres, poort en schema komen van het doel).</value></data>
   <data name="values must not be empty." xml:space="preserve"><value>waarden mogen niet leeg zijn.</value></data>
+  <data name="week (from Monday)" xml:space="preserve"><value>week (vanaf maandag)</value></data>
   <data name="written since start" xml:space="preserve"><value>geschreven sinds de start</value></data>
   <data name="written since start, {0} waiting" xml:space="preserve"><value>geschreven sinds de start, {0} wachtend</value></data>
   <data name="{0} (detection only: logged, not enforced)" xml:space="preserve"><value>{0} (alleen detectie: gelogd, niet uitgevoerd)</value></data>
@@ -1272,9 +1285,12 @@
   <data name="{0} (version {1})." xml:space="preserve"><value>{0} (versie {1}).</value></data>
   <data name="{0} UTC by {1}, for &lt;a href=&quot;history/{2}&quot;&gt;version {2}&lt;/a&gt;" xml:space="preserve"><value>{0} UTC door {1}, voor &lt;a href="history/{2}"&gt;versie {2}&lt;/a&gt;</value></data>
   <data name="{0} UTC: {1} by age, {2} by size" xml:space="preserve"><value>{0} UTC: {1} op leeftijd, {2} op grootte</value></data>
+  <data name="{0} UTC: {1} rows added up" xml:space="preserve"><value>{0} UTC: {1} rijen opgeteld</value></data>
   <data name="{0} answers with MAC address {1}. Save to look it up from now on." xml:space="preserve"><value>{0} antwoordt met MAC-adres {1}. Sla op om het voortaan op te zoeken.</value></data>
   <data name="{0} certificate needs attention." xml:space="preserve"><value>{0} certificaat vraagt aandacht.</value></data>
   <data name="{0} certificates need attention." xml:space="preserve"><value>{0} certificaten vragen aandacht.</value></data>
+  <data name="{0} day" xml:space="preserve"><value>{0} dag</value></data>
+  <data name="{0} days" xml:space="preserve"><value>{0} dagen</value></data>
   <data name="{0} detected in {1} (signature {2}): {3}" xml:space="preserve"><value>{0} gedetecteerd in {1} (signatuur {2}): {3}</value></data>
   <data name="{0} did not answer, or is not on the gateway's own network: no MAC address found." xml:space="preserve"><value>{0} antwoordde niet, of staat niet op het eigen netwerk van de gateway: geen MAC-adres gevonden.</value></data>
   <data name="{0} disabled" xml:space="preserve"><value>{0} uitgeschakeld</value></data>
@@ -1282,6 +1298,8 @@
   <data name="{0} failed attempts since then" xml:space="preserve"><value>{0} mislukte pogingen sindsdien</value></data>
   <data name="{0} gets its certificate from Let's Encrypt" xml:space="preserve"><value>{0} krijgt zijn certificaat van Let's Encrypt</value></data>
   <data name="{0} has no certificate any more (version {1})." xml:space="preserve"><value>{0} heeft geen certificaat meer (versie {1}).</value></data>
+  <data name="{0} hour" xml:space="preserve"><value>{0} uur</value></data>
+  <data name="{0} hours" xml:space="preserve"><value>{0} uur</value></data>
   <data name="{0} is already covered by this list." xml:space="preserve"><value>{0} valt al onder deze lijst.</value></data>
   <data name="{0} is used by route {1}. Use a host name of its own for the admin UI." xml:space="preserve"><value>{0} wordt gebruikt door route {1}. Gebruik een eigen hostnaam voor de beheeromgeving.</value></data>
   <data name="{0} not counted" xml:space="preserve"><value>{0} niet geteld</value></data>

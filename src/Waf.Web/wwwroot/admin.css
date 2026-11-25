@@ -230,7 +230,7 @@ h2 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; display: flex; align-items: ce
     padding: 1rem;
 }
 
-.card h2 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--muted); }
+.card h2, .card h3.card-heading { margin: 0 0 0.5rem; font-size: 1rem; color: var(--muted); }
 .metric { font-size: 1.6rem; font-weight: 700; margin: 0; }
 
 /* ---- Tables ---- */
