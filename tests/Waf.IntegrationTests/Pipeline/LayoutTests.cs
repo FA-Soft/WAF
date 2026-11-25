@@ -11,7 +11,7 @@ namespace FASoft.Waf.IntegrationTests.Pipeline;
 /// Every admin page fits the screen: on a phone (390 px) and on a desktop (1280 px), in English and in German (the
 /// longest words), with the example configuration (long names, IP lists, host names). A page may scroll its tables
 /// inside their own box, never the whole page sideways. Needs a Chromium for Playwright; where none is installed the
-/// test is skipped (CI installs one: see .github/workflows/ci.yml).
+/// test uses an installed Chrome or Edge, and is skipped when there is none (GitHub's runners have Chrome).
 /// </summary>
 public sealed class LayoutTests
 {
@@ -24,6 +24,27 @@ public sealed class LayoutTests
     private sealed class Gateway : AdminGateway
     {
         protected override IEnumerable<string> ExtraArgs => ["--environment=Development"];
+    }
+
+    /// <summary>
+    /// Playwright's own Chromium when it is installed, else the Chrome or Edge installed on the machine (GitHub's
+    /// runners have Chrome); null when there is none.
+    /// </summary>
+    private static async Task<IBrowser?> LaunchAsync(IPlaywright playwright)
+    {
+        foreach (var channel in new string?[] { null, "chrome", "msedge" })
+        {
+            try
+            {
+                return await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = channel });
+            }
+            catch (PlaywrightException)
+            {
+                // Not installed: try the next one.
+            }
+        }
+
+        return null;
     }
 
     private static string RepositoryRoot()
@@ -40,16 +61,12 @@ public sealed class LayoutTests
     [Fact]
     public async Task Every_admin_page_fits_a_phone_and_a_desktop_screen()
     {
-        IPlaywright playwright;
-        IBrowser browser;
-        try
+        var playwright = await Playwright.CreateAsync();
+        var browser = await LaunchAsync(playwright);
+        if (browser is null)
         {
-            playwright = await Playwright.CreateAsync();
-            browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
-        }
-        catch (PlaywrightException ex)
-        {
-            Assert.Skip($"No Chromium for Playwright on this machine ({ex.Message.Split('\n')[0]}). Install it with: pwsh bin/<configuration>/net11.0/playwright.ps1 install chromium");
+            playwright.Dispose();
+            Assert.Skip("No browser for Playwright on this machine: neither its own Chromium nor an installed Chrome or Edge. Install one, e.g. pwsh bin/<configuration>/net11.0/playwright.ps1 install chromium");
             return;
         }
 

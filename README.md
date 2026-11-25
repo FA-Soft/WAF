@@ -691,7 +691,7 @@ Run it locally with `dotnet run --project src/Waf.Host`. In the Development envi
 
 Shared build settings live in `Directory.Build.props` (nullable, analyzers, warnings as errors) and NuGet versions in `Directory.Packages.props` (central package management). Tests use xUnit v3 on Microsoft.Testing.Platform.
 
-**Layout test.** `LayoutTests` opens every admin page in Chromium (Playwright) at phone width (390 px) and desktop width (1280 px), in English and German, with the example configuration, and fails when a page is wider than the screen (tables may scroll inside their own box). It needs Chromium for Playwright, installed once with `pwsh tests/Waf.IntegrationTests/bin/Debug/net11.0/playwright.ps1 install chromium` after a build; without it the test is skipped. CI installs it on the Ubuntu job.
+**Layout test.** `LayoutTests` opens every admin page in Chromium (Playwright) at phone width (390 px) and desktop width (1280 px), in English and German, with the example configuration, and fails when a page is wider than the screen (tables may scroll inside their own box). It uses Playwright's own Chromium when installed (`pwsh tests/Waf.IntegrationTests/bin/Debug/net11.0/playwright.ps1 install chromium` after a build), otherwise an installed Google Chrome or Microsoft Edge, as on GitHub's runners; with no browser at all the test is skipped.
 
 **Let's Encrypt tests.** The regular tests run the whole ACME flow (account, HTTP-01 through the gateway's port 80 listener, issuance, renewal) against a small in-process ACME server. One more test runs it against [Pebble](https://github.com/letsencrypt/pebble), Let's Encrypt's own test CA, in Docker (Linux or Windows containers); it is skipped unless `WAF_PEBBLE=1` is set:
 
