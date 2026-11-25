@@ -88,6 +88,7 @@ internal static class AdminPipeline
             signedIn.MapAdminDownloads();
             signedIn.MapLogEndpoints();
             signedIn.MapLiveTraffic();
+            signedIn.MapPerformanceEndpoints();
             endpoints.MapRazorComponents<App>().RequireAuthorization();
         });
     }

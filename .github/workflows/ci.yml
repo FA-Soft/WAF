@@ -37,6 +37,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Test the CI scripts
+        # The scripts that write the job summary (test durations, coverage); standard library only.
+        run: python -m unittest discover -s .github/scripts -p "test_*.py" -v
+
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json

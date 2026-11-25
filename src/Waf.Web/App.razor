@@ -8,6 +8,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <base href="/" />
     <link rel="icon" type="image/svg+xml" href="@Assets["_content/Waf.Web/favicon.svg"]" />
+    <link rel="stylesheet" href="@Assets["_content/Waf.Web/lib/uplot/uPlot.min.css"]" />
     <link rel="stylesheet" href="@Assets["_content/Waf.Web/admin.css"]" />
     <HeadOutlet />
 </head>
@@ -21,6 +22,9 @@
     @* Live traffic on the dashboard (SignalR client served from the gateway itself); does nothing on other pages. *@
     <script src="@Assets["_content/Waf.Web/lib/signalr/signalr.min.js"]"></script>
     <script src="@Assets["_content/Waf.Web/live.js"]"></script>
+    @* Charts of the Performance page (uPlot, served from the gateway itself); does nothing on other pages. *@
+    <script src="@Assets["_content/Waf.Web/lib/uplot/uPlot.iife.min.js"]"></script>
+    <script src="@Assets["_content/Waf.Web/performance.js"]"></script>
 </body>
 </html>
 

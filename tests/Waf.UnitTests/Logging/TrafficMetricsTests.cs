@@ -89,11 +89,11 @@ public sealed class TrafficMetricsTests : IDisposable
         counter.Add(Start.AddSeconds(1), TrafficKind.Forwarded, "", "website", "203.0.113.7");
         counter.Add(Start.AddSeconds(1), TrafficKind.Forwarded, "", "api", "203.0.113.7");
 
-        var (counts, _) = counter.TakeCompleted(Start.AddSeconds(1.5), TimeSpan.Zero);
+        var (counts, _, _) = counter.TakeCompleted(Start.AddSeconds(1.5), TimeSpan.Zero);
         var only = Assert.Single(counts);
         Assert.Equal(new TrafficCount(Start.ToUnixTimeSeconds(), TrafficKind.Forwarded, "", "website", 2), only);
 
-        (counts, _) = counter.TakeCompleted(Start.AddSeconds(2), TimeSpan.Zero);
+        (counts, _, _) = counter.TakeCompleted(Start.AddSeconds(2), TimeSpan.Zero);
         Assert.Equal(2, counts.Count);
         Assert.Equal(0, counter.Pending);
     }
@@ -112,6 +112,58 @@ public sealed class TrafficMetricsTests : IDisposable
 
         var sources = counter.TakeCompleted(Start.AddSeconds(90), TimeSpan.FromSeconds(30)).Sources;
         Assert.Equal([new SourceCount(Start.ToUnixTimeSeconds(), "198.51.100.2", TrafficKind.RuleBlocked, 2)], sources);
+    }
+
+    [Fact]
+    public void Requested_destinations_are_counted_per_minute_for_bad_requests_only()
+    {
+        var counter = new TrafficCounter();
+        counter.Add(Start.AddSeconds(5), TrafficKind.Forwarded, "", "website", "198.51.100.1", "www.example.com/");
+        counter.Add(Start.AddSeconds(5), TrafficKind.NoRoute, "", null, "198.51.100.2", "probe.example.net/.env");
+        counter.Add(Start.AddSeconds(50), TrafficKind.NoRoute, "", null, "198.51.100.3", "probe.example.net/.env");
+        counter.Add(Start.AddSeconds(51), TrafficKind.RuleBlocked, "no-wp", "website", "198.51.100.3", "www.example.com/wp-login.php");
+
+        var (_, sources, destinations) = counter.TakeCompleted(Start.AddMinutes(2), TimeSpan.Zero);
+
+        Assert.Equal(3, sources.Count);
+        Assert.Equal(
+            [
+                new SourceCount(Start.ToUnixTimeSeconds(), "probe.example.net/.env", TrafficKind.NoRoute, 2),
+                new SourceCount(Start.ToUnixTimeSeconds(), "www.example.com/wp-login.php", TrafficKind.RuleBlocked, 1),
+            ],
+            destinations);
+    }
+
+    [Fact]
+    public void A_scan_of_many_paths_is_counted_as_other_beyond_the_limit()
+    {
+        var counter = new TrafficCounter(maxCells: 1000, maxSourceCells: 3);
+        for (var i = 0; i < 10; i++)
+        {
+            counter.Add(Start, TrafficKind.NoRoute, "", null, "198.51.100.1", $"www.example.com/probe-{i}");
+        }
+
+        var destinations = counter.TakeCompleted(Start.AddMinutes(5), TimeSpan.Zero).Destinations;
+        Assert.Equal(10, destinations.Sum(d => d.Count));
+        Assert.Equal(7, destinations.Single(d => d.Source == TrafficCounter.OtherSource).Count);
+    }
+
+    [Theory]
+    [InlineData("WWW.Example.COM", "/Admin/Login", "www.example.com/Admin/Login")]
+    [InlineData("www.example.com", "", "www.example.com/")]
+    public void A_destination_is_the_host_in_lower_case_and_the_path(string host, string path, string expected)
+    {
+        var entry = new RequestLogEntry(Start, "203.0.113.7", "GET", host, path, null, RequestAction.NoRoute, null, null, null, null, 404, 1);
+        Assert.Equal(expected, TrafficClassifier.Destination(entry));
+    }
+
+    [Fact]
+    public void A_long_destination_is_cut()
+    {
+        var entry = new RequestLogEntry(Start, "203.0.113.7", "GET", new string('h', 200), "/" + new string('p', 500), null, RequestAction.NoRoute, null, null, null, null, 404, 1);
+        var destination = TrafficClassifier.Destination(entry);
+        Assert.Equal(TrafficClassifier.MaxDestinationLength, destination.Length);
+        Assert.StartsWith(new string('h', 100) + "/", destination, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -264,12 +316,14 @@ public sealed class TrafficMetricsTests : IDisposable
 
         public List<SourceCount> Sources { get; } = [];
 
+        public List<SourceCount> Destinations { get; } = [];
+
         public int Writes { get; private set; }
 
         public Task InitializeAsync(CancellationToken cancellationToken) =>
             FailInitialize ? throw new IOException("read-only file system") : Task.CompletedTask;
 
-        public Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, CancellationToken cancellationToken)
+        public Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, IReadOnlyList<SourceCount> destinations, CancellationToken cancellationToken)
         {
             if (FailuresLeft > 0)
             {
@@ -279,6 +333,7 @@ public sealed class TrafficMetricsTests : IDisposable
 
             Counts.AddRange(counts);
             Sources.AddRange(sources);
+            Destinations.AddRange(destinations);
             Writes++;
             return Task.CompletedTask;
         }
@@ -312,6 +367,7 @@ public sealed class TrafficMetricsTests : IDisposable
         await writer.FlushAsync(all: false, Ct);
         Assert.Equal(101, store.Counts.Sum(c => c.Count));
         Assert.Equal([new SourceCount(Start.ToUnixTimeSeconds(), "203.0.113.7", TrafficKind.RuleBlocked, 1)], store.Sources);
+        Assert.Equal([new SourceCount(Start.ToUnixTimeSeconds(), "www.example.com/", TrafficKind.RuleBlocked, 1)], store.Destinations);
 
         var statistics = writer.Statistics!;
         Assert.Equal(101, statistics.Counted);

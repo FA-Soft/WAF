@@ -41,6 +41,28 @@ The live requests per second (good, bad, failed, and the sources of bad traffic,
 
 ![Dashboard](images/admin-dashboard.png)
 
+## Performance
+
+Live: requests per second of the last five minutes, updated every second, with the current figures.
+
+![Performance, live](images/admin-performance-live.png)
+
+The last hour from the traffic history: figures that link to the request log, the stacked chart (good, bad hatched, failed dotted, and the peak), in the browser's time zone.
+
+![Performance, the last hour](images/admin-performance-history.png)
+
+Bad traffic by kind and its sources as pie charts ("Chart / Table" switches to the tables, with "Only this" and links to the request log).
+
+![Bad traffic by kind and by source](images/admin-performance-breakdown.png)
+
+The requested destinations of bad traffic (host and path), for example a scanner trying `/wp-login.php`.
+
+![Requested destinations of bad traffic](images/admin-performance-destinations.png)
+
+The same in the dark theme.
+
+![Performance in the dark theme](images/admin-performance-dark.png)
+
 ## Request log
 
 Every public request, newest first, with filters, free-text search and a live view.

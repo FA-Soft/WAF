@@ -28,6 +28,10 @@ internal sealed partial class MetricsMaintenanceService(
 
     public bool Enabled => true;
 
+    public SqliteMetricsStore? Store => store;
+
+    public MetricsRetention Retention => options.Retention;
+
     public MetricsMaintenanceResult? LastRun => Volatile.Read(ref _lastRun);
 
     public Task<MetricsStorageStatus?> GetStatusAsync(CancellationToken cancellationToken) =>
