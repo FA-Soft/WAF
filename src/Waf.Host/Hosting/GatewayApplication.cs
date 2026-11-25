@@ -277,6 +277,7 @@ internal static partial class GatewayApplication
             builder.Services.AddSingleton<NullRequestMetrics>();
             builder.Services.AddSingleton<IRequestMetrics>(sp => sp.GetRequiredService<NullRequestMetrics>());
             builder.Services.AddSingleton<IRequestMetricsMonitor>(sp => sp.GetRequiredService<NullRequestMetrics>());
+            builder.Services.AddSingleton<FASoft.Waf.Web.IMetricsHistory, FASoft.Waf.Web.DisabledMetricsHistory>();
             return;
         }
 
@@ -288,6 +289,9 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<IRequestMetrics>(sp => sp.GetRequiredService<RequestMetricsWriter>());
         builder.Services.AddSingleton<IRequestMetricsMonitor>(sp => sp.GetRequiredService<RequestMetricsWriter>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<RequestMetricsWriter>());
+        builder.Services.AddSingleton<MetricsMaintenanceService>();
+        builder.Services.AddSingleton<FASoft.Waf.Web.IMetricsHistory>(sp => sp.GetRequiredService<MetricsMaintenanceService>());
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<MetricsMaintenanceService>());
     }
 
     /// <summary>

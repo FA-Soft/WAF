@@ -121,6 +121,39 @@ public sealed class TrafficMetricsTests
     }
 
     [Fact]
+    public async Task The_history_is_rolled_up_and_shown_on_the_log_retention_page()
+    {
+        await using var gateway = new Gateway("--Gateway:Metrics:Retention:Second=1.00:00:00");
+        await gateway.InitializeAsync();
+        Assert.Equal(HttpStatusCode.OK, await SendAsync(gateway, "/"));
+        await gateway.App.Services.GetRequiredService<RequestMetricsWriter>().FlushAsync(all: true, Ct);
+
+        var job = gateway.App.Services.GetRequiredService<MetricsMaintenanceService>();
+        var run = await job.RunNowAsync(Ct);
+        Assert.Null(run.Error);
+        Assert.Same(job, gateway.App.Services.GetRequiredService<IMetricsHistory>());
+
+        var status = (await job.GetStatusAsync(Ct))!;
+        Assert.True(status.FileBytes > 0);
+        Assert.Equal(TimeSpan.FromDays(1), status.Tiers[0].KeptFor);
+        Assert.NotNull(status.Tiers[0].Newest);
+
+        var page = await gateway.GetPageAsync("/logs/settings");
+        Assert.Contains("Traffic history", page, StringComparison.Ordinal);
+        Assert.Contains("1 day", page, StringComparison.Ordinal);       // seconds, from the host setting
+        Assert.Contains("1,096 days", page, StringComparison.Ordinal);  // months: three years
+        Assert.Contains("week (from Monday)", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_wrong_retention_stops_the_start()
+    {
+        await using var gateway = new Gateway("--Gateway:Metrics:Retention:Hour=1.00:00:00");
+        var error = await Assert.ThrowsAnyAsync<Exception>(async () => await gateway.InitializeAsync());
+        Assert.Contains("Gateway:Metrics:Retention:Hour", error.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Counting_can_be_switched_off()
     {
         await using var gateway = new Gateway("--Gateway:Metrics:Enabled=false");
@@ -130,6 +163,8 @@ public sealed class TrafficMetricsTests
         Assert.Null(gateway.App.Services.GetRequiredService<IRequestMetricsMonitor>().Statistics);
         Assert.False(File.Exists(Path.Combine(gateway.DataDirectory, "metrics.db")));
         Assert.Contains("Gateway:Metrics:Enabled", await gateway.GetPageAsync("/"), StringComparison.Ordinal);
+        Assert.False(gateway.App.Services.GetRequiredService<IMetricsHistory>().Enabled);
+        Assert.Contains("Gateway:Metrics:Enabled", await gateway.GetPageAsync("/logs/settings"), StringComparison.Ordinal);
     }
 
     [Fact]

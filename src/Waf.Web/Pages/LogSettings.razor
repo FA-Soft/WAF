@@ -3,6 +3,7 @@
 @inject IGatewayConfigurationService Configurations
 @inject RequestLogMaintenance Maintenance
 @inject ILogRetention Retention
+@inject IMetricsHistory History
 @inject NavigationManager Navigation
 @inject AuditLogStore Audit
 
@@ -120,6 +121,66 @@
     </EditForm>
 }
 
+<section aria-labelledby="history-heading">
+    <h2 id="history-heading">
+        @T("Traffic history")
+        <HelpTip Title="@T("Traffic history")">
+            <p>@T("The traffic counts of the performance dashboard are kept in metrics.db in the data folder, apart from the request log. The older the data, the coarser it is kept: per second for the last days, then per minute, hour, day, week and month. A background job adds up completed periods into the coarser ones every minute and removes what is older than its tier keeps, so the file stays small. The tiers are host settings (Gateway:Metrics:Retention).")</p>
+        </HelpTip>
+    </h2>
+    @if (!History.Enabled)
+    {
+        <p class="muted">@T("Switched off in the host settings (Gateway:Metrics:Enabled).")</p>
+    }
+    else
+    {
+        <section class="cards" aria-label="@T("Traffic history size")">
+            <div class="card">
+                <h3 class="card-heading">@T("Size on disk")</h3>
+                <p class="metric">@Megabytes(_history?.FileBytes ?? 0)</p>
+                <p class="muted">@T("metrics.db; at most a few hundred MB for three years of a busy site")</p>
+            </div>
+            <div class="card">
+                <h3 class="card-heading">@T("Last rollup")</h3>
+                @if (History.LastRun is { } run)
+                {
+                    <p class="metric">@Plural(run.Deleted, "{0} removed", "{0} removed")</p>
+                    <p class="muted">@T("{0} UTC: {1} rows added up", run.FinishedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture), run.RolledUp.ToString("N0", CultureInfo.CurrentCulture))</p>
+                    @if (run.Error is not null)
+                    {
+                        <p class="field-error">@run.Error</p>
+                    }
+                }
+                else
+                {
+                    <p class="metric">@T("Not yet")</p>
+                    <p class="muted">@T("The first run starts shortly after the gateway starts, then every minute.")</p>
+                }
+            </div>
+        </section>
+        @if (_history is { } history)
+        {
+            <div class="table-scroll">
+                <table>
+                    <caption>@T("What is kept, from fine to coarse")</caption>
+                    <thead><tr><th scope="col">@T("Stored per")</th><th scope="col">@T("Kept for")</th><th scope="col">@T("Oldest stored")</th><th scope="col">@T("Newest stored")</th></tr></thead>
+                    <tbody>
+                        @foreach (var tier in history.Tiers)
+                        {
+                            <tr>
+                                <th scope="row">@TierName(tier.Tier)</th>
+                                <td>@KeptFor(tier.KeptFor)</td>
+                                <td>@(tier.Oldest is { } oldestBucket ? oldestBucket.UtcDateTime.ToString("yyyy-MM-dd HH:mm", Culture) + " UTC" : T("nothing yet"))</td>
+                                <td>@(tier.Newest is { } newestBucket ? newestBucket.UtcDateTime.ToString("yyyy-MM-dd HH:mm", Culture) + " UTC" : T("nothing yet"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</section>
+
 @code {
     [CascadingParameter]
     public HttpContext? HttpContext { get; set; }
@@ -134,6 +195,7 @@
         4000.ToString("N0", CultureInfo.CurrentCulture));
 
     private LogDatabaseInfo? _info;
+    private MetricsStorageStatus? _history;
     private LogRetentionSettings _settings = new();
     private LogCleanupResult? _cleaned;
     private IReadOnlyList<string> _errors = [];
@@ -167,6 +229,8 @@
         {
             _info = null; // being created right now
         }
+
+        _history = await History.GetStatusAsync(CancellationToken.None);
     }
 
     private async Task CleanUpAsync()
@@ -198,6 +262,21 @@
 
         Navigation.NavigateTo($"logs/settings?saved={Uri.EscapeDataString($"Log retention saved (version {result.Version!.Version}).")}");
     }
+
+    private static string TierName(MetricsTier tier) => tier switch
+    {
+        MetricsTier.Second => T("second"),
+        MetricsTier.Minute => T("minute"),
+        MetricsTier.Hour => T("hour"),
+        MetricsTier.Day => T("day"),
+        MetricsTier.Week => T("week (from Monday)"),
+        _ => T("month"),
+    };
+
+    private static string KeptFor(TimeSpan keep) =>
+        keep.TotalDays >= 1 && keep.Ticks % TimeSpan.TicksPerDay == 0
+            ? Plural((long)keep.TotalDays, "{0} day", "{0} days")
+            : Plural((long)Math.Round(keep.TotalHours), "{0} hour", "{0} hours");
 
     private double Fraction(long bytes) => (double)bytes / ((long)_settings.MaxDatabaseSizeMb * 1024 * 1024);
 

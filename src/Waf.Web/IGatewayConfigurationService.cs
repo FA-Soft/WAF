@@ -69,3 +69,26 @@ public interface ILogRetention
     /// <summary>Runs a cleanup now with the active configuration's limits.</summary>
     Task<LogCleanupResult> CleanUpNowAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>The traffic history (metrics.db): its rollup and retention job and what it holds, for the log settings page.</summary>
+public interface IMetricsHistory
+{
+    /// <summary>False when the traffic counts are switched off in the host settings.</summary>
+    bool Enabled { get; }
+
+    /// <summary>The last rollup and retention run; null until the first run.</summary>
+    MetricsMaintenanceResult? LastRun { get; }
+
+    /// <summary>Size of metrics.db and the stored range of each tier; null when switched off.</summary>
+    Task<MetricsStorageStatus?> GetStatusAsync(CancellationToken cancellationToken);
+}
+
+/// <summary>Traffic history that is switched off.</summary>
+public sealed class DisabledMetricsHistory : IMetricsHistory
+{
+    public bool Enabled => false;
+
+    public MetricsMaintenanceResult? LastRun => null;
+
+    public Task<MetricsStorageStatus?> GetStatusAsync(CancellationToken cancellationToken) => Task.FromResult<MetricsStorageStatus?>(null);
+}

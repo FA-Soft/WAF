@@ -242,8 +242,10 @@ normal editor, pre-filled; nothing changes until you save.
 
 ![A request with its actions](images/admin-log-entry.png)
 
-**Log retention** keeps the log bounded: by default 30 days and 1024 MB, whichever comes first. On a Raspberry Pi
-with an SD card, a smaller size (for example 200 MB) is sensible.
+**Log retention** keeps the log bounded: by default 30 days and 1024 MB, whichever comes first. The same page shows the
+**traffic history** (`metrics.db`): its size, and how long the counts are kept per second, minute, hour, day, week
+and month (up to three years; host settings). On a Raspberry Pi
+with an SD card, a smaller log size (for example 200 MB) is sensible.
 
 ## 7. Changes, history and backups
 
