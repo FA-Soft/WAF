@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
+using FASoft.Waf.Core.Routing;
 using FASoft.Waf.Engine;
 
 namespace FASoft.Waf.Data;
@@ -15,6 +16,15 @@ public interface IMetricsStore
     /// (per minute) in one transaction. A bucket that is stored already gets the new count added.
     /// </summary>
     Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, IReadOnlyList<SourceCount> destinations, CancellationToken cancellationToken);
+
+    /// <summary>Adds everything <see cref="TrafficCounter.TakeCompleted"/> took, response times and backends too, in one transaction.</summary>
+    Task WriteAsync(TrafficTake take, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Records which routes run on a failover now: a period starts when a route appears in <paramref name="current"/>
+    /// and ends (at <paramref name="now"/>) when it is gone.
+    /// </summary>
+    Task RecordFailoversAsync(IReadOnlyList<RouteFailoverStatus> current, DateTimeOffset now, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -40,8 +50,11 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
     public const int BusyTimeoutSeconds = 5;
 
     /// <summary>Schema version written to <c>PRAGMA user_version</c>.</summary>
-    /// <remarks>1: counts and sources (step 45). 2: rollup state and peaks (step 46). 3: requested destinations (step 48).</remarks>
-    public const int SchemaVersion = 3;
+    /// <remarks>
+    /// 1: counts and sources (step 45). 2: rollup state and peaks (step 46). 3: requested destinations (step 48).
+    /// 4: response times, backends and failover periods (step 49).
+    /// </remarks>
+    public const int SchemaVersion = 4;
 
     /// <summary>The per-minute tables of bad traffic: (table, column) of the sources and of the requested destinations.</summary>
     internal static readonly (string Table, string Column)[] TopTables = [("SourceCounts", "Source"), ("DestinationCounts", "Destination")];
@@ -83,6 +96,32 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
             Bad INTEGER NOT NULL,
             Failed INTEGER NOT NULL,
             PRIMARY KEY (Tier, BucketStart)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS LatencyCounts (
+            Tier INTEGER NOT NULL,
+            BucketStart INTEGER NOT NULL,
+            Route TEXT NOT NULL,
+            Series INTEGER NOT NULL,
+            Bin INTEGER NOT NULL,
+            Count INTEGER NOT NULL,
+            PRIMARY KEY (Tier, BucketStart, Route, Series, Bin)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS BackendCounts (
+            Tier INTEGER NOT NULL,
+            BucketStart INTEGER NOT NULL,
+            Route TEXT NOT NULL,
+            Destination TEXT NOT NULL,
+            Metric INTEGER NOT NULL,
+            Count INTEGER NOT NULL,
+            PRIMARY KEY (Tier, BucketStart, Route, Destination, Metric)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS FailoverPeriods (
+            Route TEXT NOT NULL,
+            Start INTEGER NOT NULL,
+            Failover INTEGER NOT NULL,
+            Destinations TEXT NOT NULL,
+            End INTEGER,
+            PRIMARY KEY (Route, Start)
         ) WITHOUT ROWID;
         CREATE TABLE IF NOT EXISTS RollupState (
             Tier INTEGER NOT NULL PRIMARY KEY,
@@ -166,12 +205,17 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
     public Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, CancellationToken cancellationToken) =>
         WriteAsync(counts, sources, [], cancellationToken);
 
-    public async Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, IReadOnlyList<SourceCount> destinations, CancellationToken cancellationToken)
+    public Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, IReadOnlyList<SourceCount> destinations, CancellationToken cancellationToken) =>
+        WriteAsync(new TrafficTake([.. counts], [.. sources], [.. destinations], [], []), cancellationToken);
+
+    public async Task WriteAsync(TrafficTake take, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(take);
+        var (counts, sources, destinations) = take;
         ArgumentNullException.ThrowIfNull(counts);
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(destinations);
-        if (counts.Count == 0 && sources.Count == 0 && destinations.Count == 0)
+        if (take.IsEmpty)
         {
             return;
         }
@@ -236,8 +280,12 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
             }
         }
 
+        await WriteResponsesAsync(connection, transaction, take.Latencies, take.Backends, cancellationToken).ConfigureAwait(false);
+
         // Counts for buckets that were rolled up already (a slow request is counted by its start): roll them up again.
-        await ReopenRollupsAsync(connection, transaction, counts, [.. sources, .. destinations], cancellationToken).ConfigureAwait(false);
+        IEnumerable<long> minutes = [.. sources.Select(s => s.BucketStart), .. destinations.Select(d => d.BucketStart),
+            .. take.Latencies.Select(l => l.BucketStart), .. take.Backends.Select(b => b.BucketStart)];
+        await ReopenRollupsAsync(connection, transaction, counts, minutes, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 

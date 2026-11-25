@@ -8,6 +8,7 @@
     const liveSeconds = 300;
     let root = null;
     let chart = null;
+    let latencyChart = null;
     let connection = null;
     let resizeObserver = null;
     let state = null;
@@ -149,8 +150,103 @@
                 ],
             },
             // The chart's own background, for the canvas (theme colours).
-            plugins: [{ hooks: { drawClear: (u) => { u.ctx.fillStyle = surface; u.ctx.fillRect(0, 0, u.ctx.canvas.width, u.ctx.canvas.height); } } }],
+            plugins: [background(), failoverBands(state.failovers)],
         };
+    };
+
+    // The chart's own background, for the canvas (theme colours).
+    const background = () => ({
+        hooks: {
+            drawClear: (u) => {
+                u.ctx.fillStyle = css('--surface', '#ffffff');
+                u.ctx.fillRect(0, 0, u.ctx.canvas.width, u.ctx.canvas.height);
+            },
+        },
+    });
+
+    // Periods in which a route ran on its failover: shaded bands behind the series, with a line on top.
+    const failoverBands = (periods) => ({
+        hooks: {
+            drawAxes: (u) => {
+                if (!periods || periods.length === 0) {
+                    return;
+                }
+                const g = u.ctx;
+                const { left, top, width, height } = u.bbox;
+                const now = Date.now() / 1000;
+                g.save();
+                for (const [start, end] of periods) {
+                    const x0 = Math.max(left, u.valToPos(start, 'x', true));
+                    const x1 = Math.min(left + width, u.valToPos(end ?? now, 'x', true));
+                    if (x1 <= x0) {
+                        continue;
+                    }
+                    g.fillStyle = css('--warn-bg', '#fff4d6');
+                    g.fillRect(x0, top, x1 - x0, height);
+                    g.fillStyle = css('--warn', '#8a5a00');
+                    g.fillRect(x0, top, x1 - x0, 3 * (window.devicePixelRatio || 1));
+                }
+                g.restore();
+            },
+        },
+    });
+
+    const decades = (u, splits) => splits.map((v) => (v > 0 && Math.abs(Math.log10(v) - Math.round(Math.log10(v))) < 1e-9 ? v : null));
+
+    // Response times: median, 95th and 99th percentile and what the gateway adds, on a logarithmic scale.
+    const drawLatency = () => {
+        const element = document.getElementById('perf-latency');
+        if (latencyChart) {
+            latencyChart.destroy();
+            latencyChart = null;
+        }
+        if (!element || !window.uPlot) {
+            return;
+        }
+        let data;
+        try {
+            data = JSON.parse(element.dataset.chart || '{}');
+        } catch {
+            return;
+        }
+        const points = data.points || [];
+        const label = (name) => element.dataset['text' + name] || name;
+        const ms = (u, v) => (v === null || v === undefined ? '–' : `${number(v, v < 10 ? 1 : 0)} ms`);
+        const textColor = css('--text', '#1d2430');
+        const border = css('--border', '#d9dee5');
+        const axis = { stroke: textColor, grid: { stroke: border, width: 1 }, ticks: { stroke: border, width: 1 } };
+        const width = Math.max(280, element.clientWidth);
+        latencyChart = new uPlot({
+            width,
+            height: width < 600 ? 200 : 260,
+            series: [
+                { value: (u, v) => (v === null ? '–' : new Date(v * 1000).toLocaleString(lang())) },
+                { label: label('P50'), stroke: css('--ok', '#1d7a46'), width: 2, value: ms, spanGaps: false },
+                { label: label('P95'), stroke: css('--warn', '#8a5a00'), width: 1.5, value: ms },
+                { label: label('P99'), stroke: css('--danger', '#b3261e'), width: 1.5, dash: [4, 3], value: ms },
+                { label: label('Gateway'), stroke: css('--accent', '#1f5fbf'), width: 1.5, dash: [2, 3], value: ms },
+            ],
+            axes: [
+                { ...axis, values: timeLabels },
+                {
+                    ...axis,
+                    // Only the powers of ten (0.1, 1, 10, 100 ms …): a line at every 2, 3 … 9 is too busy.
+                    filter: decades,
+                    grid: { ...axis.grid, filter: decades },
+                    ticks: { ...axis.ticks, filter: decades },
+                    values: (u, ticks) => ticks.map((t) => (t === null ? '' : `${number(t, t < 1 ? 1 : 0)}`)),
+                },
+            ],
+            scales: { x: { time: true }, y: { distr: 3, log: 10 } },
+            cursor: { drag: { x: false, y: false } },
+            plugins: [background(), failoverBands(data.failovers)],
+        }, [
+            points.map((p) => p[0]),
+            points.map((p) => p[1]),
+            points.map((p) => p[2]),
+            points.map((p) => p[3]),
+            points.map((p) => p[4]),
+        ], element);
     };
 
     const draw = () => {
@@ -459,6 +555,10 @@
             resizeObserver.disconnect();
             resizeObserver = null;
         }
+        if (latencyChart) {
+            latencyChart.destroy();
+            latencyChart = null;
+        }
         if (chart) {
             chart.destroy();
             chart = null;
@@ -490,6 +590,7 @@
             buckets: data.buckets || [],
             previous: data.previous || null,
             hasPeaks: (data.buckets || []).some((b) => b[5] !== null),
+            failovers: data.failovers || [],
         };
         if (state.live) {
             state.hasPeaks = false;
@@ -505,11 +606,17 @@
             }
         }
         draw();
+        drawLatency();
         setupPies();
         resizeObserver = new ResizeObserver(() => {
             if (chart && root) {
                 const width = Math.max(280, root.clientWidth);
                 chart.setSize({ width, height: width < 600 ? 220 : 300 });
+            }
+            const latency = document.getElementById('perf-latency');
+            if (latencyChart && latency) {
+                const width = Math.max(280, latency.clientWidth);
+                latencyChart.setSize({ width, height: width < 600 ? 200 : 260 });
             }
         });
         resizeObserver.observe(root);
@@ -530,6 +637,6 @@
 
     // A theme change (system setting) redraws with the new colours.
     if (window.matchMedia) {
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (state) { draw(); setupPies(); } });
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (state) { draw(); drawLatency(); setupPies(); } });
     }
 })();

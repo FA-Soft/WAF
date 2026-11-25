@@ -165,6 +165,8 @@ public sealed partial class SqliteMetricsStore
             state[tier] = state[tier] with { DeletedBefore = Math.Max(cutoff, state[tier].DeletedBefore) };
         }
 
+        deleted += await DeleteOldFailoversAsync(connection, now - retention.Month, cancellationToken).ConfigureAwait(false);
+
         if (deleted > 0)
         {
             await GiveSpaceBackAsync(connection, cancellationToken).ConfigureAwait(false);
@@ -267,7 +269,7 @@ public sealed partial class SqliteMetricsStore
                     SELECT $tier, {bucket}, MAX(Total), MAX(Good), MAX(Bad), MAX(Failed) FROM TrafficPeaks
                     WHERE Tier = $finer AND {range}
                     GROUP BY {bucket};
-                """ + string.Concat(TopTables.Select(t => TopRollupSql(t.Table, t.Column, bucket, range)));
+                """ + string.Concat(TopTables.Select(t => TopRollupSql(t.Table, t.Column, bucket, range))) + ResponseRollupSql(bucket, range);
 
         sql += """
             INSERT INTO RollupState (Tier, DoneUntil, DeletedBefore) VALUES ($tier, $to, 0)
@@ -319,7 +321,7 @@ public sealed partial class SqliteMetricsStore
     {
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         long deleted = 0;
-        foreach (var table in new[] { "TrafficCounts", "SourceCounts", "DestinationCounts", "TrafficPeaks" })
+        foreach (var table in new[] { "TrafficCounts", "SourceCounts", "DestinationCounts", "LatencyCounts", "BackendCounts", "TrafficPeaks" })
         {
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
@@ -352,10 +354,10 @@ public sealed partial class SqliteMetricsStore
     /// seconds that ended a moment ago, long after the last rollup's settle delay.
     /// </summary>
     private static async Task ReopenRollupsAsync(
-        SqliteConnection connection, SqliteTransaction transaction, IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, CancellationToken cancellationToken)
+        SqliteConnection connection, SqliteTransaction transaction, List<TrafficCount> counts, IEnumerable<long> minutes, CancellationToken cancellationToken)
     {
         long? oldestCount = counts.Count == 0 ? null : counts.Min(c => c.BucketStart);
-        long? oldestSource = sources.Count == 0 ? null : sources.Min(s => s.BucketStart);
+        long? oldestSource = minutes.Any() ? minutes.Min() : null;
 
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;

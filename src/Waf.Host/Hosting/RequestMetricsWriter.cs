@@ -70,6 +70,7 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
     private static readonly TimeSpan WarningInterval = TimeSpan.FromMinutes(1);
 
     private readonly TrafficCounter _counter;
+    private readonly FASoft.Waf.Core.Routing.IRouteFailoverMonitor? _failover;
     private readonly IMetricsStore _store;
     private readonly MetricsOptions _options;
     private readonly TimeProvider _time;
@@ -83,10 +84,13 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
     private string? _lastError;
     private bool _ready;
 
-    public RequestMetricsWriter(IMetricsStore store, MetricsOptions options, TimeProvider time, ILogger<RequestMetricsWriter> logger)
+    /// <param name="failover">Which routes run on a failover; recorded as failover periods at every flush.</param>
+    public RequestMetricsWriter(
+        IMetricsStore store, MetricsOptions options, TimeProvider time, ILogger<RequestMetricsWriter> logger, FASoft.Waf.Core.Routing.IRouteFailoverMonitor? failover = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        _failover = failover;
         _store = store;
         _options = options;
         _time = time;
@@ -118,6 +122,19 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
         else
         {
             Interlocked.Increment(ref _dropped);
+            return;
+        }
+
+        // Response times and backends: requests that reached a backend, and those that found none or no answer.
+        switch (kind)
+        {
+            case TrafficKind.Forwarded or TrafficKind.WouldBeBlocked:
+                _counter.AddResponse(entry.Timestamp, entry.RouteName, entry.LatencyMs, entry.BackendMs);
+                _counter.AddBackend(entry.Timestamp, entry.RouteName, entry.Destination, LatencyHistogram.StatusClass(entry.StatusCode));
+                break;
+            case TrafficKind.NoBackend or TrafficKind.BackendError or TrafficKind.BackendTimeout:
+                _counter.AddBackend(entry.Timestamp, entry.RouteName, entry.Destination, (BackendMetric)(int)kind);
+                break;
         }
     }
 
@@ -132,8 +149,10 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
                 _ready = await InitializeAsync().ConfigureAwait(false);
             }
 
-            var (counts, sources, destinations) = _counter.TakeCompleted(_time.GetUtcNow(), SourceGrace, all);
-            if (counts.Count == 0 && sources.Count == 0 && destinations.Count == 0)
+            await RecordFailoversAsync().ConfigureAwait(false);
+            var take = _counter.TakeCompleted(_time.GetUtcNow(), SourceGrace, all);
+            var counts = take.Counts;
+            if (take.IsEmpty)
             {
                 return;
             }
@@ -146,7 +165,7 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
 
             try
             {
-                await _store.WriteAsync(counts, sources, destinations, CancellationToken.None).ConfigureAwait(false);
+                await _store.WriteAsync(take, CancellationToken.None).ConfigureAwait(false);
                 lock (_counter)
                 {
                     _lastWrite = _time.GetUtcNow();
@@ -207,6 +226,26 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
             {
                 break; // StopAsync writes the rest
             }
+        }
+    }
+
+    /// <summary>The failover periods: which routes run on a failover now (nothing is written when nothing changed).</summary>
+    private async Task RecordFailoversAsync()
+    {
+        if (_failover is null || !_ready)
+        {
+            return;
+        }
+
+        try
+        {
+            await _store.RecordFailoversAsync(_failover.Statuses, _time.GetUtcNow(), CancellationToken.None).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Best effort, like the counts: tried again at the next flush.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            LogWriteFailed(_logger, ex);
         }
     }
 

@@ -56,5 +56,6 @@ public static class ProxyServiceCollectionExtensions
             proxy.UseSessionAffinity();
             proxy.UseLoadBalancing();
             proxy.UsePassiveHealthChecks();
+            proxy.UseMiddleware<BackendTimingMiddleware>(); // last: the time of the forwarding itself
         });
 }

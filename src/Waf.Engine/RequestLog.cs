@@ -45,6 +45,8 @@ public enum RequestAction
 /// <param name="Destination">Backend the request was forwarded to, e.g. <c>http://10.0.0.5:8080/</c>.</param>
 /// <param name="StatusCode">Status code sent to the client.</param>
 /// <param name="LatencyMs">Time from arrival until the response was complete, in milliseconds.</param>
+/// <param name="BackendMs">Of that, the time spent forwarding to the backend (connecting, its answer, sending it on);
+/// null when the request was not forwarded. Not stored in the request log; used for the response times.</param>
 public sealed record RequestLogEntry(
     DateTimeOffset Timestamp,
     string ClientIp,
@@ -58,7 +60,8 @@ public sealed record RequestLogEntry(
     string? Detail,
     string? Destination,
     int StatusCode,
-    double LatencyMs);
+    double LatencyMs,
+    double? BackendMs = null);
 
 /// <summary>
 /// Receives request log entries. <see cref="Write"/> must never block or throw: it is called on the request path.

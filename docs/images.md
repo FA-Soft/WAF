@@ -59,6 +59,14 @@ The requested destinations of bad traffic (host and path), for example a scanner
 
 ![Requested destinations of bad traffic](images/admin-performance-destinations.png)
 
+Response times: median, 95th and 99th percentile and what the gateway adds, on a logarithmic scale; the shaded band is a failover period.
+
+![Response times](images/admin-performance-latency.png)
+
+Backends per route (status classes, 502/503/504) and the failover periods.
+
+![Backends and failovers](images/admin-performance-backends.png)
+
 The same in the dark theme.
 
 ![Performance in the dark theme](images/admin-performance-dark.png)
