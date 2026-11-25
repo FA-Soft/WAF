@@ -333,7 +333,7 @@ public sealed class TrafficCounter
         return result;
     }
 
-    private static bool Increment<TKey>(ConcurrentDictionary<TKey, Cell> cells, TKey key, ref int size, int max)
+    internal static bool Increment<TKey>(ConcurrentDictionary<TKey, Cell> cells, TKey key, ref int size, int max)
         where TKey : notnull
     {
         while (true)
@@ -363,7 +363,7 @@ public sealed class TrafficCounter
         }
     }
 
-    private static long? Take<TKey>(ConcurrentDictionary<TKey, Cell> cells, TKey key, ref int size)
+    internal static long? Take<TKey>(ConcurrentDictionary<TKey, Cell> cells, TKey key, ref int size)
         where TKey : notnull
     {
         if (!cells.TryRemove(key, out var cell))
@@ -376,7 +376,7 @@ public sealed class TrafficCounter
         return value > 0 ? value : null;
     }
 
-    private sealed class Cell
+    internal sealed class Cell
     {
         public long Value;
     }

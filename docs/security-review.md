@@ -106,6 +106,24 @@ event, or at shutdown. The request log (`events.db`) still records every request
   - Sign-in: failed attempts are throttled, accounts lock out, sessions end after an idle timeout.
   - Cookies are `HttpOnly`, `SameSite=Strict` and `Secure` over HTTPS.
   - Every form has an antiforgery token.
+- **Live traffic hub (SignalR, `/hubs/traffic`).** It pushes the dashboard's live numbers once a second.
+  - Mapped in the admin pipeline only. On a public port the path is an ordinary public path: 404 without a route,
+    or forwarded to the route's backend like any other path.
+  - Signed-in admins only: negotiating, WebSockets, Server-Sent Events and long polling all need the session cookie
+    (401 without). Remote access applies too: before sign-in the hub is the same empty 404 as everything else.
+  - Cross-site use is refused: a request with an `Origin` header other than the admin address itself gets 403. The
+    session cookie is `SameSite=Strict` as well, so another site's page cannot use it.
+  - An open connection does not outlive its session. Every 10 seconds the gateway checks each connection's session:
+    idle timeout, the 8-hour maximum, and the security stamp (sign out other sessions, password or 2FA change).
+    When the session has ended, it tells the page and closes the connection. A live connection does not count as
+    activity, so it does not keep a session alive.
+  - Clients can only call `Watch(route)`. Messages are limited to 4 KB, the route name is checked, and detailed
+    errors are off.
+  - Load: nothing is counted or built while no dashboard is open. With dashboards open, one snapshot a second is
+    built per view (all traffic, or one route), not per viewer.
+  - The browser client is `@microsoft/signalr` 11.0.0, served by the gateway itself, unchanged. Its SHA-256 is
+    checked by `LicenseTests`. The Content-Security-Policy stays `script-src 'self'; connect-src 'self'`.
+  - Tests: `LiveTrafficTests` (unit and integration).
 - **Secrets.**
   - Authorization headers, cookie values, request bodies and query strings are not logged; the request log stores the
     path without the query.

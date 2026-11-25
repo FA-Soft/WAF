@@ -61,6 +61,9 @@ internal static class AdminPipeline
             return next(context);
         });
 
+        // The live traffic hub: refused for requests from another site.
+        admin.UseLiveTrafficOriginCheck();
+
         admin.UseRouting();
         admin.UseAuthentication();
 
@@ -84,6 +87,7 @@ internal static class AdminPipeline
             var signedIn = endpoints.MapGroup(string.Empty).RequireAuthorization();
             signedIn.MapAdminDownloads();
             signedIn.MapLogEndpoints();
+            signedIn.MapLiveTraffic();
             endpoints.MapRazorComponents<App>().RequireAuthorization();
         });
     }

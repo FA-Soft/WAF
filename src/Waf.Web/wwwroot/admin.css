@@ -509,3 +509,9 @@ td .badge {
 .language-switch button:hover { background: var(--bg); }
 .language-switch button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
 .language-switch button:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* Live traffic card on the dashboard (live.js). */
+.live-sources { margin: 0.5rem 0 0; padding-left: 1.25rem; font-size: 0.875rem; }
+.live-sources li { overflow-wrap: anywhere; }
+.live-status[data-state="live"]::before { content: "● "; color: var(--ok); }
+.live-status[data-state="reconnecting"]::before, .live-status[data-state="ended"]::before { content: "● "; color: var(--warn); }

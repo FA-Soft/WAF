@@ -70,7 +70,7 @@ public sealed class RequestLogFeature(DateTimeOffset startedAt, long startTimest
 /// delays a request: the entry is handed to <see cref="IRequestLog"/>, which only queues it, and to
 /// <see cref="IRequestMetrics"/>, which only increments a counter in memory.
 /// </summary>
-public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog log, IRequestMetrics metrics, TimeProvider time)
+public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog log, IRequestMetrics metrics, LiveTraffic live, TimeProvider time)
 {
     public const int MaxHostLength = 255;
     public const int MaxPathLength = 2048;
@@ -99,6 +99,7 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
         {
             var entry = CreateEntry(context, feature, failed, time.GetElapsedTime(feature.StartTimestamp));
             metrics.Record(entry, failed);
+            live.Record(entry, failed); // returns at once when no dashboard watches
             log.Write(entry);
         }
     }
