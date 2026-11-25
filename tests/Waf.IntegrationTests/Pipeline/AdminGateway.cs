@@ -16,10 +16,18 @@ public abstract partial class AdminGateway : GatewayFixture
 
     public BackendServer B { get; private set; } = null!;
 
-    public HttpClient Admin { get; } = new(new HttpClientHandler { UseCookies = true, CookieContainer = new CookieContainer() })
+    protected AdminGateway()
     {
-        Timeout = TimeSpan.FromSeconds(15),
-    };
+        Admin = new(new HttpClientHandler { UseCookies = true, CookieContainer = AdminCookies })
+        {
+            Timeout = TimeSpan.FromSeconds(15),
+        };
+    }
+
+    /// <summary>The cookies of <see cref="Admin"/> (its session), e.g. for a SignalR client.</summary>
+    public CookieContainer AdminCookies { get; } = new();
+
+    public HttpClient Admin { get; }
 
     public HttpClient Public { get; } = new() { Timeout = TimeSpan.FromSeconds(15) };
 

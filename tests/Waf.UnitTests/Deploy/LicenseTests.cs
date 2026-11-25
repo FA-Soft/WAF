@@ -21,6 +21,20 @@ public sealed class LicenseTests
 
     private static string Read(string relativePath) => File.ReadAllText(Path.Combine(RepositoryRoot(), relativePath));
 
+    /// <summary>SHA-256 of the vendored SignalR client, as in src/Waf.Web/wwwroot/lib/signalr/README.md.</summary>
+    private const string SignalRClientSha256 = "830ef76ca570fbc1a5716ff0ae812155b2e09abc393f7d9d4457d404ad05a53e";
+
+    [Fact]
+    public void The_vendored_SignalR_client_is_unchanged_and_licensed()
+    {
+        var folder = Path.Combine(RepositoryRoot(), "src", "Waf.Web", "wwwroot", "lib", "signalr");
+        var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(folder, "signalr.min.js"))));
+        Assert.Equal(SignalRClientSha256, hash);
+        Assert.Contains(SignalRClientSha256, File.ReadAllText(Path.Combine(folder, "README.md")), StringComparison.Ordinal);
+        Assert.Contains("The MIT License (MIT)", File.ReadAllText(Path.Combine(folder, "LICENSE.txt")), StringComparison.Ordinal);
+        Assert.Contains("@microsoft/signalr", Read("THIRD-PARTY-NOTICES.md"), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void The_license_is_proprietary_to_FA_Soft()
     {

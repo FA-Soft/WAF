@@ -13,6 +13,7 @@ license. Those licenses apply to those components only.
 | System libraries | Microsoft.Win32.SystemEvents, System.Drawing.Common, System.IO.Hashing, System.ServiceProcess.ServiceController | MIT | .NET Foundation and Contributors |
 | Entity Framework Core and Microsoft.Data.Sqlite | Microsoft.EntityFrameworkCore, Microsoft.EntityFrameworkCore.Abstractions, Microsoft.EntityFrameworkCore.Analyzers, Microsoft.EntityFrameworkCore.Relational, Microsoft.EntityFrameworkCore.Sqlite, Microsoft.EntityFrameworkCore.Sqlite.Core, Microsoft.Data.Sqlite.Core | MIT | .NET Foundation and Contributors |
 | YARP (reverse proxy) | Yarp.ReverseProxy | MIT | .NET Foundation and Contributors |
+| SignalR JavaScript client (sent to the admin UI's browser) | npm package @microsoft/signalr 11.0.0 (`dist/browser/signalr.min.js`, unchanged) | MIT | .NET Foundation and Contributors |
 | QRCoder | QRCoder | MIT | Raffael Herrmann; Shane Krueger |
 | Anthropic SDK for .NET | Anthropic | Apache-2.0 | Anthropic, PBC |
 | SQLitePCLRaw | SQLitePCLRaw.bundle_e_sqlite3, SQLitePCLRaw.config.e_sqlite3, SQLitePCLRaw.core, SQLitePCLRaw.provider.e_sqlite3 | Apache-2.0 | Eric Sink |

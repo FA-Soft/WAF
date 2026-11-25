@@ -289,6 +289,7 @@
   <data name="Configuration imported (version {0})." xml:space="preserve"><value>Configuration importée (version {0}).</value></data>
   <data name="Configuration version" xml:space="preserve"><value>Version de configuration</value></data>
   <data name="Configuration version {0} does not exist." xml:space="preserve"><value>La version de configuration {0} n'existe pas.</value></data>
+  <data name="Connecting…" xml:space="preserve"><value>Connexion…</value></data>
   <data name="Contact e-mail" xml:space="preserve"><value>E-mail de contact</value></data>
   <data name="Content type" xml:space="preserve"><value>Type de contenu</value></data>
   <data name="Counted" xml:space="preserve"><value>Compté</value></data>
@@ -513,6 +514,7 @@
   <data name="Limit requests per client" xml:space="preserve"><value>Limiter les requêtes par client</value></data>
   <data name="Limits" xml:space="preserve"><value>Limites</value></data>
   <data name="Live" xml:space="preserve"><value>En direct</value></data>
+  <data name="Live, updated every second" xml:space="preserve"><value>En direct, mis à jour chaque seconde</value></data>
   <data name="Load a JSON file exported from this or another gateway. You see exactly what will change before anything is applied, and the import becomes a new version you can roll back." xml:space="preserve"><value>Chargez un fichier JSON exporté de cette passerelle ou d'une autre. Vous voyez exactement ce qui va changer avant toute application, et l'import devient une nouvelle version que vous pouvez annuler.</value></data>
   <data name="Load-balanced servers" xml:space="preserve"><value>Serveurs avec répartition de charge</value></data>
   <data name="Lock a path to your IP addresses" xml:space="preserve"><value>Réserver un chemin à vos adresses IP</value></data>
@@ -546,6 +548,7 @@
   <data name="More filters" xml:space="preserve"><value>Plus de filtres</value></data>
   <data name="Name" xml:space="preserve"><value>Nom</value></data>
   <data name="Nederlands" xml:space="preserve"><value>Nederlands</value></data>
+  <data name="Needs JavaScript to update." xml:space="preserve"><value>Nécessite JavaScript pour se mettre à jour.</value></data>
   <data name="Needs subdomains and at least 365 days." xml:space="preserve"><value>Exige les sous-domaines et au moins 365 jours.</value></data>
   <data name="New password" xml:space="preserve"><value>Nouveau mot de passe</value></data>
   <data name="New password again" xml:space="preserve"><value>Confirmer le nouveau mot de passe</value></data>
@@ -559,6 +562,7 @@
   <data name="No access to your authenticator app?" xml:space="preserve"><value>Pas d'accès à votre application d'authentification ?</value></data>
   <data name="No admin account exists yet. The account you create here signs in to this admin UI." xml:space="preserve"><value>Aucun compte administrateur n'existe encore. Le compte que vous créez ici se connecte à cette interface d'administration.</value></data>
   <data name="No backend (503)" xml:space="preserve"><value>Aucun backend (503)</value></data>
+  <data name="No bad requests in the last minute." xml:space="preserve"><value>Aucune mauvaise requête dans la dernière minute.</value></data>
   <data name="No certificate was found in the PEM file (it should contain '-----BEGIN CERTIFICATE-----')." xml:space="preserve"><value>Aucun certificat n'a été trouvé dans le fichier PEM (il doit contenir « -----BEGIN CERTIFICATE----- »).</value></data>
   <data name="No certificate yet for {0}: add one on the &lt;a href=&quot;certificates&quot;&gt;Certificates&lt;/a&gt; page before redirecting to HTTPS." xml:space="preserve"><value>Pas encore de certificat pour {0} : ajoutez-en un sur la page &lt;a href="certificates"&gt;Certificats&lt;/a&gt; avant de rediriger vers HTTPS.</value></data>
   <data name="No certificates uploaded." xml:space="preserve"><value>Aucun certificat téléversé.</value></data>
@@ -681,6 +685,7 @@
   <data name="Protect a backend" xml:space="preserve"><value>Protéger un backend</value></data>
   <data name="Protect a login page" xml:space="preserve"><value>Protéger une page de connexion</value></data>
   <data name="Protecting" xml:space="preserve"><value>Protection active</value></data>
+  <data name="Public requests completed in the last second, pushed by the gateway every second while this page is open. Good: forwarded, redirected or answered. Bad: blocked, rate limited, refused (fail-closed) or without a route. Failed: no backend answered. The addresses are the sources of the most bad requests in the last minute." xml:space="preserve"><value>Requêtes publiques terminées dans la dernière seconde, envoyées par la passerelle chaque seconde tant que cette page est ouverte. Bonnes : transmises, redirigées ou traitées. Mauvaises : bloquées, limitées, refusées (fail-closed) ou sans route. En échec : aucun backend n'a répondu. Les adresses sont les sources du plus grand nombre de mauvaises requêtes de la dernière minute.</value></data>
   <data name="QR code to add {0} to an authenticator app" xml:space="preserve"><value>Code QR pour ajouter {0} à une application d'authentification</value></data>
   <data name="Query string" xml:space="preserve"><value>Chaîne de requête</value></data>
   <data name="Query strings, headers, cookies and bodies are not logged. For a detected attack, only the matching fragment (at most 100 characters) is kept as evidence, never from a cookie." xml:space="preserve"><value>Les chaînes de requête, en-têtes, cookies et corps ne sont pas journalisés. Pour une attaque détectée, seul le fragment correspondant (au plus 100 caractères) est conservé comme preuve, jamais issu d'un cookie.</value></data>
@@ -701,6 +706,7 @@
   <data name="Rate-limit templates" xml:space="preserve"><value>Modèles de limites de débit</value></data>
   <data name="Reason" xml:space="preserve"><value>Raison</value></data>
   <data name="Recommended; required for remote access." xml:space="preserve"><value>Recommandée ; obligatoire pour l'accès à distance.</value></data>
+  <data name="Reconnecting…" xml:space="preserve"><value>Reconnexion…</value></data>
   <data name="Recovery code" xml:space="preserve"><value>Code de récupération</value></data>
   <data name="Recovery codes left: &lt;strong&gt;{0}&lt;/strong&gt; — make new ones soon." xml:space="preserve"><value>Codes de récupération restants : &lt;strong&gt;{0}&lt;/strong&gt; — créez-en bientôt de nouveaux.</value></data>
   <data name="Recovery codes left: &lt;strong&gt;{0}&lt;/strong&gt;." xml:space="preserve"><value>Codes de récupération restants : &lt;strong&gt;{0}&lt;/strong&gt;.</value></data>
@@ -746,6 +752,7 @@
   <data name="Requests it handles will get 404 (or go to another matching route). The deletion is stored as a new configuration version, so it can be undone by restoring the previous version." xml:space="preserve"><value>Les requêtes qu'elle traite recevront 404 (ou iront vers une autre route correspondante). La suppression est enregistrée comme une nouvelle version de configuration ; elle peut donc être annulée en restaurant la version précédente.</value></data>
   <data name="Requests per client" xml:space="preserve"><value>Requêtes par client</value></data>
   <data name="Requests per minute" xml:space="preserve"><value>Requêtes par minute</value></data>
+  <data name="Requests per second" xml:space="preserve"><value>Requêtes par seconde</value></data>
   <data name="Requests that got an error because no backend answered: &lt;strong&gt;no backend&lt;/strong&gt; (503, none was healthy), &lt;strong&gt;backend error&lt;/strong&gt; (502, the connection failed or the answer was invalid) and &lt;strong&gt;time-out&lt;/strong&gt; (504). The request log has each request, with the backend that was tried." xml:space="preserve"><value>Requêtes qui ont reçu une erreur faute de réponse d'un backend : &lt;strong&gt;aucun backend&lt;/strong&gt; (503, aucun n'était en bonne santé), &lt;strong&gt;erreur de backend&lt;/strong&gt; (502, la connexion a échoué ou la réponse était invalide) et &lt;strong&gt;délai dépassé&lt;/strong&gt; (504). Le journal des requêtes contient chaque requête, avec le backend essayé.</value></data>
   <data name="Requests that would be blocked are logged but let through." xml:space="preserve"><value>Les requêtes qui seraient bloquées sont journalisées mais laissées passer.</value></data>
   <data name="Requests under /api go to a separate API server; the rest of the site is unaffected." xml:space="preserve"><value>Les requêtes sous /api vont vers un serveur d'API distinct ; le reste du site n'est pas concerné.</value></data>
@@ -843,6 +850,7 @@
   <data name="Skip to content" xml:space="preserve"><value>Aller au contenu</value></data>
   <data name="Slow down password guessing." xml:space="preserve"><value>Ralentir les tentatives de deviner les mots de passe.</value></data>
   <data name="Slow down password guessing: limit login attempts per client IP." xml:space="preserve"><value>Ralentir les tentatives de deviner les mots de passe : limiter les essais de connexion par IP de client.</value></data>
+  <data name="Sources of bad requests, last minute" xml:space="preserve"><value>Sources des mauvaises requêtes, dernière minute</value></data>
   <data name="Spread requests over two servers; a server that fails its health check gets no traffic until it recovers." xml:space="preserve"><value>Répartir les requêtes sur deux serveurs ; un serveur qui échoue à son contrôle de santé ne reçoit plus de trafic jusqu'à son rétablissement.</value></data>
   <data name="Start an IP block list with this address." xml:space="preserve"><value>Commencer une liste de blocage d'IP avec cette adresse.</value></data>
   <data name="Start short (a day) and raise it to a year once everything works over HTTPS. 0 tells browsers to forget it. &lt;strong&gt;Subdomains&lt;/strong&gt; extends it to every subdomain; &lt;strong&gt;preload&lt;/strong&gt; asks to be built into browsers (hstspreload.org) and is very hard to undo." xml:space="preserve"><value>Commencez court (un jour) et passez à un an quand tout fonctionne en HTTPS. 0 demande aux navigateurs de l'oublier. &lt;strong&gt;Sous-domaines&lt;/strong&gt; l'étend à tous les sous-domaines ; &lt;strong&gt;preload&lt;/strong&gt; demande l'intégration dans les navigateurs (hstspreload.org) et est très difficile à annuler.</value></data>
@@ -1145,6 +1153,7 @@
   <data name="Your IP addresses" xml:space="preserve"><value>Vos adresses IP</value></data>
   <data name="Your account" xml:space="preserve"><value>Votre compte</value></data>
   <data name="Your password was changed. Other sessions were signed out." xml:space="preserve"><value>Votre mot de passe a été modifié. Les autres sessions ont été déconnectées.</value></data>
+  <data name="Your session ended. Reload the page to sign in again." xml:space="preserve"><value>Votre session est terminée. Rechargez la page pour vous reconnecter.</value></data>
   <data name="a backend address is only scheme, host and port, without a path (the request path is forwarded as is)." xml:space="preserve"><value>une adresse de backend ne contient que le schéma, l'hôte et le port, sans chemin (le chemin de la requête est transmis tel quel).</value></data>
   <data name="a header" xml:space="preserve"><value>un en-tête</value></data>
   <data name="a label is required." xml:space="preserve"><value>un libellé est obligatoire.</value></data>
@@ -1166,6 +1175,7 @@
   <data name="at least one port is required." xml:space="preserve"><value>au moins un port est obligatoire.</value></data>
   <data name="at least one value is required." xml:space="preserve"><value>au moins une valeur est obligatoire.</value></data>
   <data name="attack tool" xml:space="preserve"><value>outil d'attaque</value></data>
+  <data name="bad" xml:space="preserve"><value>mauvaises</value></data>
   <data name="changed" xml:space="preserve"><value>modifiée</value></data>
   <data name="command injection" xml:space="preserve"><value>injection de commandes</value></data>
   <data name="contains" xml:space="preserve"><value>contient</value></data>
@@ -1189,8 +1199,10 @@
   <data name="expired on {0}; browsers refuse it." xml:space="preserve"><value>expiré le {0} ; les navigateurs le refusent.</value></data>
   <data name="expires in {0} day." xml:space="preserve"><value>expire dans {0} jour.</value></data>
   <data name="expires in {0} days." xml:space="preserve"><value>expire dans {0} jours.</value></data>
+  <data name="failed" xml:space="preserve"><value>en échec</value></data>
   <data name="first-run setup" xml:space="preserve"><value>première installation</value></data>
   <data name="give it a label, e.g. web or admin." xml:space="preserve"><value>donnez-lui un libellé, p. ex. web ou admin.</value></data>
+  <data name="good" xml:space="preserve"><value>bonnes</value></data>
   <data name="hour" xml:space="preserve"><value>heure</value></data>
   <data name="https:// and a host name, optionally with a port of its own, e.g. https://admin.example.com or https://admin.example.com:8443." xml:space="preserve"><value>https:// et un nom d'hôte, éventuellement avec un port propre, p. ex. https://admin.example.com ou https://admin.example.com:8443.</value></data>
   <data name="https://admin.example.com" xml:space="preserve"><value>https://admin.example.com</value></data>

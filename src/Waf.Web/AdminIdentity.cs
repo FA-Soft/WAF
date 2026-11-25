@@ -215,7 +215,8 @@ public static class AdminIdentity
 
     /// <summary>Requests made by a page's script, not by the admin: they do not keep a session alive.</summary>
     private static bool IsBackgroundRequest(HttpRequest request) =>
-        request.Path.StartsWithSegments(LogEndpoints.LivePath, StringComparison.OrdinalIgnoreCase);
+        request.Path.StartsWithSegments(LogEndpoints.LivePath, StringComparison.OrdinalIgnoreCase)
+        || request.Path.StartsWithSegments(TrafficHub.Path, StringComparison.OrdinalIgnoreCase);
 
     private static DateTimeOffset Now(HttpContext context) =>
         (context.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System).GetUtcNow();

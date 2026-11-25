@@ -1,3 +1,6 @@
 # Linux scripts and systemd units keep LF line endings in every checkout (bash and systemd reject CRLF).
 *.sh       text eol=lf
 *.service  text eol=lf
+
+# Vendored third-party files stay byte-for-byte as published (their hashes are checked).
+src/Waf.Web/wwwroot/lib/** -text

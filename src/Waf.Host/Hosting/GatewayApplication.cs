@@ -87,6 +87,7 @@ internal static partial class GatewayApplication
         // Admin UI texts in English, Dutch, French and German (Waf.Web/Resources); see AdminLanguage.
         builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
         builder.Services.AddAdminIdentity(storagePaths);
+        builder.Services.AddLiveTraffic();
         AddDataProtection(builder, storagePaths);
         builder.Services.AddHealthChecks().AddCheck<WafEngineHealthCheck>("waf-engine");
         builder.Services.AddSingleton(storagePaths);

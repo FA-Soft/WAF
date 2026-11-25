@@ -18,6 +18,9 @@
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     @* Live view of the request log; does nothing on other pages. *@
     <script src="@Assets["_content/Waf.Web/logs.js"]"></script>
+    @* Live traffic on the dashboard (SignalR client served from the gateway itself); does nothing on other pages. *@
+    <script src="@Assets["_content/Waf.Web/lib/signalr/signalr.min.js"]"></script>
+    <script src="@Assets["_content/Waf.Web/live.js"]"></script>
 </body>
 </html>
 

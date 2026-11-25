@@ -37,7 +37,7 @@ With two-factor sign-in on, the code from the authenticator app comes after the 
 
 ## Dashboard
 
-The firewall state, the active configuration version, and the routes, rules, rate limits and attack detection in plain language.
+The live requests per second (good, bad, failed, and the sources of bad traffic, pushed every second), the firewall state, the active configuration version, and the routes, rules, rate limits and attack detection in plain language.
 
 ![Dashboard](images/admin-dashboard.png)
 
