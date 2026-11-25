@@ -306,6 +306,56 @@ public sealed class PerformancePageTests
     }
 
     [Fact]
+    public async Task A_simulated_attack_shows_a_notice_on_the_dashboard_until_notices_are_switched_off()
+    {
+        await using var gateway = new Gateway();
+        await gateway.InitializeAsync();
+
+        // Two days of history: 1 request a second, nothing bad.
+        var store = gateway.App.Services.GetRequiredService<SqliteMetricsStore>();
+        await store.InitializeAsync(Ct);
+        var thisHour = DateTimeOffset.FromUnixTimeSeconds(MetricsBuckets.Start(MetricsTier.Hour, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={store.DatabasePath}"))
+        {
+            await connection.OpenAsync(Ct);
+            for (var hour = thisHour.AddDays(-2); hour < thisHour; hour = hour.AddHours(1))
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = "INSERT INTO TrafficCounts VALUES (2, $start, 1, '', 'website', 0, 3600)";
+                command.Parameters.AddWithValue("$start", hour.ToUnixTimeSeconds());
+                await command.ExecuteNonQueryAsync(Ct);
+            }
+        }
+
+        // The attack: 90 requests for a host without a route, at once.
+        await Task.WhenAll(Enumerable.Range(0, 90).Select(i => SendAsync(gateway, "unknown.example.com", $"/.env?{i}")));
+        await gateway.App.Services.GetRequiredService<RequestMetricsWriter>().FlushAsync(all: true, Ct);
+        await Task.Delay(TimeSpan.FromSeconds(6), Ct); // the check leaves out the last seconds (counts are written every few)
+        var alerts = gateway.App.Services.GetRequiredService<TrafficAlertService>();
+        await alerts.CheckAsync(Ct);
+
+        var dashboard = WebUtility.HtmlDecode(await gateway.GetPageAsync("/"));
+        Assert.Contains("Bad traffic: up to", dashboard, StringComparison.Ordinal);
+        // "/.env" is caught by attack detection before "no route" applies.
+        Assert.Contains("Mostly Blocked by attack detection: path traversal, from 127.0.0.0/24.", dashboard, StringComparison.Ordinal);
+        Assert.Contains("Show it on the Performance page", dashboard, StringComparison.Ordinal);
+        var performance = WebUtility.HtmlDecode(await gateway.GetPageAsync("/performance?period=1h"));
+        Assert.Contains("Notices of unusual traffic", performance, StringComparison.Ordinal);
+        Assert.Contains("class=\"running\"", performance, StringComparison.Ordinal);
+        Assert.Contains("\"usual\":[[", performance, StringComparison.Ordinal); // the band on the chart
+
+        // Switched off in the settings (a new configuration version): the notice ends at the next check.
+        var settings = await gateway.GetPageAsync("/performance/settings");
+        var form = AdminGateway.ScrapeForm(settings, "traffic-alerts");
+        form.Remove("Model.Enabled");
+        await gateway.PostAsync("/performance/settings", "traffic-alerts", form);
+        Assert.False((await gateway.Store.GetLastKnownGoodAsync(Ct))!.Configuration.Settings.TrafficAlerts.Enabled);
+        await alerts.CheckAsync(Ct);
+        Assert.DoesNotContain("Bad traffic: up to", WebUtility.HtmlDecode(await gateway.GetPageAsync("/")), StringComparison.Ordinal);
+        Assert.NotNull(Assert.Single(await alerts.RecentAsync(10, Ct)).End);
+    }
+
+    [Fact]
     public async Task The_page_and_the_export_need_a_session()
     {
         await using var gateway = new Gateway();

@@ -79,6 +79,9 @@
         if (state.previous) {
             data.push(b.map((row, i) => (state.previous[i] ? state.previous[i][2] / Math.max(1, state.previous[i][1]) : null)));
         }
+        if (state.usual) {
+            data.push(b.map((row, i) => (state.usual[i] ? state.usual[i][0] : null)));
+        }
         return { data, good, bad, failed };
     };
 
@@ -123,6 +126,9 @@
         if (state.previous) {
             s.push({ label: text('Previous'), stroke: muted, width: 1.5, dash: [6, 4], value: (u, v) => number(v) });
         }
+        if (state.usual) {
+            s.push({ label: text('Usual'), stroke: css('--accent', '#1f5fbf'), width: 1.5, dash: [8, 4], value: (u, v) => number(v) });
+        }
 
         const axis = { stroke: textColor, grid: { stroke: border, width: 1 }, ticks: { stroke: border, width: 1 } };
         return {
@@ -150,7 +156,7 @@
                 ],
             },
             // The chart's own background, for the canvas (theme colours).
-            plugins: [background(), failoverBands(state.failovers)],
+            plugins: [background(), failoverBands(state.failovers), usualBand(state)],
         };
     };
 
@@ -192,6 +198,38 @@
     });
 
     const decades = (u, splits) => splits.map((v) => (v > 0 && Math.abs(Math.log10(v) - Math.round(Math.log10(v))) < 1e-9 ? v : null));
+
+    // The usual level: a light band from the usual rate up to where a notice of unusual traffic starts.
+    const usualBand = (chartState) => ({
+        hooks: {
+            drawAxes: (u) => {
+                const band = chartState.usual;
+                if (!band || band.length === 0) {
+                    return;
+                }
+                const xs = u.data[0];
+                const g = u.ctx;
+                g.save();
+                g.beginPath();
+                xs.forEach((x, i) => {
+                    const px = u.valToPos(x, 'x', true);
+                    const py = u.valToPos(Math.min(band[i][1], u.scales.y.max), 'y', true);
+                    if (i === 0) {
+                        g.moveTo(px, py);
+                    } else {
+                        g.lineTo(px, py);
+                    }
+                });
+                for (let i = xs.length - 1; i >= 0; i--) {
+                    g.lineTo(u.valToPos(xs[i], 'x', true), u.valToPos(band[i][0], 'y', true));
+                }
+                g.closePath();
+                g.fillStyle = css('--info-bg', '#e8f0fc');
+                g.fill();
+                g.restore();
+            },
+        },
+    });
 
     // Response times: median, 95th and 99th percentile and what the gateway adds, on a logarithmic scale.
     const drawLatency = () => {
@@ -591,6 +629,7 @@
             previous: data.previous || null,
             hasPeaks: (data.buckets || []).some((b) => b[5] !== null),
             failovers: data.failovers || [],
+            usual: data.usual || null,
         };
         if (state.live) {
             state.hasPeaks = false;

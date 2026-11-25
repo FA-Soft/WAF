@@ -71,6 +71,12 @@ Backends per route (status classes, 502/503/504) and the failover periods.
 
 ![Backends and failovers](images/admin-performance-backends.png)
 
+Notices of unusual traffic: the list of past notices (here still learning what is usual), and their settings.
+
+![Notices of unusual traffic](images/admin-performance-notices.png)
+
+![Notice settings](images/admin-notice-settings.png)
+
 The same in the dark theme.
 
 ![Performance in the dark theme](images/admin-performance-dark.png)

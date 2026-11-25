@@ -436,6 +436,16 @@ Counting never slows requests down: a request only increments a counter in memor
 
 **Performance page.** The **Performance** page shows the counts: live (the last five minutes, updated every second) or for a period (the last hour up to the last 3 years, or a custom range), as a stacked chart of good, bad and failed requests per second, with the peak and, if you like, the previous period as a dashed line. The resolution follows the period and the tiers below; dragging across the chart zooms in and loads the finer data. Bad traffic is broken down by kind (rule, attack category, rate limit, fail-closed, no route), by source (client IP) and by requested destination (host and path), each as a pie chart that switches to a table; filters for kinds, sources, destinations and route are in the address, so a view can be bookmarked. Every number links to the same requests in the request log, as long as the log still has them (the request log can now also show a fixed period: `logs?from=…&to=…`, Unix seconds). **Response times** (median, 95th and 99th percentile, and what the gateway itself adds apart from the backend's time) are kept as a histogram per minute and coarser (bins 25 % apart, so accurate to about 12 %), per route; **backends** per route show their status classes (2xx to 5xx) and the 502/503/504 the gateway answered for them; the periods in which a route ran on its failover are kept (as long as the month tier) and shaded on the charts. The series can be downloaded as CSV, the chart has a table view, and times are shown in the browser's time zone. The charts are drawn with [uPlot](https://github.com/leeoniya/uPlot) (MIT), served by the gateway itself, so the Content-Security-Policy stays strict. Three years load in milliseconds: a long period reads the coarse tiers only (at most 3,600 points).
 
+**Notices of unusual traffic.** Every 15 seconds the gateway compares the last minute of total, bad and failed requests with the usual level for that hour of the week: the median of the same hour on the same weekday over the last four weeks (or of the same hour on other days while there is less history; nothing is judged before a day of history). When one is the set number of times higher (default 5) and above a minimum volume (default 60 requests a minute), a notice shows on the dashboard and the Performance page, for example "Bad traffic is 20× higher than usual since 10:42 UTC. Mostly Blocked by attack detection: SQL injection, from 203.0.113.0/24.", with links to the filtered Performance view and the request log, and goes to the service log. Bad or failed traffic gets the notice before total traffic, so one attack is one notice. A notice ends after two calm checks; past notices are listed on the Performance page (kept as long as the month tier). The traffic chart shows the usual level as a dashed line, and the band up to where a notice starts. The settings are part of the configuration (Performance → Notice settings): 
+
+```json
+"Settings": {
+  "TrafficAlerts": { "Enabled": true, "Sensitivity": 5, "MinimumPerMinute": 60 }  // Sensitivity: times the usual level (2 to 100)
+}
+```
+
+Sending notices by e-mail or webhook is not part of it (yet).
+
 **History up to three years.** The older the counts, the coarser they are kept, so three years fit in little space:
 
 | Age | Stored per |

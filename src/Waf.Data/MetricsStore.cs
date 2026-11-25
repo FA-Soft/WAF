@@ -53,8 +53,9 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
     /// <remarks>
     /// 1: counts and sources (step 45). 2: rollup state and peaks (step 46). 3: requested destinations (step 48).
     /// 4: response times, backends and failover periods (step 49). 5: networks and countries of sources (step 50).
+    /// 6: notices of unusual traffic (step 51).
     /// </remarks>
-    public const int SchemaVersion = 5;
+    public const int SchemaVersion = 6;
 
     /// <summary>The per-minute tables of bad traffic: (table, column) of the sources and of the requested destinations.</summary>
     internal static readonly (string Table, string Column)[] TopTables =
@@ -142,6 +143,17 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
             End INTEGER,
             PRIMARY KEY (Route, Start)
         ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS TrafficAlerts (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Metric INTEGER NOT NULL,
+            Start INTEGER NOT NULL,
+            End INTEGER,
+            Usual REAL NOT NULL,
+            Peak REAL NOT NULL,
+            Kind INTEGER,
+            Name TEXT,
+            Network TEXT
+        );
         CREATE TABLE IF NOT EXISTS RollupState (
             Tier INTEGER NOT NULL PRIMARY KEY,
             DoneUntil INTEGER NOT NULL,

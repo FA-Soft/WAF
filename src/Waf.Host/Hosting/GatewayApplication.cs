@@ -279,6 +279,7 @@ internal static partial class GatewayApplication
             builder.Services.AddSingleton<IRequestMetrics>(sp => sp.GetRequiredService<NullRequestMetrics>());
             builder.Services.AddSingleton<IRequestMetricsMonitor>(sp => sp.GetRequiredService<NullRequestMetrics>());
             builder.Services.AddSingleton<FASoft.Waf.Web.IMetricsHistory, FASoft.Waf.Web.DisabledMetricsHistory>();
+            builder.Services.AddSingleton<FASoft.Waf.Web.ITrafficAlerts, FASoft.Waf.Web.DisabledTrafficAlerts>();
             return;
         }
 
@@ -305,6 +306,9 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<MetricsMaintenanceService>();
         builder.Services.AddSingleton<FASoft.Waf.Web.IMetricsHistory>(sp => sp.GetRequiredService<MetricsMaintenanceService>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<MetricsMaintenanceService>());
+        builder.Services.AddSingleton<TrafficAlertService>();
+        builder.Services.AddSingleton<FASoft.Waf.Web.ITrafficAlerts>(sp => sp.GetRequiredService<TrafficAlertService>());
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<TrafficAlertService>());
     }
 
     /// <summary>

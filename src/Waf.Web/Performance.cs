@@ -313,7 +313,7 @@ internal sealed record PerformanceReport(
     }
 
     /// <summary>The chart's data, for the page's script: buckets as [start, good, bad, failed, peak], the previous period shifted onto this one.</summary>
-    public string ChartJson(bool live, string? route)
+    public string ChartJson(bool live, string? route, IReadOnlyList<(double Usual, double Alarm)>? usual = null)
     {
         var span = (long)(To - From).TotalSeconds;
         var data = new
@@ -324,6 +324,7 @@ internal sealed record PerformanceReport(
             buckets = Series.Select(b => new object?[] { b.Start, b.Seconds, b.Good, b.Bad, b.Failed, b.Peak }),
             previous = Previous?.Select(b => new object[] { b.Start + span, b.Seconds, b.Total }),
             failovers = FailoverBands(),
+            usual = usual?.Select(u => new[] { Math.Round(u.Usual, 3), Math.Round(u.Alarm, 3) }),
         };
         return JsonSerializer.Serialize(data);
     }

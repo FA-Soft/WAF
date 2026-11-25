@@ -250,6 +250,11 @@ The **Performance** page shows how much traffic the gateway handles, and how muc
   added, and **Rate limit** opens a new rate limit for it. Nothing changes until you save, and saving creates a
   configuration version you can roll back, like every change. Addresses are kept as long as the request log keeps
   its entries; networks and countries longer.
+- **Notices of unusual traffic**: when total, bad or failed traffic is far above the usual level for that hour of
+  the week (learned from the last four weeks; after the first day), a notice shows on the dashboard and here, with
+  what most of it is and where it comes from, and links to the filtered view and the request log. Past notices are
+  listed under the charts; the chart shows the usual level as a dashed line. **Notice settings** sets how many times
+  the usual level counts (default 5), the minimum volume (default 60 requests a minute), or switches notices off.
 - **Response times**: the median, the 95th and the 99th percentile over the period and over time, and what the
   gateway itself adds (WAF, routing, logging) apart from the backend's time. Kept per minute and coarser, accurate to
   about 12 %. Choose a route to see only its response times.

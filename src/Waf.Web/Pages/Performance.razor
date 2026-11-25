@@ -3,6 +3,7 @@
 @inject IGatewayConfigurationService Configurations
 @inject RequestLogMaintenance LogInfo
 @inject TimeProvider Time
+@inject ITrafficAlerts Alerts
 
 <PageTitle>@T("Performance") · @ProductInfo.Name</PageTitle>
 
@@ -12,6 +13,8 @@
         <p>@T("How many public requests the gateway handles, and how many of them are good, bad or failed. Good: forwarded, redirected or answered. Bad: blocked, rate limited, refused (fail-closed) or without a route. Failed: no backend answered. Live shows the last minutes, updated every second; the other periods come from the traffic history, which keeps older data coarser (per second for 3 days, up to per month for 3 years).")</p>
     </HelpTip>
 </h1>
+
+<TrafficAlertNotice />
 
 @if (History.Store is null)
 {
@@ -178,9 +181,9 @@ else if (_report is { } report)
             }
         </figcaption>
         <div id="perf-chart" class="perf-chart" role="img" aria-label="@ChartSummary(report)"
-             data-chart="@report.ChartJson(_query.IsLive, _query.Route)" data-hub="hubs/traffic"
+             data-chart="@report.ChartJson(_query.IsLive, _query.Route, UsualBand(report))" data-hub="hubs/traffic"
              data-text-good="@T("Good")" data-text-bad="@T("Bad")" data-text-failed="@T("Failed")"
-             data-text-peak="@T("Peak")" data-text-previous="@T("Previous period")" data-text-time="@T("Time")"
+             data-text-peak="@T("Peak")" data-text-previous="@T("Previous period")" data-text-time="@T("Time")" data-text-usual="@T("Usual")"
              data-text-connecting="@T("Connecting…")" data-text-live="@T("Live, updated every second")"
              data-text-reconnecting="@T("Reconnecting…")" data-text-ended="@T("Your session ended. Reload the page to sign in again.")"
              data-text-zone="@T("times in {0}", "{0}")"
@@ -456,6 +459,49 @@ else if (_report is { } report)
         }
     </section>
 
+    <section aria-labelledby="alerts-heading">
+        <h2 id="alerts-heading">
+            @T("Notices of unusual traffic")
+            <HelpTip Title="@T("Notices of unusual traffic")"><p>@T("Every 15 seconds the gateway compares the last minute with the usual traffic for that hour of the week, learned from the last four weeks. When total, bad or failed traffic is far above it, a notice shows on the dashboard and here, and goes to the service log. The chart shows the usual level as a dashed line, and the band up to where a notice starts.")</p></HelpTip>
+            <a class="heading-link" href="performance/settings">@T("Notice settings")</a>
+        </h2>
+        @if (!Alerts.Enabled)
+        {
+            <p class="muted">@T("Switched off with the traffic counts.")</p>
+        }
+        else
+        {
+            @if (Alerts.Profile is { IsReady: false } learning)
+            {
+                <p class="muted">@T("Still learning what is usual: notices start after a day of traffic history ({0} hours so far).", learning.Hours)</p>
+            }
+            @if (_recentAlerts.Count == 0)
+            {
+                <p class="muted">@T("No unusual traffic noticed.")</p>
+            }
+            else
+            {
+                <ul class="traffic-alerts">
+                    @foreach (var alert in _recentAlerts)
+                    {
+                        <li class="@(alert.End is null ? "running" : null)">
+                            <strong>@TrafficAlertText.Headline(alert)</strong>
+                            @if (alert.End is { } end)
+                            {
+                                <span class="muted">@T("Back to normal at {0}.", Describe.Time(end))</span>
+                            }
+                            @if (TrafficAlertText.Mostly(alert) is { } mostly)
+                            {
+                                <span>@mostly</span>
+                            }
+                            <a href="@TrafficAlertText.ViewUrl(alert)">@T("Show")</a>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </section>
+
     <p>
         <a href="@_query.Url("performance/export.csv")" download>@T("Download as CSV")</a>
         @if (_oldestLogged is null)
@@ -485,6 +531,26 @@ else if (_report is { } report)
     private string? Route => _query.HasSourceFilter ? null : _query.Route;
 
     private string? _blockList;
+    private IReadOnlyList<TrafficAlert> _recentAlerts = [];
+    private TrafficAlertSettings _alertSettings = new();
+
+    /// <summary>
+    /// The usual level and where a notice starts, per bucket of the traffic chart: for all traffic over at most a
+    /// week (the usual level is known per hour of the week); null otherwise.
+    /// </summary>
+    private IReadOnlyList<(double Usual, double Alarm)>? UsualBand(PerformanceReport report)
+    {
+        if (_query.IsLive || _query.IsFiltered || !_alertSettings.Enabled || Alerts.Profile is not { IsReady: true } profile || report.To - report.From > TimeSpan.FromDays(7.5))
+        {
+            return null;
+        }
+
+        return [.. report.Series.Select(b =>
+        {
+            var usual = profile.RateAt(AlertMetric.Total, DateTimeOffset.FromUnixTimeSeconds(b.Start));
+            return (usual, Math.Max(usual * _alertSettings.Sensitivity, _alertSettings.MinimumPerMinute / 60.0));
+        })];
+    }
 
     /// <summary>The IP block list with the source added (an existing list, or a new one); saving creates a configuration version.</summary>
     private string BlockUrl(string source) => _blockList is { } list
@@ -517,6 +583,15 @@ else if (_report is { } report)
         var active = await Configurations.GetActiveAsync(CancellationToken.None);
         _routes = active?.Configuration.Routes.Select(r => r.Name).Order(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
         _blockList = active is null ? null : LogActions.FindBlockList(active.Configuration)?.Name;
+        _alertSettings = active?.Configuration.Settings.TrafficAlerts ?? new TrafficAlertSettings();
+        try
+        {
+            _recentAlerts = await Alerts.RecentAsync(10, CancellationToken.None);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            _recentAlerts = [];
+        }
         if (History.Store is not { } store)
         {
             return;

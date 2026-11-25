@@ -69,6 +69,9 @@ public sealed class GatewaySettings
     /// <summary>How long request log entries are kept, and how large the log may grow.</summary>
     public LogRetentionSettings LogRetention { get; set; } = new();
 
+    /// <summary>Notices of unusual traffic on the dashboard and the Performance page.</summary>
+    public TrafficAlertSettings TrafficAlerts { get; set; } = new();
+
     /// <summary>
     /// Upper bound on rate-limit counters kept in memory (all limits together). When full, idle counters
     /// and those with the fewest requests are dropped first.
@@ -77,6 +80,28 @@ public sealed class GatewaySettings
 
     /// <summary>Default for <see cref="RateLimitMaxTrackedClients"/>.</summary>
     public const int DefaultRateLimitMaxTrackedClients = 100_000;
+}
+
+/// <summary>
+/// Notices of unusual traffic: total, bad or failed requests far above the usual level for that hour of the week
+/// (learned from the traffic history).
+/// </summary>
+public sealed class TrafficAlertSettings
+{
+    /// <summary>Watch the traffic and show notices. On by default.</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>How many times the usual level counts as unusual (2 to 100; default 5).</summary>
+    public double Sensitivity { get; set; } = DefaultSensitivity;
+
+    /// <summary>Fewest requests per minute for a notice, so a quiet site does not get notices about a handful of requests.</summary>
+    public int MinimumPerMinute { get; set; } = DefaultMinimumPerMinute;
+
+    public const double DefaultSensitivity = 5;
+    public const int DefaultMinimumPerMinute = 60;
+    public const double MinSensitivity = 2;
+    public const double MaxSensitivity = 100;
+    public const int MaxMinimumPerMinute = 1_000_000;
 }
 
 /// <summary>

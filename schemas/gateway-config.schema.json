@@ -135,6 +135,21 @@
           },
           "additionalProperties": false
         },
+        "TrafficAlerts": {
+          "type": "object",
+          "properties": {
+            "Enabled": {
+              "type": "boolean"
+            },
+            "Sensitivity": {
+              "type": "number"
+            },
+            "MinimumPerMinute": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
         "RateLimitMaxTrackedClients": {
           "type": "integer"
         }

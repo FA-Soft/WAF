@@ -33,6 +33,7 @@ public static class GatewayConfigurationValidator
         ValidateRateLimits(configuration.RateLimits, routeNames, errors);
         ValidateAttackDetection(configuration.Settings?.AttackDetection, routeNames, errors);
         ValidateLogRetention(configuration.Settings?.LogRetention, errors);
+        ValidateTrafficAlerts(configuration.Settings?.TrafficAlerts, errors);
         ValidateCertificates(configuration.Certificates, configuration.Settings, errors);
         ValidateHttps(configuration, errors);
 
@@ -47,6 +48,25 @@ public static class GatewayConfigurationValidator
 
     /// <summary>Largest body part that can be inspected: 10 MB.</summary>
     public const int MaxInspectedBodyBytes = 10 * 1024 * 1024;
+
+    private static void ValidateTrafficAlerts(TrafficAlertSettings? alerts, List<string> errors)
+    {
+        if (alerts is null)
+        {
+            errors.Add("Settings.TrafficAlerts is missing.");
+            return;
+        }
+
+        if (double.IsNaN(alerts.Sensitivity) || alerts.Sensitivity is < TrafficAlertSettings.MinSensitivity or > TrafficAlertSettings.MaxSensitivity)
+        {
+            errors.Add($"Settings.TrafficAlerts.Sensitivity must be between {TrafficAlertSettings.MinSensitivity} and {TrafficAlertSettings.MaxSensitivity} times the usual level (was {alerts.Sensitivity}).");
+        }
+
+        if (alerts.MinimumPerMinute is < 1 or > TrafficAlertSettings.MaxMinimumPerMinute)
+        {
+            errors.Add($"Settings.TrafficAlerts.MinimumPerMinute must be between 1 and {TrafficAlertSettings.MaxMinimumPerMinute} (was {alerts.MinimumPerMinute}).");
+        }
+    }
 
     private static void ValidateLogRetention(LogRetentionSettings? retention, List<string> errors)
     {

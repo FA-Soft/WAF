@@ -171,6 +171,7 @@ public sealed partial class SqliteMetricsStore
         }
 
         deleted += await DeleteOldFailoversAsync(connection, now - retention.Month, cancellationToken).ConfigureAwait(false);
+        deleted += await DeleteOldAlertsAsync(connection, now - retention.Month, cancellationToken).ConfigureAwait(false);
         if (clientIpRetention is { } keep && keep > TimeSpan.Zero)
         {
             await using var command = connection.CreateCommand();

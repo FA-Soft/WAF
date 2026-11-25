@@ -561,3 +561,8 @@ td .badge {
 .source-levels a { padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); background: var(--surface); }
 .source-levels a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .source-actions a + a { margin-left: 0.5rem; }
+.traffic-alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.traffic-alerts li { padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.traffic-alerts li.running { border-color: var(--warn); background: var(--warn-bg); }
+.traffic-alerts li > * + * { margin-left: 0.35rem; }
+.traffic-alert a { margin-left: 0.35rem; }
