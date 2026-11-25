@@ -5,6 +5,14 @@
 #   Actions > Release > Run workflow              builds and tests only; the packages are kept as workflow artifacts
 #
 # A tag with a hyphen (v1.2.0-rc.1) becomes a pre-release.
+#
+# Code signing (Windows): WafGateway.exe, wafctl.exe and Install.ps1 are signed with Azure Artifact Signing (formerly
+# Trusted Signing): Authenticode, SHA-256, timestamped. The workflow signs in to Azure with OpenID Connect, so no Azure
+# secret is stored in GitHub. It is switched on by these repository variables (Settings > Secrets and variables >
+# Actions > Variables); without them the packages are built unsigned, with a warning. See docs/code-signing.md.
+#   AZURE_TENANT_ID, AZURE_CLIENT_ID                    the app registration that may sign (federated credential for this repository)
+#   ARTIFACT_SIGNING_ENDPOINT                            for example https://weu.codesigning.azure.net/
+#   ARTIFACT_SIGNING_ACCOUNT, ARTIFACT_SIGNING_PROFILE   the signing account and its certificate profile
 name: Release
 
 on:
@@ -32,6 +40,12 @@ jobs:
     name: Package (${{ matrix.rid }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    # The Azure app registration trusts this environment (one fixed OpenID Connect subject for every tag); it can also
+    # require an approval before a release is built and signed.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # OpenID Connect token for signing in to Azure (code signing)
     strategy:
       fail-fast: false
       matrix:
@@ -83,6 +97,70 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: .\deploy\windows\Build-Package.ps1 -Configuration $env:CONFIGURATION -Version '${{ steps.version.outputs.version }}'
+
+      # Code signing (Windows): switched on by the repository variables described at the top.
+      - name: Signing settings (Windows)
+        if: runner.os == 'Windows'
+        id: signing
+        shell: bash
+        env:
+          TENANT: ${{ vars.AZURE_TENANT_ID }}
+          CLIENT: ${{ vars.AZURE_CLIENT_ID }}
+          ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          ACCOUNT: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          PROFILE: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+        run: |
+          if [[ -n "$TENANT" && -n "$CLIENT" && -n "$ENDPOINT" && -n "$ACCOUNT" && -n "$PROFILE" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Code signing: on (account $ACCOUNT, profile $PROFILE)"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::The Windows package is NOT signed: set the code-signing variables (see docs/code-signing.md)."
+          fi
+
+      - name: Sign in to Azure (OpenID Connect)
+        if: steps.signing.outputs.enabled == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Sign the programs and the installer script
+        if: steps.signing.outputs.enabled == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          files: |
+            ${{ github.workspace }}\artifacts\windows\WafGateway-win-x64\WafGateway.exe
+            ${{ github.workspace }}\artifacts\windows\WafGateway-win-x64\wafctl.exe
+            ${{ github.workspace }}\artifacts\windows\WafGateway-win-x64\Install.ps1
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: WAF Gateway
+          description-url: ${{ github.server_url }}/${{ github.repository }}
+          # Only the Azure CLI sign-in of the step above.
+          exclude-environment-credential: true
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+
+      # A signature that is missing or not valid stops the release; the zip is made again with the signed files.
+      - name: Check the signatures and zip the signed package
+        if: steps.signing.outputs.enabled == 'true'
+        shell: powershell
+        run: |
+          $package = 'artifacts\windows\WafGateway-win-x64'
+          foreach ($file in 'WafGateway.exe', 'wafctl.exe', 'Install.ps1') {
+              $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $package $file)
+              if ($signature.Status -ne 'Valid' -or -not $signature.TimeStamperCertificate) {
+                  throw "$file is not validly signed and timestamped: $($signature.Status) $($signature.StatusMessage)"
+              }
+              Write-Host "$file signed by $($signature.SignerCertificate.Subject), timestamped $($signature.TimeStamperCertificate.NotBefore)"
+          }
+          .\deploy\windows\Build-Package.ps1 -ZipOnly
 
       - name: Build the package (Linux)
         if: runner.os == 'Linux'

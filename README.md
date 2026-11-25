@@ -632,7 +632,7 @@ Database migrations use the repository-local `dotnet-ef` tool (`dotnet tool rest
 dotnet publish src/Waf.Host -c Release -p:PublishProfile=linux-arm64   # artifacts/publish/linux-arm64
 ```
 
-**Releases.** Pushing a version tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml): it builds the three packages with that version, starts each one once on a machine without .NET (`deploy/windows/Smoke-Test.ps1` with the runner's .NET hidden; `deploy/linux/smoke-test.sh` in a plain Ubuntu 24.04 container, `linux-arm64` under QEMU), and attaches the packages and `SHA256SUMS.txt` to a GitHub release with generated notes. A tag with a hyphen becomes a pre-release. Running the workflow by hand builds and tests without releasing.
+**Releases.** Pushing a version tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml): it builds the three packages with that version, starts each one once on a machine without .NET (`deploy/windows/Smoke-Test.ps1` with the runner's .NET hidden; `deploy/linux/smoke-test.sh` in a plain Ubuntu 24.04 container, `linux-arm64` under QEMU), and attaches the packages and `SHA256SUMS.txt` to a GitHub release with generated notes. A tag with a hyphen becomes a pre-release. Running the workflow by hand builds and tests without releasing. On Windows, `WafGateway.exe`, `wafctl.exe` and `Install.ps1` are code-signed (Authenticode, timestamped) with Azure Artifact Signing once its repository variables are set; until then the package is unsigned and the run shows a warning. Setup and how to check a signature: [docs/code-signing.md](docs/code-signing.md).
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0
