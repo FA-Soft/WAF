@@ -144,7 +144,7 @@ public sealed record TrafficCount(long BucketStart, TrafficKind Kind, string Nam
     public TrafficOutcome Outcome => TrafficClassifier.OutcomeOf(Kind);
 }
 
-/// <summary>Bad requests from one source (client IP) of one kind within one bucket.</summary>
+/// <summary>Bad requests from one source (client IP), or to one destination (host and path), of one kind within one bucket.</summary>
 /// <param name="BucketStart">Start of the bucket, in Unix seconds (UTC).</param>
 /// <param name="Source">Client IP, or <see cref="TrafficCounter.OtherSource"/> for all sources outside the top.</param>
 /// <param name="Kind">What the requests were counted as (always a bad kind).</param>
@@ -199,12 +199,29 @@ public static class TrafficClassifier
         return Enum.TryParse<AttackCategory>(first, out var category) && Enum.IsDefined(category) ? category.ToString() : string.Empty;
     }
 
+    /// <summary>Longest destination kept: the host name and the start of the path.</summary>
+    public const int MaxDestinationLength = 300;
+
+    /// <summary>
+    /// The requested destination of a request: its host name (lower case) and path, without the query string, e.g.
+    /// "www.example.com/wp-login.php"; cut at <see cref="MaxDestinationLength"/> characters.
+    /// </summary>
+    public static string Destination(RequestLogEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        var host = entry.Host.ToLowerInvariant();
+        var destination = host.Length > 100 ? host[..100] : host;
+        destination += string.IsNullOrEmpty(entry.Path) ? "/" : entry.Path;
+        return destination.Length <= MaxDestinationLength ? destination : destination[..MaxDestinationLength];
+    }
+
     internal static string Name(string? name) =>
         string.IsNullOrEmpty(name) ? string.Empty : name.Length <= MaxNameLength ? name : name[..MaxNameLength];
 }
 
 /// <summary>
-/// Counts requests in memory: per second by kind, name and route, and bad requests per minute by source. Adding is
+/// Counts requests in memory: per second by kind, name and route, and bad requests per minute by source and by
+/// requested destination (host and path). Adding is
 /// lock-free and never waits; a background writer takes the completed buckets (<see cref="TakeCompleted"/>).
 /// </summary>
 /// <remarks>
@@ -225,10 +242,12 @@ public sealed class TrafficCounter
 
     private readonly ConcurrentDictionary<CountKey, Cell> _counts = new();
     private readonly ConcurrentDictionary<SourceKey, Cell> _sources = new();
+    private readonly ConcurrentDictionary<SourceKey, Cell> _destinations = new();
     private readonly int _maxCells;
     private readonly int _maxSourceCells;
     private int _countCells;
     private int _sourceCells;
+    private int _destinationCells;
 
     /// <param name="maxCells">Most counts waiting in memory; beyond that, requests are not counted (see <see cref="Add"/>).</param>
     /// <param name="maxSourceCells">Most source counts waiting in memory; beyond that, new sources count as <see cref="OtherSource"/>.</param>
@@ -241,13 +260,14 @@ public sealed class TrafficCounter
     }
 
     /// <summary>Counts waiting in memory.</summary>
-    public int Pending => Volatile.Read(ref _countCells) + Volatile.Read(ref _sourceCells);
+    public int Pending => Volatile.Read(ref _countCells) + Volatile.Read(ref _sourceCells) + Volatile.Read(ref _destinationCells);
 
     /// <summary>
     /// Counts one request. Returns false when it could not be counted because too many counts are waiting (the
     /// store is not keeping up).
     /// </summary>
-    public bool Add(DateTimeOffset timestamp, TrafficKind kind, string name, string? route, string? source)
+    /// <param name="destination">The requested host and path (<see cref="TrafficClassifier.Destination"/>), kept for bad requests like the source.</param>
+    public bool Add(DateTimeOffset timestamp, TrafficKind kind, string name, string? route, string? source, string? destination = null)
     {
         ArgumentNullException.ThrowIfNull(name);
 
@@ -267,6 +287,16 @@ public sealed class TrafficCounter
             }
         }
 
+        if (destination is not null && TrafficClassifier.OutcomeOf(kind) == TrafficOutcome.Bad)
+        {
+            var minute = second - (second % 60);
+            if (!Increment(_destinations, new SourceKey(minute, destination, kind), ref _destinationCells, _maxSourceCells))
+            {
+                // A scan of many paths at once: the request is still counted, as "other".
+                Increment(_destinations, new SourceKey(minute, OtherSource, kind), ref _destinationCells, int.MaxValue);
+            }
+        }
+
         return true;
     }
 
@@ -276,7 +306,7 @@ public sealed class TrafficCounter
     /// Everything when <paramref name="all"/> (shutdown). Sources are limited to the top <see cref="TopSources"/>
     /// per minute.
     /// </summary>
-    public (List<TrafficCount> Counts, List<SourceCount> Sources) TakeCompleted(DateTimeOffset now, TimeSpan sourceGrace, bool all = false)
+    public (List<TrafficCount> Counts, List<SourceCount> Sources, List<SourceCount> Destinations) TakeCompleted(DateTimeOffset now, TimeSpan sourceGrace, bool all = false)
     {
         var second = now.ToUnixTimeSeconds();
         var counts = new List<TrafficCount>();
@@ -298,7 +328,16 @@ public sealed class TrafficCounter
             }
         }
 
-        return (counts, LimitSources(sources, TopSources));
+        var destinations = new List<SourceCount>();
+        foreach (var key in _destinations.Keys)
+        {
+            if ((all || key.Minute + 60 <= sourceCutoff) && Take(_destinations, key, ref _destinationCells) is { } value)
+            {
+                destinations.Add(new SourceCount(key.Minute, key.Source, key.Kind, value));
+            }
+        }
+
+        return (counts, LimitSources(sources, TopSources), LimitSources(destinations, TopSources));
     }
 
     /// <summary>

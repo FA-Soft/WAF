@@ -49,6 +49,15 @@ internal sealed record LogQuery
     public long? Before { get; init; }
     public long? After { get; init; }
 
+    /// <summary>Start of a fixed period (from the Performance page); overrides <see cref="Range"/>.</summary>
+    public DateTimeOffset? From { get; init; }
+
+    /// <summary>End of a fixed period (exclusive).</summary>
+    public DateTimeOffset? To { get; init; }
+
+    /// <summary>A fixed period is set instead of "the last …".</summary>
+    public bool HasPeriod => From is not null || To is not null;
+
     /// <summary>True when any filter other than the time range is set.</summary>
     public bool IsFiltered => Show != LogView.All || Ip is not null || Host is not null || Route is not null || Rule is not null || Status is not null || Search is not null;
 
@@ -62,6 +71,10 @@ internal sealed record LogQuery
         string? Text(string name, int max = 300) =>
             query[name].ToString().Trim() is { Length: > 0 } value ? (value.Length > max ? value[..max] : value) : null;
         long? Id(string name) => long.TryParse(query[name], NumberStyles.None, CultureInfo.InvariantCulture, out var id) && id > 0 ? id : null;
+        DateTimeOffset? Moment(string name) =>
+            long.TryParse(query[name], NumberStyles.None, CultureInfo.InvariantCulture, out var seconds) && seconds is > 0 and < 253402300800
+                ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+                : null;
 
         var range = Text("range");
         var size = int.TryParse(query["size"], NumberStyles.None, CultureInfo.InvariantCulture, out var s) && PageSizes.Contains(s) ? s : DefaultSize;
@@ -78,12 +91,15 @@ internal sealed record LogQuery
             Size = size,
             Before = Id("before"),
             After = Id("after"),
+            From = Moment("from"),
+            To = Moment("to"),
         };
     }
 
     public RequestLogFilter ToFilter(DateTimeOffset now) => new()
     {
-        From = Ranges.First(r => r.Value == Range).Span is { } span ? now - span : null,
+        From = HasPeriod ? From : Ranges.First(r => r.Value == Range).Span is { } span ? now - span : null,
+        To = To,
         Show = Show,
         ClientIp = Ip,
         Host = Host,
@@ -106,6 +122,8 @@ internal sealed record LogQuery
         }
 
         Add("range", Range, DefaultRange);
+        Add("from", From?.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+        Add("to", To?.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
         Add("show", Show == LogView.All ? null : Show.ToString());
         Add("ip", Ip);
         Add("host", Host);

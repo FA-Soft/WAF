@@ -111,7 +111,7 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
         ArgumentNullException.ThrowIfNull(entry);
 
         var (kind, name) = TrafficClassifier.Classify(entry, failed);
-        if (_counter.Add(entry.Timestamp, kind, name, entry.RouteName, entry.ClientIp))
+        if (_counter.Add(entry.Timestamp, kind, name, entry.RouteName, entry.ClientIp, TrafficClassifier.Destination(entry)))
         {
             Interlocked.Increment(ref _counted);
         }
@@ -132,8 +132,8 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
                 _ready = await InitializeAsync().ConfigureAwait(false);
             }
 
-            var (counts, sources) = _counter.TakeCompleted(_time.GetUtcNow(), SourceGrace, all);
-            if (counts.Count == 0 && sources.Count == 0)
+            var (counts, sources, destinations) = _counter.TakeCompleted(_time.GetUtcNow(), SourceGrace, all);
+            if (counts.Count == 0 && sources.Count == 0 && destinations.Count == 0)
             {
                 return;
             }
@@ -146,7 +146,7 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
 
             try
             {
-                await _store.WriteAsync(counts, sources, CancellationToken.None).ConfigureAwait(false);
+                await _store.WriteAsync(counts, sources, destinations, CancellationToken.None).ConfigureAwait(false);
                 lock (_counter)
                 {
                     _lastWrite = _time.GetUtcNow();

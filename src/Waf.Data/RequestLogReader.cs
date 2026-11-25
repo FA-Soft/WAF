@@ -35,6 +35,9 @@ public sealed record RequestLogFilter
     /// <summary>Only requests from this moment on.</summary>
     public DateTimeOffset? From { get; init; }
 
+    /// <summary>Only requests before this moment.</summary>
+    public DateTimeOffset? To { get; init; }
+
     public LogView Show { get; init; }
 
     /// <summary>Exact client IP.</summary>
@@ -182,30 +185,38 @@ public sealed class RequestLogReader(StoragePaths paths)
         return connection;
     }
 
+    /// <summary>How far past <see cref="RequestLogFilter.To"/> the id range reaches, for requests that took long.</summary>
+    private static readonly TimeSpan ToSlack = TimeSpan.FromMinutes(10);
+
     /// <summary>The id range of the time filter: from the first entry at or after From; null when nothing is that recent.</summary>
     private static async Task<(long Min, long Max)?> IdRangeAsync(SqliteConnection connection, RequestLogFilter filter, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         // Separate subqueries: SQLite answers a lone MIN or MAX of the key with one seek, but MIN and MAX together, or
         // MIN(Id) over a timestamp range, with a scan.
+        string min = "(SELECT MIN(Id) FROM RequestEvents)", max = "(SELECT MAX(Id) FROM RequestEvents)";
         if (filter.From is { } from)
         {
             // The first entry at or after From by timestamp (one seek in the timestamp index). Ids follow arrival
             // order closely; around the boundary a request that took long can be a few ids off, which is fine for a
             // time filter (the timestamp itself is still checked).
-            command.CommandText = """
-                SELECT (SELECT Id FROM RequestEvents WHERE TimestampMs >= $from ORDER BY TimestampMs LIMIT 1),
-                       (SELECT MAX(Id) FROM RequestEvents)
-                """;
+            min = "(SELECT Id FROM RequestEvents WHERE TimestampMs >= $from ORDER BY TimestampMs LIMIT 1)";
             command.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
         }
-        else
+
+        if (filter.To is { } to)
         {
-            command.CommandText = "SELECT (SELECT MIN(Id) FROM RequestEvents), (SELECT MAX(Id) FROM RequestEvents)";
+            // Up to the first entry that started well after To (one seek in the timestamp index): an entry is written
+            // when its request is complete, so a slow request that started before To can have a higher id than quicker
+            // ones that started after it. With the slack, only requests that took longer than it can be missed.
+            max = "COALESCE((SELECT Id FROM RequestEvents WHERE TimestampMs >= $toSlack ORDER BY TimestampMs LIMIT 1) - 1, (SELECT MAX(Id) FROM RequestEvents))";
+            command.Parameters.AddWithValue("$toSlack", (to + ToSlack).ToUnixTimeMilliseconds());
         }
 
+        command.CommandText = $"SELECT {min}, {max}";
+
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false) || reader.IsDBNull(0))
+        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false) || reader.IsDBNull(0) || reader.IsDBNull(1))
         {
             return null;
         }
@@ -256,6 +267,12 @@ public sealed class RequestLogReader(StoragePaths paths)
             // Unary + keeps SQLite from switching to the timestamp index for this check.
             where.Append(" AND +TimestampMs >= $from");
             command.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
+        }
+
+        if (filter.To is { } to)
+        {
+            where.Append(" AND +TimestampMs < $to");
+            command.Parameters.AddWithValue("$to", to.ToUnixTimeMilliseconds());
         }
 
         switch (filter.Show)

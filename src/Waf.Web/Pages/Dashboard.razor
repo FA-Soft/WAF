@@ -74,13 +74,14 @@ else
             </h2>
             <p class="metric" data-live="total">–</p>
             <p class="muted">
-                @T("good") <strong data-live="good">–</strong> ·
-                @T("bad") <strong data-live="bad">–</strong> ·
-                @T("failed") <strong data-live="failed">–</strong>
+                @T("Good") <strong data-live="good">–</strong> ·
+                @T("Bad") <strong data-live="bad">–</strong> ·
+                @T("Failed") <strong data-live="failed">–</strong>
             </p>
             <ol class="live-sources" data-live="sources" aria-label="@T("Sources of bad requests, last minute")"></ol>
             <p class="muted" data-live="no-sources" hidden>@T("No bad requests in the last minute.")</p>
             <p class="muted live-status" data-live="status" role="status" data-state="off">@T("Needs JavaScript to update.")</p>
+            <a href="performance">@T("Performance and history")</a>
         </div>
         <div class="card">
             <h2>@T("Configuration")</h2>

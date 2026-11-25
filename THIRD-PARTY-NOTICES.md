@@ -13,6 +13,7 @@ license. Those licenses apply to those components only.
 | System libraries | Microsoft.Win32.SystemEvents, System.Drawing.Common, System.IO.Hashing, System.ServiceProcess.ServiceController | MIT | .NET Foundation and Contributors |
 | Entity Framework Core and Microsoft.Data.Sqlite | Microsoft.EntityFrameworkCore, Microsoft.EntityFrameworkCore.Abstractions, Microsoft.EntityFrameworkCore.Analyzers, Microsoft.EntityFrameworkCore.Relational, Microsoft.EntityFrameworkCore.Sqlite, Microsoft.EntityFrameworkCore.Sqlite.Core, Microsoft.Data.Sqlite.Core | MIT | .NET Foundation and Contributors |
 | YARP (reverse proxy) | Yarp.ReverseProxy | MIT | .NET Foundation and Contributors |
+| uPlot (charts, sent to the admin UI's browser) | npm package uplot 1.6.32 (`dist/uPlot.iife.min.js`, `dist/uPlot.min.css`, unchanged) | MIT | Leon Sorokin |
 | SignalR JavaScript client (sent to the admin UI's browser) | npm package @microsoft/signalr 11.0.0 (`dist/browser/signalr.min.js`, unchanged) | MIT | .NET Foundation and Contributors |
 | QRCoder | QRCoder | MIT | Raffael Herrmann; Shane Krueger |
 | Anthropic SDK for .NET | Anthropic | Apache-2.0 | Anthropic, PBC |

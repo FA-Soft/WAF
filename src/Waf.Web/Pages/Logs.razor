@@ -19,7 +19,23 @@
     <div class="alert alert-warning" role="status">@TM("Request logging is switched off in the host settings (<code>Gateway:EventLog:Enabled</code>).")</div>
 }
 
+@if (_query.HasPeriod)
+{
+    <div class="alert alert-info" role="status">
+        @T("Requests from {0} to {1} UTC (from the Performance page).", _query.From?.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "…", _query.To?.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "…")
+        <a href="@_query.Url("logs", ("from", null), ("to", null))">@T("Show the time range instead")</a>
+    </div>
+}
+
 <form method="get" action="logs" class="log-filter" role="search" aria-label="@T("Filter the request log")">
+    @if (_query.From is { } periodFrom)
+    {
+        <input type="hidden" name="from" value="@periodFrom.ToUnixTimeSeconds()" />
+    }
+    @if (_query.To is { } periodTo)
+    {
+        <input type="hidden" name="to" value="@periodTo.ToUnixTimeSeconds()" />
+    }
     <div class="field-row">
         <div class="field">
             <label for="range">@T("Time")</label>
@@ -78,7 +94,7 @@
             }
         </select>
         <button type="submit" class="button">@T("Apply")</button>
-        @if (_query.IsFiltered || _query.Range != LogQuery.DefaultRange)
+        @if (_query.IsFiltered || _query.HasPeriod || _query.Range != LogQuery.DefaultRange)
         {
             <a class="button button-secondary" href="logs">@T("Clear filters")</a>
         }

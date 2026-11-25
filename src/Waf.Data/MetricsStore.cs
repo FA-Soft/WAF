@@ -11,10 +11,10 @@ public interface IMetricsStore
     Task InitializeAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Adds <paramref name="counts"/> and <paramref name="sources"/> (per-second and per-minute buckets) in one
-    /// transaction. A bucket that is stored already gets the new count added.
+    /// Adds <paramref name="counts"/> (per second), <paramref name="sources"/> and <paramref name="destinations"/>
+    /// (per minute) in one transaction. A bucket that is stored already gets the new count added.
     /// </summary>
-    Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, CancellationToken cancellationToken);
+    Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, IReadOnlyList<SourceCount> destinations, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -40,8 +40,11 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
     public const int BusyTimeoutSeconds = 5;
 
     /// <summary>Schema version written to <c>PRAGMA user_version</c>.</summary>
-    /// <remarks>1: counts and sources (step 45). 2: rollup state and peaks (step 46).</remarks>
-    public const int SchemaVersion = 2;
+    /// <remarks>1: counts and sources (step 45). 2: rollup state and peaks (step 46). 3: requested destinations (step 48).</remarks>
+    public const int SchemaVersion = 3;
+
+    /// <summary>The per-minute tables of bad traffic: (table, column) of the sources and of the requested destinations.</summary>
+    internal static readonly (string Table, string Column)[] TopTables = [("SourceCounts", "Source"), ("DestinationCounts", "Destination")];
 
     private const string CreateSql = """
         CREATE TABLE IF NOT EXISTS TrafficCounts (
@@ -62,6 +65,15 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
             Outcome INTEGER NOT NULL,
             Count INTEGER NOT NULL,
             PRIMARY KEY (Tier, BucketStart, Source, Kind)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS DestinationCounts (
+            Tier INTEGER NOT NULL,
+            BucketStart INTEGER NOT NULL,
+            Destination TEXT NOT NULL,
+            Kind INTEGER NOT NULL,
+            Outcome INTEGER NOT NULL,
+            Count INTEGER NOT NULL,
+            PRIMARY KEY (Tier, BucketStart, Destination, Kind)
         ) WITHOUT ROWID;
         CREATE TABLE IF NOT EXISTS TrafficPeaks (
             Tier INTEGER NOT NULL,
@@ -85,10 +97,10 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
         ON CONFLICT (Tier, BucketStart, Kind, Name, Route) DO UPDATE SET Count = Count + excluded.Count
         """;
 
-    private const string InsertSourceSql = """
-        INSERT INTO SourceCounts (Tier, BucketStart, Source, Kind, Outcome, Count)
-        VALUES ($tier, $bucket, $source, $kind, $outcome, $count)
-        ON CONFLICT (Tier, BucketStart, Source, Kind) DO UPDATE SET Count = Count + excluded.Count
+    private static string InsertTopSql(string table, string column) => $"""
+        INSERT INTO {table} (Tier, BucketStart, {column}, Kind, Outcome, Count)
+        VALUES ($tier, $bucket, $value, $kind, $outcome, $count)
+        ON CONFLICT (Tier, BucketStart, {column}, Kind) DO UPDATE SET Count = Count + excluded.Count
         """;
 
     private readonly string _connectionString;
@@ -150,11 +162,16 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
         await ExecuteAsync(connection, $"PRAGMA user_version={SchemaVersion};", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, CancellationToken cancellationToken)
+    /// <summary>As the interface's <c>WriteAsync</c>, without destinations.</summary>
+    public Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, CancellationToken cancellationToken) =>
+        WriteAsync(counts, sources, [], cancellationToken);
+
+    public async Task WriteAsync(IReadOnlyList<TrafficCount> counts, IReadOnlyList<SourceCount> sources, IReadOnlyList<SourceCount> destinations, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(counts);
         ArgumentNullException.ThrowIfNull(sources);
-        if (counts.Count == 0 && sources.Count == 0)
+        ArgumentNullException.ThrowIfNull(destinations);
+        if (counts.Count == 0 && sources.Count == 0 && destinations.Count == 0)
         {
             return;
         }
@@ -190,23 +207,28 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
             }
         }
 
-        if (sources.Count > 0)
+        foreach (var ((table, column), items) in TopTables.Zip([sources, destinations]))
         {
+            if (items.Count == 0)
+            {
+                continue;
+            }
+
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
-            command.CommandText = InsertSourceSql;
+            command.CommandText = InsertTopSql(table, column);
             var tier = command.Parameters.Add("$tier", SqliteType.Integer);
             var bucket = command.Parameters.Add("$bucket", SqliteType.Integer);
-            var source = command.Parameters.Add("$source", SqliteType.Text);
+            var value = command.Parameters.Add("$value", SqliteType.Text);
             var kind = command.Parameters.Add("$kind", SqliteType.Integer);
             var outcome = command.Parameters.Add("$outcome", SqliteType.Integer);
             var count = command.Parameters.Add("$count", SqliteType.Integer);
             await command.PrepareAsync(cancellationToken).ConfigureAwait(false);
             tier.Value = (int)MetricsTier.Minute;
-            foreach (var item in sources)
+            foreach (var item in items)
             {
                 bucket.Value = item.BucketStart;
-                source.Value = item.Source;
+                value.Value = item.Source;
                 kind.Value = (int)item.Kind;
                 outcome.Value = (int)TrafficClassifier.OutcomeOf(item.Kind);
                 count.Value = item.Count;
@@ -215,7 +237,7 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
         }
 
         // Counts for buckets that were rolled up already (a slow request is counted by its start): roll them up again.
-        await ReopenRollupsAsync(connection, transaction, counts, sources, cancellationToken).ConfigureAwait(false);
+        await ReopenRollupsAsync(connection, transaction, counts, [.. sources, .. destinations], cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 

@@ -56,6 +56,26 @@ public sealed class RequestLogReaderTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_fixed_period_shows_only_the_requests_that_started_in_it()
+    {
+        var reader = await WithAsync(Entry(90, "/old"), Entry(50, "/start"), Entry(30, "/middle"), Entry(11, "/before-end"), Entry(10, "/end"), Entry(5, "/after"));
+
+        var filter = new RequestLogFilter { From = Now.AddMinutes(-50), To = Now.AddMinutes(-10) };
+        Assert.Equal(["/before-end", "/middle", "/start"], await PathsAsync(reader, filter));
+        Assert.Equal(["/before-end", "/middle", "/start", "/old"], await PathsAsync(reader, new RequestLogFilter { To = Now.AddMinutes(-10) }));
+        Assert.Empty(await PathsAsync(reader, new RequestLogFilter { To = Now.AddMinutes(-100) }));
+    }
+
+    [Fact]
+    public async Task A_slow_request_written_after_later_ones_is_still_in_its_period()
+    {
+        // Written in completion order: the slow request started first but was logged last.
+        var reader = await WithAsync(Entry(29, "/quick-1"), Entry(28, "/quick-2"), Entry(31, "/slow"));
+
+        Assert.Equal(["/slow"], await PathsAsync(reader, new RequestLogFilter { To = Now.AddMinutes(-30) }));
+    }
+
+    [Fact]
     public async Task Views_select_what_happened()
     {
         var reader = await WithAsync(

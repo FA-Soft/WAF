@@ -317,6 +317,43 @@ public sealed class MetricsRollupTests : IDisposable
     }
 
     [Fact]
+    public async Task Destinations_are_rolled_up_and_removed_like_the_sources()
+    {
+        await _store.InitializeAsync(Ct);
+        var minute = Unix(Start.AddMinutes(-30)) - (Unix(Start.AddMinutes(-30)) % 60);
+        var destinations = Enumerable.Range(0, 150)
+            .Select(i => new SourceCount(minute + (i / 50 * 60), $"www.example.com/probe-{i}", TrafficKind.NoRoute, i < 10 ? 100 : 1))
+            .ToList();
+        await _store.WriteAsync([Count(Start.AddMinutes(-30), 1)], [], destinations, Ct);
+
+        await MaintainAsync(Start.AddDays(1));
+        var hour = await ReadDestinationsAsync(MetricsTier.Hour);
+        Assert.Equal(TrafficCounter.TopSources + 1, hour.Count);
+        Assert.Equal(destinations.Sum(d => d.Count), hour.Sum(d => d.Count));
+
+        await MaintainAsync(Start.AddDays(40));
+        Assert.Empty(await ReadDestinationsAsync(MetricsTier.Minute)); // minutes are kept a week
+        Assert.Equal(destinations.Sum(d => d.Count), (await ReadDestinationsAsync(MetricsTier.Month)).Sum(d => d.Count));
+    }
+
+    private async Task<List<(string Destination, long Count)>> ReadDestinationsAsync(MetricsTier tier)
+    {
+        await using var connection = new SqliteConnection($"Data Source={_store.DatabasePath}");
+        await connection.OpenAsync(Ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT Destination, SUM(Count) FROM DestinationCounts WHERE Tier = $tier GROUP BY Destination";
+        command.Parameters.AddWithValue("$tier", (int)tier);
+        var result = new List<(string, long)>();
+        await using var reader = await command.ExecuteReaderAsync(Ct);
+        while (await reader.ReadAsync(Ct))
+        {
+            result.Add((reader.GetString(0), reader.GetInt64(1)));
+        }
+
+        return result;
+    }
+
+    [Fact]
     public async Task The_status_shows_the_size_and_the_range_of_every_tier()
     {
         var empty = await _store.GetStatusAsync(new MetricsRetention(), Ct);
