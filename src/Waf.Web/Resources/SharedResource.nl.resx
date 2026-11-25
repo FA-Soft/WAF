@@ -117,6 +117,7 @@
   <data name="Added" xml:space="preserve"><value>Toegevoegd</value></data>
   <data name="Added by the gateway" xml:space="preserve"><value>Toegevoegd door de gateway</value></data>
   <data name="Address" xml:space="preserve"><value>Adres</value></data>
+  <data name="Addresses" xml:space="preserve"><value>Adressen</value></data>
   <data name="Adds a rate limit on POST requests to the login path, counted per client IP. A client that sends more attempts per minute than allowed gets 429 until it slows down." xml:space="preserve"><value>Voegt een snelheidslimiet toe op POST-verzoeken naar het aanmeldpad, geteld per client-IP. Een client die meer pogingen per minuut stuurt dan toegestaan, krijgt 429 tot hij vertraagt.</value></data>
   <data name="Adds a rate limit on all requests, counted per client IP (IPv6 per /64 network). People browsing a site stay far below 300 requests per minute; scrapers and floods do not." xml:space="preserve"><value>Voegt een snelheidslimiet toe op alle verzoeken, geteld per client-IP (IPv6 per /64-netwerk). Mensen die een site bekijken, blijven ver onder 300 verzoeken per minuut; scrapers en floods niet.</value></data>
   <data name="Adds a rule that blocks the path for every client IP that is not in your list. Enter your office or VPN addresses. Rules with a lower priority number, such as an IP allow list, still run first." xml:space="preserve"><value>Voegt een regel toe die het pad blokkeert voor elk client-IP dat niet in uw lijst staat. Voer de adressen van uw kantoor of VPN in. Regels met een lager prioriteitsnummer, zoals een IP-toestaanlijst, gaan nog steeds voor.</value></data>
@@ -203,6 +204,8 @@
   <data name="Backups, downloads and cleanup" xml:space="preserve"><value>Back-ups, downloads en opschonen</value></data>
   <data name="Bad" xml:space="preserve"><value>Slecht</value></data>
   <data name="Bad requests" xml:space="preserve"><value>Slechte aanvragen</value></data>
+  <data name="Bad requests per country of their source." xml:space="preserve"><value>Slechte aanvragen per land van hun bron.</value></data>
+  <data name="Bad requests per network: an IPv4 /24 or IPv6 /48, so an attack from many addresses in one network shows as one row." xml:space="preserve"><value>Slechte aanvragen per netwerk: een IPv4 /24 of IPv6 /48, zodat een aanval vanaf veel adressen in één netwerk als één rij verschijnt.</value></data>
   <data name="Bad traffic by kind" xml:space="preserve"><value>Slecht verkeer per soort</value></data>
   <data name="Before" xml:space="preserve"><value>Voor</value></data>
   <data name="Before an address can be registered:" xml:space="preserve"><value>Voordat een adres kan worden geregistreerd:</value></data>
@@ -314,6 +317,9 @@
   <data name="Contact e-mail" xml:space="preserve"><value>Contact-e-mailadres</value></data>
   <data name="Content type" xml:space="preserve"><value>Inhoudstype</value></data>
   <data name="Counted" xml:space="preserve"><value>Geteld</value></data>
+  <data name="Countries" xml:space="preserve"><value>Landen</value></data>
+  <data name="Countries from {0}, on this machine: no address is sent anywhere. Check that file's license for the attribution it asks for." xml:space="preserve"><value>Landen uit {0}, op deze machine: er wordt geen adres verstuurd. Controleer de licentie van dat bestand voor de bronvermelding die het vraagt.</value></data>
+  <data name="Country" xml:space="preserve"><value>Land</value></data>
   <data name="Create a route for {0}" xml:space="preserve"><value>Een route maken voor {0}</value></data>
   <data name="Create a rule for this path" xml:space="preserve"><value>Een regel maken voor dit pad</value></data>
   <data name="Create account and sign in" xml:space="preserve"><value>Account aanmaken en aanmelden</value></data>
@@ -456,6 +462,7 @@
   <data name="Français" xml:space="preserve"><value>Français</value></data>
   <data name="Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate." xml:space="preserve"><value>Gratis certificaten, automatisch aangevraagd en vernieuwd (30 dagen voor ze verlopen). Let's Encrypt controleert of u de hostnaam beheert door een bestand op te halen via gewoon HTTP: de hostnaam moet naar deze gateway wijzen en poort 80 moet bereikbaar zijn vanaf het internet. Wildcard-hostnamen hebben een eigen certificaat nodig.</value></data>
   <data name="From" xml:space="preserve"><value>Vanaf</value></data>
+  <data name="From the Performance page." xml:space="preserve"><value>Vanaf de pagina Prestaties.</value></data>
   <data name="From the request log (request {0})." xml:space="preserve"><value>Uit het verzoekenlogboek (verzoek {0}).</value></data>
   <data name="From the service log of the gateway." xml:space="preserve"><value>Uit het servicelogboek van de gateway.</value></data>
   <data name="Full backup" xml:space="preserve"><value>Volledige back-up</value></data>
@@ -553,6 +560,7 @@
   <data name="Limit" xml:space="preserve"><value>Limiet</value></data>
   <data name="Limit requests per client" xml:space="preserve"><value>Verzoeken per client beperken</value></data>
   <data name="Limits" xml:space="preserve"><value>Grenzen</value></data>
+  <data name="List the sources by" xml:space="preserve"><value>Bronnen tonen per</value></data>
   <data name="Live" xml:space="preserve"><value>Live</value></data>
   <data name="Live, updated every second" xml:space="preserve"><value>Live, elke seconde bijgewerkt</value></data>
   <data name="Load a JSON file exported from this or another gateway. You see exactly what will change before anything is applied, and the import becomes a new version you can roll back." xml:space="preserve"><value>Laad een JSON-bestand dat uit deze of een andere gateway is geëxporteerd. U ziet precies wat er verandert voordat er iets wordt toegepast, en de import wordt een nieuwe versie die u kunt terugdraaien.</value></data>
@@ -591,6 +599,8 @@
   <data name="Nederlands" xml:space="preserve"><value>Nederlands</value></data>
   <data name="Needs JavaScript to update." xml:space="preserve"><value>Heeft JavaScript nodig om bij te werken.</value></data>
   <data name="Needs subdomains and at least 365 days." xml:space="preserve"><value>Vereist subdomeinen en minstens 365 dagen.</value></data>
+  <data name="Network" xml:space="preserve"><value>Netwerk</value></data>
+  <data name="Networks" xml:space="preserve"><value>Netwerken</value></data>
   <data name="New password" xml:space="preserve"><value>Nieuw wachtwoord</value></data>
   <data name="New password again" xml:space="preserve"><value>Nieuw wachtwoord nogmaals</value></data>
   <data name="New recovery codes" xml:space="preserve"><value>Nieuwe herstelcodes</value></data>
@@ -671,6 +681,7 @@
   <data name="One per line: an address such as http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http), or a target and port label such as nas/web (see Targets)." xml:space="preserve"><value>Eén per regel: een adres zoals http://10.0.0.5:8080, https://backend.local:8443 of 10.0.0.5:8080 (http), of een doel met poortlabel zoals nas/web (zie Doelen).</value></data>
   <data name="One-click presets" xml:space="preserve"><value>Voorinstellingen met één klik</value></data>
   <data name="Only a proposal that was not applied can be discarded." xml:space="preserve"><value>Alleen een voorstel dat niet is toegepast, kan worden verworpen.</value></data>
+  <data name="Only bad requests from {0}." xml:space="preserve"><value>Alleen slechte aanvragen van {0}.</value></data>
   <data name="Only bad requests to {0}." xml:space="preserve"><value>Alleen slechte aanvragen naar {0}.</value></data>
   <data name="Only count requests where (optional)" xml:space="preserve"><value>Alleen verzoeken tellen waarbij (optioneel)</value></data>
   <data name="Only for backends you control on a trusted network, e.g. a local IIS with a self-signed certificate." xml:space="preserve"><value>Alleen voor backends die u beheert op een vertrouwd netwerk, bijv. een lokale IIS met een zelfondertekend certificaat.</value></data>
@@ -694,6 +705,8 @@
   <data name="Only your request and a summary of the configuration without secrets are sent." xml:space="preserve"><value>Alleen uw verzoek en een samenvatting van de configuratie zonder geheimen worden verzonden.</value></data>
   <data name="Only your request and this summary of the configuration. Secret values (such as API keys in header conditions) are replaced, and the Let's Encrypt e-mail, certificate files, the request log, accounts and remote access settings are left out. Request bodies, cookies and log content are never sent." xml:space="preserve"><value>Alleen uw verzoek en deze samenvatting van de configuratie. Geheime waarden (zoals API-sleutels in headervoorwaarden) worden vervangen, en het Let's Encrypt-e-mailadres, certificaatbestanden, het verzoekenlogboek, accounts en de instellingen voor toegang op afstand worden weggelaten. Inhoud van verzoeken, cookies en loginhoud worden nooit verzonden.</value></data>
   <data name="Open your authenticator app, add an account and scan this QR code." xml:space="preserve"><value>Open uw authenticator-app, voeg een account toe en scan deze QR-code.</value></data>
+  <data name="Opens a new rate limit for this source; nothing changes until you save." xml:space="preserve"><value>Opent een nieuwe limiet voor deze bron; er verandert niets tot je opslaat.</value></data>
+  <data name="Opens the IP block list with this source added; nothing changes until you save." xml:space="preserve"><value>Opent de IP-blokkeerlijst met deze bron toegevoegd; er verandert niets tot je opslaat.</value></data>
   <data name="Optional: with an API key from Anthropic, a Claude model can help you change the configuration. It only proposes changes; nothing is applied without your review." xml:space="preserve"><value>Optioneel: met een API-sleutel van Anthropic kan een Claude-model u helpen de configuratie te wijzigen. Het stelt alleen wijzigingen voor; er wordt niets toegepast zonder dat u het beoordeelt.</value></data>
   <data name="Or paste the JSON" xml:space="preserve"><value>Of plak de JSON</value></data>
   <data name="Other" xml:space="preserve"><value>Overige</value></data>
@@ -808,6 +821,7 @@
   <data name="Requests for {0}" xml:space="preserve"><value>Verzoeken voor {0}</value></data>
   <data name="Requests for {0} under {1}" xml:space="preserve"><value>Verzoeken voor {0} onder {1}</value></data>
   <data name="Requests from {0} to {1} UTC (from the Performance page)." xml:space="preserve"><value>Aanvragen van {0} tot {1} UTC (vanaf de pagina Prestaties).</value></data>
+  <data name="Requests from {0}, per client. {1}" xml:space="preserve"><value>Aanvragen van {0}, per client. {1}</value></data>
   <data name="Requests it handles will get 404 (or go to another matching route). The deletion is stored as a new configuration version, so it can be undone by restoring the previous version." xml:space="preserve"><value>Verzoeken die ze behandelt, krijgen 404 (of gaan naar een andere passende route). Het verwijderen wordt opgeslagen als nieuwe configuratieversie, dus u kunt het ongedaan maken door de vorige versie terug te zetten.</value></data>
   <data name="Requests per client" xml:space="preserve"><value>Verzoeken per client</value></data>
   <data name="Requests per minute" xml:space="preserve"><value>Verzoeken per minuut</value></data>
@@ -888,6 +902,7 @@
   <data name="Share of the size limit in use" xml:space="preserve"><value>Gebruikt deel van de groottegrens</value></data>
   <data name="Show" xml:space="preserve"><value>Tonen</value></data>
   <data name="Show all destinations" xml:space="preserve"><value>Alle bestemmingen tonen</value></data>
+  <data name="Show all sources" xml:space="preserve"><value>Alle bronnen tonen</value></data>
   <data name="Show as" xml:space="preserve"><value>Tonen als</value></data>
   <data name="Show as configuration" xml:space="preserve"><value>Tonen als configuratie</value></data>
   <data name="Show as table" xml:space="preserve"><value>Als tabel tonen</value></data>
@@ -921,7 +936,7 @@
   <data name="Slow down password guessing: limit login attempts per client IP." xml:space="preserve"><value>Het raden van wachtwoorden vertragen: aanmeldpogingen per client-IP beperken.</value></data>
   <data name="Sources" xml:space="preserve"><value>Bronnen</value></data>
   <data name="Sources and destinations are counted without their route, so the route filter does not apply while they are selected." xml:space="preserve"><value>Bronnen en bestemmingen worden zonder hun route geteld, dus de routefilter geldt niet zolang ze gekozen zijn.</value></data>
-  <data name="Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet." xml:space="preserve"><value>Bronnen worden per minuut opgeslagen, ongeveer een minuut nadat die voorbij is, dus de laatste minuut staat nog niet in deze lijst.</value></data>
+  <data name="Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet. Addresses are kept as long as the request log keeps its entries; networks and countries longer." xml:space="preserve"><value>Bronnen worden per minuut opgeslagen, ongeveer een minuut nadat die voorbij is, dus de laatste minuut staat nog niet in deze lijst. Adressen worden bewaard zolang het aanvraaglogboek zijn regels bewaart; netwerken en landen langer.</value></data>
   <data name="Sources of bad requests, last minute" xml:space="preserve"><value>Bronnen van slechte aanvragen, laatste minuut</value></data>
   <data name="Sources of bad traffic" xml:space="preserve"><value>Bronnen van slecht verkeer</value></data>
   <data name="Spread requests over two servers; a server that fails its health check gets no traffic until it recovers." xml:space="preserve"><value>Verzoeken over twee servers spreiden; een server die zijn statuscontrole niet doorstaat, krijgt geen verkeer tot hij hersteld is.</value></data>

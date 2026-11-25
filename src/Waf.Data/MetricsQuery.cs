@@ -39,8 +39,10 @@ public sealed record TrafficType(TrafficKind Kind, string? Name = null)
 /// <param name="Types">Only these kinds of traffic; empty for all.</param>
 /// <param name="Sources">Only bad traffic from these client IPs; empty for all traffic. Sources are kept per minute and
 /// coarser, without the route and the rule name, so this reads the source counts instead.</param>
-/// <param name="Destinations">Only bad traffic to these destinations (host and path), like <paramref name="Sources"/>;
-/// not together with sources (sources win).</param>
+/// <param name="Destinations">Only bad traffic to these destinations (host and path), like <paramref name="Sources"/>.</param>
+/// <param name="Networks">Only bad traffic from these networks ("203.0.113.0/24").</param>
+/// <param name="Countries">Only bad traffic from these countries (ISO codes).</param>
+/// <remarks>Sources, networks, countries and destinations are separate tables: only one of them filters, in that order.</remarks>
 public sealed record TrafficQuery(
     DateTimeOffset From,
     DateTimeOffset To,
@@ -48,16 +50,29 @@ public sealed record TrafficQuery(
     string? Route = null,
     IReadOnlyList<TrafficType>? Types = null,
     IReadOnlyList<string>? Sources = null,
-    IReadOnlyList<string>? Destinations = null)
+    IReadOnlyList<string>? Destinations = null,
+    IReadOnlyList<string>? Networks = null,
+    IReadOnlyList<string>? Countries = null)
 {
     public IReadOnlyList<TrafficType> TypeFilter => Types ?? [];
 
     public IReadOnlyList<string> SourceFilter => Sources ?? [];
 
-    public IReadOnlyList<string> DestinationFilter => SourceFilter.Count > 0 ? [] : Destinations ?? [];
+    public IReadOnlyList<string> DestinationFilter => TopFilter is { Index: 1 } filter ? filter.Values : [];
 
-    /// <summary>Reads a per-minute table of bad traffic (sources or destinations) instead of the counts.</summary>
-    public bool ByTop => SourceFilter.Count > 0 || DestinationFilter.Count > 0;
+    /// <summary>
+    /// The per-minute table of bad traffic that filters, as its index in the top tables (0 sources, 1 destinations,
+    /// 2 networks, 3 countries) and the values; null when none does.
+    /// </summary>
+    public (int Index, IReadOnlyList<string> Values)? TopFilter =>
+        SourceFilter.Count > 0 ? (0, SourceFilter)
+        : Networks is { Count: > 0 } networks ? (2, networks)
+        : Countries is { Count: > 0 } countries ? (3, countries)
+        : Destinations is { Count: > 0 } destinations ? (1, destinations)
+        : null;
+
+    /// <summary>Reads a per-minute table of bad traffic (sources, destinations, networks, countries) instead of the counts.</summary>
+    public bool ByTop => TopFilter is not null;
 }
 
 /// <summary>One bucket of a traffic series.</summary>
@@ -230,6 +245,22 @@ public sealed partial class SqliteMetricsStore
     public Task<long> ReadSourceTotalAsync(TrafficQuery query, CancellationToken cancellationToken) =>
         ReadTopTotalAsync(query, TopTables[0], cancellationToken);
 
+    /// <summary>The networks (/24, /48) with the most bad requests, like <see cref="ReadTopSourcesAsync"/>.</summary>
+    public Task<List<LiveSourceCount>> ReadTopNetworksAsync(TrafficQuery query, int limit, CancellationToken cancellationToken) =>
+        ReadTopAsync(query, TopTables[2], limit, cancellationToken);
+
+    /// <summary>The countries with the most bad requests, like <see cref="ReadTopSourcesAsync"/>.</summary>
+    public Task<List<LiveSourceCount>> ReadTopCountriesAsync(TrafficQuery query, int limit, CancellationToken cancellationToken) =>
+        ReadTopAsync(query, TopTables[3], limit, cancellationToken);
+
+    /// <summary>All bad requests counted in the networks (with "other").</summary>
+    public Task<long> ReadNetworkTotalAsync(TrafficQuery query, CancellationToken cancellationToken) =>
+        ReadTopTotalAsync(query, TopTables[2], cancellationToken);
+
+    /// <summary>All bad requests counted in the countries (with "other"; requests whose country is unknown are not in it).</summary>
+    public Task<long> ReadCountryTotalAsync(TrafficQuery query, CancellationToken cancellationToken) =>
+        ReadTopTotalAsync(query, TopTables[3], cancellationToken);
+
     /// <summary>All bad requests counted in the destinations (with "other"), like <see cref="ReadSourceTotalAsync"/>.</summary>
     public Task<long> ReadDestinationTotalAsync(TrafficQuery query, CancellationToken cancellationToken) =>
         ReadTopTotalAsync(query, TopTables[1], cancellationToken);
@@ -304,7 +335,8 @@ public sealed partial class SqliteMetricsStore
 
         if (query.ByTop)
         {
-            var ((table, column), values) = query.SourceFilter.Count > 0 ? (TopTables[0], query.SourceFilter) : (TopTables[1], query.DestinationFilter);
+            var (index, values) = query.TopFilter!.Value;
+            var (table, column) = TopTables[index];
             where.Append(" AND ").Append(column).Append(" IN (");
             for (var i = 0; i < values.Count; i++)
             {

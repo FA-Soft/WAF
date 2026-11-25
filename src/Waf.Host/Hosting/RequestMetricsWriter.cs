@@ -23,6 +23,12 @@ public sealed class MetricsOptions
     /// <summary>Most counts waiting in memory (one per second, kind and route). Beyond it, requests are not counted (and that is counted).</summary>
     public int MaxPendingCounts { get; set; } = 100_000;
 
+    /// <summary>
+    /// An IP range file with countries (CSV: start, end, country code; for example DB-IP "IP to Country Lite" or
+    /// IP2Location LITE DB1). Empty: sources have no country. A relative path is relative to the data folder.
+    /// </summary>
+    public string? GeoIpFile { get; set; }
+
     /// <summary>How long each tier (per second, minute, hour, day, week, month) is kept (<c>Gateway:Metrics:Retention</c>).</summary>
     public MetricsRetention Retention { get; set; } = new();
 
@@ -45,6 +51,11 @@ public sealed class MetricsOptions
         if (DatabasePath is { } path && path.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
         {
             errors.Add($"{SectionName}:DatabasePath is not a valid path.");
+        }
+
+        if (GeoIpFile is { } geoIp && geoIp.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+        {
+            errors.Add($"{SectionName}:GeoIpFile is not a valid path.");
         }
 
         errors.AddRange((Retention ?? new MetricsRetention()).Validate($"{SectionName}:Retention"));
@@ -71,6 +82,7 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
 
     private readonly TrafficCounter _counter;
     private readonly FASoft.Waf.Core.Routing.IRouteFailoverMonitor? _failover;
+    private readonly Func<CountryLookup?>? _countries;
     private readonly IMetricsStore _store;
     private readonly MetricsOptions _options;
     private readonly TimeProvider _time;
@@ -86,10 +98,16 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
 
     /// <param name="failover">Which routes run on a failover; recorded as failover periods at every flush.</param>
     public RequestMetricsWriter(
-        IMetricsStore store, MetricsOptions options, TimeProvider time, ILogger<RequestMetricsWriter> logger, FASoft.Waf.Core.Routing.IRouteFailoverMonitor? failover = null)
+        IMetricsStore store,
+        MetricsOptions options,
+        TimeProvider time,
+        ILogger<RequestMetricsWriter> logger,
+        FASoft.Waf.Core.Routing.IRouteFailoverMonitor? failover = null,
+        Func<CountryLookup?>? countries = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        _countries = countries;
         _failover = failover;
         _store = store;
         _options = options;
@@ -115,7 +133,9 @@ public sealed partial class RequestMetricsWriter : BackgroundService, IRequestMe
         ArgumentNullException.ThrowIfNull(entry);
 
         var (kind, name) = TrafficClassifier.Classify(entry, failed);
-        if (_counter.Add(entry.Timestamp, kind, name, entry.RouteName, entry.ClientIp, TrafficClassifier.Destination(entry)))
+        // The country only for bad requests: a lookup costs a little, and only bad traffic is counted by source.
+        var country = TrafficClassifier.OutcomeOf(kind) == TrafficOutcome.Bad ? _countries?.Invoke()?.Find(entry.ClientIp) : null;
+        if (_counter.Add(entry.Timestamp, kind, name, entry.RouteName, entry.ClientIp, TrafficClassifier.Destination(entry), country))
         {
             Interlocked.Increment(ref _counted);
         }

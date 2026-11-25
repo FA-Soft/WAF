@@ -87,6 +87,9 @@ public interface IMetricsHistory
 
     /// <summary>How long each tier is kept (host settings).</summary>
     MetricsRetention Retention { get; }
+
+    /// <summary>The country database's file name, for its attribution; null without one (then countries are not shown).</summary>
+    string? CountrySource { get; }
 }
 
 /// <summary>Traffic history that is switched off.</summary>
@@ -101,4 +104,6 @@ public sealed class DisabledMetricsHistory : IMetricsHistory
     public SqliteMetricsStore? Store => null;
 
     public MetricsRetention Retention { get; } = new();
+
+    public string? CountrySource => null;
 }

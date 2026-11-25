@@ -414,7 +414,7 @@ Besides the request log, every public request is **counted per second** for the 
 | **Bad** | blocked by a rule (per rule); blocked by attack detection (per category); rate limited (per limit); refused because the firewall was unavailable (fail-closed); no route (404) |
 | **Failed** | not the visitor's fault: no backend (503), backend error (502), backend timeout (504), gateway error (500) |
 
-Per second, the counts are kept per kind, rule/category/limit and route. For bad requests the **source** (client IP, as resolved with the trusted proxies) and the **requested destination** (host name and path, without the query string, e.g. `www.example.com/wp-login.php`) are kept per minute, each as the 100 with the most bad requests in that minute plus "other", so an attack from many addresses or a scan of many paths cannot blow up the database (client IPs and the paths of bad requests are the only personal data that can be in `metrics.db`; no query strings or headers are stored). Each request is counted in the second it arrived (like the request log's timestamp), so the counts per second match the request log.
+Per second, the counts are kept per kind, rule/category/limit and route. For bad requests the **source** (client IP, as resolved with the trusted proxies) and the **requested destination** (host name and path, without the query string, e.g. `www.example.com/wp-login.php`) are kept per minute, each as the 100 with the most bad requests in that minute plus "other", so an attack from many addresses or a scan of many paths cannot blow up the database (client IPs and the paths of bad requests are the only personal data that can be in `metrics.db`; no query strings or headers are stored). Each request is counted in the second it arrived (like the request log's timestamp), so the counts per second match the request log. Bad requests are also counted per minute by the **network** of their source (IPv4 /24, IPv6 /48), so an attack from many addresses in one network is one row even when its addresses do not make the top 100, and, with a country file, by **country**. **Client IPs are kept no longer than the request log keeps its entries** (its age limit on the Log retention page); after that only networks, countries and the rest remain.
 
 Counting never slows requests down: a request only increments a counter in memory (lock-free). A background writer stores the completed seconds every few seconds in one transaction (SQLite, write-ahead logging), so an SD card is not written for every request. When too many counts are waiting or storing fails, counts are **dropped and counted**; the dashboard's **Traffic counts** card shows how many, and a warning is logged at most once a minute. On shutdown everything counted is written; after a crash or power failure, at most the last flush interval is lost. `metrics.db` is runtime data, like `events.db`: it is not part of configuration versions, exports or backups. Host settings (in `appsettings.json`, not part of the configuration versions):
 
@@ -424,10 +424,13 @@ Counting never slows requests down: a request only increments a counter in memor
     "Enabled": true,               // false: no traffic counts at all
     "DatabasePath": "",            // empty: metrics.db in the data folder; a relative path is relative to it
     "FlushIntervalSeconds": 5,     // 1 to 60: how often counts are written
-    "MaxPendingCounts": 100000     // counts that may wait in memory (1000 to 10,000,000)
+    "MaxPendingCounts": 100000,    // counts that may wait in memory (1000 to 10,000,000)
+    "GeoIpFile": ""                // optional: an IP range file with countries (see below); relative to the data folder
   }
 }
 ```
+
+**Countries.** Set `Gateway:Metrics:GeoIpFile` to an IP range file with countries that you download yourself: a CSV with one range per line (start, end, two-letter country code), as [DB-IP "IP to Country Lite"](https://db-ip.com/db/download/ip-to-country-lite) (CC BY 4.0, which asks for a link to DB-IP) and IP2Location LITE DB1 (CSV) publish them; IPv4 and IPv6 are read, addresses as text or as numbers. The file is read in the background at start (a restart reads a new one); the lookup happens on this machine only, so no address is sent anywhere. Without a file, the page does not offer countries.
 
 **Live numbers.** While a dashboard is open, the gateway pushes the numbers of the last second to it every second over SignalR (`/hubs/traffic` on the admin listener only): requests in total, good, bad and failed, per kind, and the addresses with the most bad requests in the last minute. A view can be narrowed to one route. The hub uses WebSockets, falling back to Server-Sent Events and long polling. It is only for signed-in admins (also through remote access) and refuses requests from other sites. A connection is closed as soon as its session ends: idle timeout, the 8-hour maximum, or "sign out other sessions" or a password change. The browser client (`@microsoft/signalr`) is served by the gateway itself, so the Content-Security-Policy stays `script-src 'self'; connect-src 'self'`. The page reconnects by itself after a network break or a restart. With no dashboard open, nothing is counted for it and no snapshots are built. With dashboards open, one snapshot a second is built per view, not per viewer.
 
@@ -710,23 +713,6 @@ tests/Waf.LoadTests/bin/Release/net11.0/waf-loadtest suite --gateway "$PWD/artif
 **Security checks.** Every build runs all security rules of the .NET analyzers (as errors) and a NuGet audit of direct and transitive packages (high and critical advisories fail the build). See [docs/security-review.md](docs/security-review.md).
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) builds and tests every push to `main` and every pull request on Windows and Ubuntu, then publishes self-contained single-file builds for `win-x64` and `linux-arm64` with the publish profiles as a smoke check. A *Security scan* job reports vulnerable and deprecated packages and checks the installer scripts with ShellCheck and PSScriptAnalyzer; a *Load test* job runs `waf-loadtest` against the `linux-x64` package and puts the report on the run's summary page. Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) proposes package and action updates weekly. Each run's summary page shows a test report per OS (passed/failed/skipped per test assembly, failure details and code coverage), and failed tests appear as annotations. Test results (TRX, Cobertura coverage) and the builds are also uploaded as workflow artifacts.
-
-## Development milestones
-
-The first release completes all ten milestones:
-
-| Milestone | Scope |
-|---|---|
-| M1 | Solution skeleton, CI on Windows and Linux, static proxy routing |
-| M2 | Rule engine, middleware, fail-closed behavior |
-| M3 | Persistence, hot reload, last-known-good configuration |
-| M4 | Web UI for rules and routes, sample library, import/export/backup |
-| M5 | Logging, log viewer, log-to-route flow, retention |
-| M6 | Authentication, 2FA, audit log, local admin, `wafctl` |
-| M7 | TLS (own certificates and Let's Encrypt), remote admin URL registration |
-| M8 | AI configuration assistant |
-| M9 | Service installers, publish profiles, Raspberry Pi tuning |
-| M10 | Hardening, load tests on desktop and Pi, documentation |
 
 ## Security notes
 

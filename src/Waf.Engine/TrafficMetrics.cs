@@ -215,6 +215,32 @@ public static class TrafficClassifier
         return destination.Length <= MaxDestinationLength ? destination : destination[..MaxDestinationLength];
     }
 
+    /// <summary>
+    /// The network of a client IP: the /24 of an IPv4 address ("203.0.113.0/24"), the /48 of an IPv6 address
+    /// ("2001:db8:1::/48"); null when it is not an IP address.
+    /// </summary>
+    public static string? Network(string? clientIp)
+    {
+        if (!System.Net.IPAddress.TryParse(clientIp, out var address))
+        {
+            return null;
+        }
+
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
+        var bytes = address.GetAddressBytes();
+        var (keep, prefix) = bytes.Length == 4 ? (3, 24) : (6, 48);
+        for (var i = keep; i < bytes.Length; i++)
+        {
+            bytes[i] = 0;
+        }
+
+        return $"{new System.Net.IPAddress(bytes)}/{prefix}";
+    }
+
     /// <summary>A rule, limit or route name as stored: empty for none, cut at <see cref="MaxNameLength"/>.</summary>
     public static string Name(string? name) =>
         string.IsNullOrEmpty(name) ? string.Empty : name.Length <= MaxNameLength ? name : name[..MaxNameLength];
@@ -244,6 +270,8 @@ public sealed class TrafficCounter
     private readonly ConcurrentDictionary<CountKey, Cell> _counts = new();
     private readonly ConcurrentDictionary<SourceKey, Cell> _sources = new();
     private readonly ConcurrentDictionary<SourceKey, Cell> _destinations = new();
+    private readonly ConcurrentDictionary<SourceKey, Cell> _networks = new();
+    private readonly ConcurrentDictionary<SourceKey, Cell> _countries = new();
     private readonly ConcurrentDictionary<LatencyKey, Cell> _latencies = new();
     private readonly ConcurrentDictionary<BackendKey, Cell> _backends = new();
     private readonly int _maxCells;
@@ -251,6 +279,8 @@ public sealed class TrafficCounter
     private int _countCells;
     private int _sourceCells;
     private int _destinationCells;
+    private int _networkCells;
+    private int _countryCells;
     private int _latencyCells;
     private int _backendCells;
 
@@ -267,6 +297,7 @@ public sealed class TrafficCounter
     /// <summary>Counts waiting in memory.</summary>
     public int Pending =>
         Volatile.Read(ref _countCells) + Volatile.Read(ref _sourceCells) + Volatile.Read(ref _destinationCells)
+        + Volatile.Read(ref _networkCells) + Volatile.Read(ref _countryCells)
         + Volatile.Read(ref _latencyCells) + Volatile.Read(ref _backendCells);
 
     /// <summary>
@@ -299,7 +330,8 @@ public sealed class TrafficCounter
     /// store is not keeping up).
     /// </summary>
     /// <param name="destination">The requested host and path (<see cref="TrafficClassifier.Destination"/>), kept for bad requests like the source.</param>
-    public bool Add(DateTimeOffset timestamp, TrafficKind kind, string name, string? route, string? source, string? destination = null)
+    /// <param name="country">The source's country (ISO code), when a country database is configured.</param>
+    public bool Add(DateTimeOffset timestamp, TrafficKind kind, string name, string? route, string? source, string? destination = null, string? country = null)
     {
         ArgumentNullException.ThrowIfNull(name);
 
@@ -316,6 +348,20 @@ public sealed class TrafficCounter
             {
                 // Many addresses at once (a distributed attack): the request is still counted, as "other".
                 Increment(_sources, new SourceKey(minute, OtherSource, kind), ref _sourceCells, int.MaxValue);
+            }
+        }
+
+        if (TrafficClassifier.OutcomeOf(kind) == TrafficOutcome.Bad)
+        {
+            var minute = second - (second % 60);
+            if (TrafficClassifier.Network(source) is { } network)
+            {
+                AddTop(_networks, new SourceKey(minute, network, kind), ref _networkCells);
+            }
+
+            if (country is not null)
+            {
+                AddTop(_countries, new SourceKey(minute, country, kind), ref _countryCells);
             }
         }
 
@@ -387,7 +433,34 @@ public sealed class TrafficCounter
             }
         }
 
-        return new TrafficTake(counts, LimitSources(sources, TopSources), LimitSources(destinations, TopSources), latencies, backends);
+        return new TrafficTake(counts, LimitSources(sources, TopSources), LimitSources(destinations, TopSources), latencies, backends)
+        {
+            Networks = LimitSources(TakeTop(_networks, ref _networkCells, all, sourceCutoff), TopSources),
+            Countries = LimitSources(TakeTop(_countries, ref _countryCells, all, sourceCutoff), TopSources),
+        };
+    }
+
+    /// <summary>Counts a bad request in a per-minute top table; beyond the memory limit as "other".</summary>
+    private void AddTop(ConcurrentDictionary<SourceKey, Cell> cells, SourceKey key, ref int size)
+    {
+        if (!Increment(cells, key, ref size, _maxSourceCells))
+        {
+            Increment(cells, key with { Source = OtherSource }, ref size, int.MaxValue);
+        }
+    }
+
+    private static List<SourceCount> TakeTop(ConcurrentDictionary<SourceKey, Cell> cells, ref int size, bool all, long cutoff)
+    {
+        var taken = new List<SourceCount>();
+        foreach (var key in cells.Keys)
+        {
+            if ((all || key.Minute + 60 <= cutoff) && Take(cells, key, ref size) is { } value)
+            {
+                taken.Add(new SourceCount(key.Minute, key.Source, key.Kind, value));
+            }
+        }
+
+        return taken;
     }
 
     /// <summary>

@@ -117,6 +117,7 @@
   <data name="Added" xml:space="preserve"><value>Added</value></data>
   <data name="Added by the gateway" xml:space="preserve"><value>Added by the gateway</value></data>
   <data name="Address" xml:space="preserve"><value>Address</value></data>
+  <data name="Addresses" xml:space="preserve"><value>Addresses</value></data>
   <data name="Adds a rate limit on POST requests to the login path, counted per client IP. A client that sends more attempts per minute than allowed gets 429 until it slows down." xml:space="preserve"><value>Adds a rate limit on POST requests to the login path, counted per client IP. A client that sends more attempts per minute than allowed gets 429 until it slows down.</value></data>
   <data name="Adds a rate limit on all requests, counted per client IP (IPv6 per /64 network). People browsing a site stay far below 300 requests per minute; scrapers and floods do not." xml:space="preserve"><value>Adds a rate limit on all requests, counted per client IP (IPv6 per /64 network). People browsing a site stay far below 300 requests per minute; scrapers and floods do not.</value></data>
   <data name="Adds a rule that blocks the path for every client IP that is not in your list. Enter your office or VPN addresses. Rules with a lower priority number, such as an IP allow list, still run first." xml:space="preserve"><value>Adds a rule that blocks the path for every client IP that is not in your list. Enter your office or VPN addresses. Rules with a lower priority number, such as an IP allow list, still run first.</value></data>
@@ -203,6 +204,8 @@
   <data name="Backups, downloads and cleanup" xml:space="preserve"><value>Backups, downloads and cleanup</value></data>
   <data name="Bad" xml:space="preserve"><value>Bad</value></data>
   <data name="Bad requests" xml:space="preserve"><value>Bad requests</value></data>
+  <data name="Bad requests per country of their source." xml:space="preserve"><value>Bad requests per country of their source.</value></data>
+  <data name="Bad requests per network: an IPv4 /24 or IPv6 /48, so an attack from many addresses in one network shows as one row." xml:space="preserve"><value>Bad requests per network: an IPv4 /24 or IPv6 /48, so an attack from many addresses in one network shows as one row.</value></data>
   <data name="Bad traffic by kind" xml:space="preserve"><value>Bad traffic by kind</value></data>
   <data name="Before" xml:space="preserve"><value>Before</value></data>
   <data name="Before an address can be registered:" xml:space="preserve"><value>Before an address can be registered:</value></data>
@@ -314,6 +317,9 @@
   <data name="Contact e-mail" xml:space="preserve"><value>Contact e-mail</value></data>
   <data name="Content type" xml:space="preserve"><value>Content type</value></data>
   <data name="Counted" xml:space="preserve"><value>Counted</value></data>
+  <data name="Countries" xml:space="preserve"><value>Countries</value></data>
+  <data name="Countries from {0}, on this machine: no address is sent anywhere. Check that file's license for the attribution it asks for." xml:space="preserve"><value>Countries from {0}, on this machine: no address is sent anywhere. Check that file's license for the attribution it asks for.</value></data>
+  <data name="Country" xml:space="preserve"><value>Country</value></data>
   <data name="Create a route for {0}" xml:space="preserve"><value>Create a route for {0}</value></data>
   <data name="Create a rule for this path" xml:space="preserve"><value>Create a rule for this path</value></data>
   <data name="Create account and sign in" xml:space="preserve"><value>Create account and sign in</value></data>
@@ -456,6 +462,7 @@
   <data name="Français" xml:space="preserve"><value>Français</value></data>
   <data name="Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate." xml:space="preserve"><value>Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate.</value></data>
   <data name="From" xml:space="preserve"><value>From</value></data>
+  <data name="From the Performance page." xml:space="preserve"><value>From the Performance page.</value></data>
   <data name="From the request log (request {0})." xml:space="preserve"><value>From the request log (request {0}).</value></data>
   <data name="From the service log of the gateway." xml:space="preserve"><value>From the service log of the gateway.</value></data>
   <data name="Full backup" xml:space="preserve"><value>Full backup</value></data>
@@ -553,6 +560,7 @@
   <data name="Limit" xml:space="preserve"><value>Limit</value></data>
   <data name="Limit requests per client" xml:space="preserve"><value>Limit requests per client</value></data>
   <data name="Limits" xml:space="preserve"><value>Limits</value></data>
+  <data name="List the sources by" xml:space="preserve"><value>List the sources by</value></data>
   <data name="Live" xml:space="preserve"><value>Live</value></data>
   <data name="Live, updated every second" xml:space="preserve"><value>Live, updated every second</value></data>
   <data name="Load a JSON file exported from this or another gateway. You see exactly what will change before anything is applied, and the import becomes a new version you can roll back." xml:space="preserve"><value>Load a JSON file exported from this or another gateway. You see exactly what will change before anything is applied, and the import becomes a new version you can roll back.</value></data>
@@ -591,6 +599,8 @@
   <data name="Nederlands" xml:space="preserve"><value>Nederlands</value></data>
   <data name="Needs JavaScript to update." xml:space="preserve"><value>Needs JavaScript to update.</value></data>
   <data name="Needs subdomains and at least 365 days." xml:space="preserve"><value>Needs subdomains and at least 365 days.</value></data>
+  <data name="Network" xml:space="preserve"><value>Network</value></data>
+  <data name="Networks" xml:space="preserve"><value>Networks</value></data>
   <data name="New password" xml:space="preserve"><value>New password</value></data>
   <data name="New password again" xml:space="preserve"><value>New password again</value></data>
   <data name="New recovery codes" xml:space="preserve"><value>New recovery codes</value></data>
@@ -671,6 +681,7 @@
   <data name="One per line: an address such as http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http), or a target and port label such as nas/web (see Targets)." xml:space="preserve"><value>One per line: an address such as http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http), or a target and port label such as nas/web (see Targets).</value></data>
   <data name="One-click presets" xml:space="preserve"><value>One-click presets</value></data>
   <data name="Only a proposal that was not applied can be discarded." xml:space="preserve"><value>Only a proposal that was not applied can be discarded.</value></data>
+  <data name="Only bad requests from {0}." xml:space="preserve"><value>Only bad requests from {0}.</value></data>
   <data name="Only bad requests to {0}." xml:space="preserve"><value>Only bad requests to {0}.</value></data>
   <data name="Only count requests where (optional)" xml:space="preserve"><value>Only count requests where (optional)</value></data>
   <data name="Only for backends you control on a trusted network, e.g. a local IIS with a self-signed certificate." xml:space="preserve"><value>Only for backends you control on a trusted network, e.g. a local IIS with a self-signed certificate.</value></data>
@@ -694,6 +705,8 @@
   <data name="Only your request and a summary of the configuration without secrets are sent." xml:space="preserve"><value>Only your request and a summary of the configuration without secrets are sent.</value></data>
   <data name="Only your request and this summary of the configuration. Secret values (such as API keys in header conditions) are replaced, and the Let's Encrypt e-mail, certificate files, the request log, accounts and remote access settings are left out. Request bodies, cookies and log content are never sent." xml:space="preserve"><value>Only your request and this summary of the configuration. Secret values (such as API keys in header conditions) are replaced, and the Let's Encrypt e-mail, certificate files, the request log, accounts and remote access settings are left out. Request bodies, cookies and log content are never sent.</value></data>
   <data name="Open your authenticator app, add an account and scan this QR code." xml:space="preserve"><value>Open your authenticator app, add an account and scan this QR code.</value></data>
+  <data name="Opens a new rate limit for this source; nothing changes until you save." xml:space="preserve"><value>Opens a new rate limit for this source; nothing changes until you save.</value></data>
+  <data name="Opens the IP block list with this source added; nothing changes until you save." xml:space="preserve"><value>Opens the IP block list with this source added; nothing changes until you save.</value></data>
   <data name="Optional: with an API key from Anthropic, a Claude model can help you change the configuration. It only proposes changes; nothing is applied without your review." xml:space="preserve"><value>Optional: with an API key from Anthropic, a Claude model can help you change the configuration. It only proposes changes; nothing is applied without your review.</value></data>
   <data name="Or paste the JSON" xml:space="preserve"><value>Or paste the JSON</value></data>
   <data name="Other" xml:space="preserve"><value>Other</value></data>
@@ -808,6 +821,7 @@
   <data name="Requests for {0}" xml:space="preserve"><value>Requests for {0}</value></data>
   <data name="Requests for {0} under {1}" xml:space="preserve"><value>Requests for {0} under {1}</value></data>
   <data name="Requests from {0} to {1} UTC (from the Performance page)." xml:space="preserve"><value>Requests from {0} to {1} UTC (from the Performance page).</value></data>
+  <data name="Requests from {0}, per client. {1}" xml:space="preserve"><value>Requests from {0}, per client. {1}</value></data>
   <data name="Requests it handles will get 404 (or go to another matching route). The deletion is stored as a new configuration version, so it can be undone by restoring the previous version." xml:space="preserve"><value>Requests it handles will get 404 (or go to another matching route). The deletion is stored as a new configuration version, so it can be undone by restoring the previous version.</value></data>
   <data name="Requests per client" xml:space="preserve"><value>Requests per client</value></data>
   <data name="Requests per minute" xml:space="preserve"><value>Requests per minute</value></data>
@@ -888,6 +902,7 @@
   <data name="Share of the size limit in use" xml:space="preserve"><value>Share of the size limit in use</value></data>
   <data name="Show" xml:space="preserve"><value>Show</value></data>
   <data name="Show all destinations" xml:space="preserve"><value>Show all destinations</value></data>
+  <data name="Show all sources" xml:space="preserve"><value>Show all sources</value></data>
   <data name="Show as" xml:space="preserve"><value>Show as</value></data>
   <data name="Show as configuration" xml:space="preserve"><value>Show as configuration</value></data>
   <data name="Show as table" xml:space="preserve"><value>Show as table</value></data>
@@ -921,7 +936,7 @@
   <data name="Slow down password guessing: limit login attempts per client IP." xml:space="preserve"><value>Slow down password guessing: limit login attempts per client IP.</value></data>
   <data name="Sources" xml:space="preserve"><value>Sources</value></data>
   <data name="Sources and destinations are counted without their route, so the route filter does not apply while they are selected." xml:space="preserve"><value>Sources and destinations are counted without their route, so the route filter does not apply while they are selected.</value></data>
-  <data name="Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet." xml:space="preserve"><value>Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet.</value></data>
+  <data name="Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet. Addresses are kept as long as the request log keeps its entries; networks and countries longer." xml:space="preserve"><value>Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet. Addresses are kept as long as the request log keeps its entries; networks and countries longer.</value></data>
   <data name="Sources of bad requests, last minute" xml:space="preserve"><value>Sources of bad requests, last minute</value></data>
   <data name="Sources of bad traffic" xml:space="preserve"><value>Sources of bad traffic</value></data>
   <data name="Spread requests over two servers; a server that fails its health check gets no traffic until it recovers." xml:space="preserve"><value>Spread requests over two servers; a server that fails its health check gets no traffic until it recovers.</value></data>

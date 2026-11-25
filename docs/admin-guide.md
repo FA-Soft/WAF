@@ -237,7 +237,7 @@ The **Performance** page shows how much traffic the gateway handles, and how muc
   it then loads the finest data still kept for it. **Compare with the previous period** adds the period before as a
   dashed line, for example this week against last week.
 - **Bad traffic by kind** (per rule, attack category, rate limit, fail-closed, no route), **sources of bad
-  traffic** (client IPs) and the **requested destinations** (host and path, for example a scanner probing
+  traffic** (by address, by network, or with a country file by country) and the **requested destinations** (host and path, for example a scanner probing
   `www.example.com/wp-login.php`), with their share. **Only this** narrows the page to one kind, source or
   destination. Each is shown as a pie chart (the 7 largest parts and "other", each named with its count and
   share); **Chart / Table** switches all three to the table and back, and the page remembers your choice in this
@@ -246,6 +246,10 @@ The **Performance** page shows how much traffic the gateway handles, and how muc
   bookmarked or shared.
 - **Every number links to the request log**, showing the same requests (same period, route and kind), as long as
   the request log still has them (see Log retention).
+- **Act on a source**: next to an address or a network, **Block** opens your IP block list (or a new one) with it
+  added, and **Rate limit** opens a new rate limit for it. Nothing changes until you save, and saving creates a
+  configuration version you can roll back, like every change. Addresses are kept as long as the request log keeps
+  its entries; networks and countries longer.
 - **Response times**: the median, the 95th and the 99th percentile over the period and over time, and what the
   gateway itself adds (WAF, routing, logging) apart from the backend's time. Kept per minute and coarser, accurate to
   about 12 %. Choose a route to see only its response times.

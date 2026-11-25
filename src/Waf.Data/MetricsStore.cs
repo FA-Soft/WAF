@@ -52,12 +52,13 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
     /// <summary>Schema version written to <c>PRAGMA user_version</c>.</summary>
     /// <remarks>
     /// 1: counts and sources (step 45). 2: rollup state and peaks (step 46). 3: requested destinations (step 48).
-    /// 4: response times, backends and failover periods (step 49).
+    /// 4: response times, backends and failover periods (step 49). 5: networks and countries of sources (step 50).
     /// </remarks>
-    public const int SchemaVersion = 4;
+    public const int SchemaVersion = 5;
 
     /// <summary>The per-minute tables of bad traffic: (table, column) of the sources and of the requested destinations.</summary>
-    internal static readonly (string Table, string Column)[] TopTables = [("SourceCounts", "Source"), ("DestinationCounts", "Destination")];
+    internal static readonly (string Table, string Column)[] TopTables =
+        [("SourceCounts", "Source"), ("DestinationCounts", "Destination"), ("NetworkCounts", "Network"), ("CountryCounts", "Country")];
 
     private const string CreateSql = """
         CREATE TABLE IF NOT EXISTS TrafficCounts (
@@ -96,6 +97,24 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
             Bad INTEGER NOT NULL,
             Failed INTEGER NOT NULL,
             PRIMARY KEY (Tier, BucketStart)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS NetworkCounts (
+            Tier INTEGER NOT NULL,
+            BucketStart INTEGER NOT NULL,
+            Network TEXT NOT NULL,
+            Kind INTEGER NOT NULL,
+            Outcome INTEGER NOT NULL,
+            Count INTEGER NOT NULL,
+            PRIMARY KEY (Tier, BucketStart, Network, Kind)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS CountryCounts (
+            Tier INTEGER NOT NULL,
+            BucketStart INTEGER NOT NULL,
+            Country TEXT NOT NULL,
+            Kind INTEGER NOT NULL,
+            Outcome INTEGER NOT NULL,
+            Count INTEGER NOT NULL,
+            PRIMARY KEY (Tier, BucketStart, Country, Kind)
         ) WITHOUT ROWID;
         CREATE TABLE IF NOT EXISTS LatencyCounts (
             Tier INTEGER NOT NULL,
@@ -251,7 +270,7 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
             }
         }
 
-        foreach (var ((table, column), items) in TopTables.Zip([sources, destinations]))
+        foreach (var ((table, column), items) in TopTables.Zip([sources, destinations, take.Networks, take.Countries]))
         {
             if (items.Count == 0)
             {
@@ -284,6 +303,7 @@ public sealed partial class SqliteMetricsStore : IMetricsStore
 
         // Counts for buckets that were rolled up already (a slow request is counted by its start): roll them up again.
         IEnumerable<long> minutes = [.. sources.Select(s => s.BucketStart), .. destinations.Select(d => d.BucketStart),
+            .. take.Networks.Select(n => n.BucketStart), .. take.Countries.Select(c => c.BucketStart),
             .. take.Latencies.Select(l => l.BucketStart), .. take.Backends.Select(b => b.BucketStart)];
         await ReopenRollupsAsync(connection, transaction, counts, minutes, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);

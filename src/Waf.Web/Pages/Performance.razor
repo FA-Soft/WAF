@@ -111,9 +111,16 @@ else if (_report is { } report)
         </details>
     }
 
-    @if ((_query.Sources.Count > 0 || _query.Destinations.Count > 0) && _query.Route is not null)
+    @if (_query.HasSourceFilter && _query.Route is not null)
     {
         <div class="alert alert-info" role="status">@T("Sources and destinations are counted without their route, so the route filter does not apply while they are selected.")</div>
+    }
+    @if (_query.Networks.Count > 0 || _query.Countries.Count > 0)
+    {
+        <div class="alert alert-info" role="status">
+            @T("Only bad requests from {0}.", string.Join(", ", _query.Networks.Concat(_query.Countries.Select(CountryName))))
+            <a href="@((_query with { Networks = [], Countries = [] }).Url())">@T("Show all sources")</a>
+        </div>
     }
     @if (_query.Destinations.Count > 0)
     {
@@ -355,30 +362,67 @@ else if (_report is { } report)
 
         <section aria-labelledby="sources-heading">
             <h2 id="sources-heading">@T("Sources of bad traffic")</h2>
-            <p class="muted">@T("Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet.")</p>
-            @if (report.Sources.Count == 0)
+            <nav class="source-levels" aria-label="@T("List the sources by")">
+                <a href="@((_query with { SourcesBy = SourceLevel.Address }).Url())" aria-current="@(_query.SourcesBy == SourceLevel.Address ? "page" : null)">@T("Addresses")</a>
+                <a href="@((_query with { SourcesBy = SourceLevel.Network }).Url())" aria-current="@(_query.SourcesBy == SourceLevel.Network ? "page" : null)">@T("Networks")</a>
+                @if (History.CountrySource is not null)
+                {
+                    <a href="@((_query with { SourcesBy = SourceLevel.Country }).Url())" aria-current="@(_query.SourcesBy == SourceLevel.Country ? "page" : null)">@T("Countries")</a>
+                }
+            </nav>
+            <p class="muted">@SourceNote</p>
+            @{
+                var level = _query.SourcesBy == SourceLevel.Country && History.CountrySource is null ? SourceLevel.Address : _query.SourcesBy;
+                var (sourceRows, total) = level switch
+                {
+                    SourceLevel.Network => (report.TopNetworks, report.NetworkTotal),
+                    SourceLevel.Country => (report.TopCountries, report.CountryTotal),
+                    _ => (report.Sources, report.SourceTotal),
+                };
+            }
+            @if (sourceRows.Count == 0)
             {
                 <p class="muted">@T("No sources in this period (sources are kept per minute and coarser).")</p>
             }
             else
             {
                 <div class="table-scroll">
-                    <table data-pie data-total="@report.SourceTotal">
-                        <thead><tr><th scope="col">@T("Client IP")</th><th scope="col">@T("Bad requests")</th><th scope="col">@T("Share")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr></thead>
+                    <table data-pie data-total="@total">
+                        <thead><tr><th scope="col">@(level switch { SourceLevel.Network => T("Network"), SourceLevel.Country => T("Country"), _ => T("Client IP") })</th><th scope="col">@T("Bad requests")</th><th scope="col">@T("Share")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr></thead>
                         <tbody>
-                            @{ var badTotal = Math.Max(1, report.SourceTotal); }
-                            @foreach (var source in report.Sources)
+                            @{ var badTotal = Math.Max(1, total); }
+                            @foreach (var row in sourceRows)
                             {
-                                <tr data-count="@source.Count">
-                                    <th scope="row"><code>@source.Source</code></th>
-                                    <td>@Number(source.Count, PerformanceText.LogUrl(report.From, report.To, _oldestLogged, null, null, source.Source))</td>
-                                    <td>@(((double)source.Count / badTotal).ToString("P1", CultureInfo.CurrentCulture))</td>
-                                    <td>@if (!_query.IsLive) { <a href="@_query.WithSource(source.Source).Url()">@T("Only this")</a> }</td>
+                                var logUrl = level switch
+                                {
+                                    SourceLevel.Address => PerformanceText.LogUrl(report.From, report.To, _oldestLogged, null, null, row.Source),
+                                    SourceLevel.Network => PerformanceText.LogUrl(report.From, report.To, _oldestLogged, null, null, null, null, row.Source),
+                                    _ => null,
+                                };
+                                <tr data-count="@row.Count">
+                                    <th scope="row">@if (level == SourceLevel.Country) { @CountryName(row.Source) } else { <code>@row.Source</code> }</th>
+                                    <td>@Number(row.Count, logUrl)</td>
+                                    <td>@(((double)row.Count / badTotal).ToString("P1", CultureInfo.CurrentCulture))</td>
+                                    <td class="source-actions">
+                                        @if (!_query.IsLive)
+                                        {
+                                            <a href="@((level switch { SourceLevel.Network => _query.WithNetwork(row.Source), SourceLevel.Country => _query.WithCountry(row.Source), _ => _query.WithSource(row.Source) }).Url())">@T("Only this")</a>
+                                        }
+                                        @if (level != SourceLevel.Country)
+                                        {
+                                            <a href="@BlockUrl(row.Source)" title="@T("Opens the IP block list with this source added; nothing changes until you save.")">@T("Block")</a>
+                                            <a href="@($"rate-limits/new?source={Uri.EscapeDataString(row.Source)}")" title="@T("Opens a new rate limit for this source; nothing changes until you save.")">@T("Rate limit")</a>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
+                @if (level == SourceLevel.Country)
+                {
+                    <p class="muted">@T("Countries from {0}, on this machine: no address is sent anywhere. Check that file's license for the attribution it asks for.", History.CountrySource!)</p>
+                }
             }
         </section>
     </div>
@@ -438,13 +482,41 @@ else if (_report is { } report)
     private List<TrafficType> _typeChoices = [];
     private DateTimeOffset? _oldestLogged;
 
-    private string? Route => _query.Sources.Count > 0 || _query.Destinations.Count > 0 ? null : _query.Route;
+    private string? Route => _query.HasSourceFilter ? null : _query.Route;
+
+    private string? _blockList;
+
+    /// <summary>The IP block list with the source added (an existing list, or a new one); saving creates a configuration version.</summary>
+    private string BlockUrl(string source) => _blockList is { } list
+        ? $"rules/{Uri.EscapeDataString(list)}/edit?source={Uri.EscapeDataString(source)}&{LogActions.ActionParameter}=Block"
+        : $"rules/new?source={Uri.EscapeDataString(source)}&{LogActions.ActionParameter}=Block";
+
+    private string SourceNote => _query.SourcesBy switch
+    {
+        SourceLevel.Network => T("Bad requests per network: an IPv4 /24 or IPv6 /48, so an attack from many addresses in one network shows as one row."),
+        SourceLevel.Country => T("Bad requests per country of their source."),
+        _ => T("Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet. Addresses are kept as long as the request log keeps its entries; networks and countries longer."),
+    };
+
+    /// <summary>The country's name in the admin's language, with its code: "Netherlands (NL)".</summary>
+    private static string CountryName(string code)
+    {
+        try
+        {
+            return $"{new RegionInfo(code).DisplayName} ({code})";
+        }
+        catch (ArgumentException)
+        {
+            return code;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         _query = HttpContext is null ? new PerformanceQuery() : PerformanceQuery.Parse(HttpContext.Request.Query);
         var active = await Configurations.GetActiveAsync(CancellationToken.None);
         _routes = active?.Configuration.Routes.Select(r => r.Name).Order(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        _blockList = active is null ? null : LogActions.FindBlockList(active.Configuration)?.Name;
         if (History.Store is not { } store)
         {
             return;

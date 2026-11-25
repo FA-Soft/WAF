@@ -51,12 +51,24 @@ internal sealed record PerformanceQuery
     /// <summary>Requested destinations (host and path, as <see cref="TrafficClassifier.Destination"/>).</summary>
     public IReadOnlyList<string> Destinations { get; init; } = [];
 
+    /// <summary>Networks of sources ("203.0.113.0/24", "2001:db8:1::/48").</summary>
+    public IReadOnlyList<string> Networks { get; init; } = [];
+
+    /// <summary>Countries of sources (ISO codes).</summary>
+    public IReadOnlyList<string> Countries { get; init; } = [];
+
+    /// <summary>How the sources are listed: by address, network or country.</summary>
+    public SourceLevel SourcesBy { get; init; }
+
     /// <summary>Also show the previous period of the same length.</summary>
     public bool Compare { get; init; }
 
     public bool IsLive => Period == Live;
 
-    public bool IsFiltered => Route is not null || Types.Count > 0 || Sources.Count > 0 || Destinations.Count > 0;
+    public bool IsFiltered => Route is not null || Types.Count > 0 || Sources.Count > 0 || Destinations.Count > 0 || Networks.Count > 0 || Countries.Count > 0;
+
+    /// <summary>A source filter of any level is set (sources are counted without their route).</summary>
+    public bool HasSourceFilter => Sources.Count > 0 || Networks.Count > 0 || Countries.Count > 0 || Destinations.Count > 0;
 
     public static PerformanceQuery Parse(IQueryCollection query)
     {
@@ -89,6 +101,17 @@ internal sealed record PerformanceQuery
                 .Where(d => d.Length is > 1 and <= TrafficClassifier.MaxDestinationLength && d.Contains('/', StringComparison.Ordinal) && !d.Any(char.IsControl))
                 .Distinct(StringComparer.Ordinal)
                 .Take(MaxFilterValues)],
+            Networks = [.. query["network"]
+                .Select(n => System.Net.IPNetwork.TryParse(n, out var network) && network.PrefixLength is 24 or 48 or 32 or 128 ? network.ToString() : null)
+                .OfType<string>()
+                .Distinct(StringComparer.Ordinal)
+                .Take(MaxFilterValues)],
+            Countries = [.. query["country"]
+                .Select(c => (c ?? string.Empty).Trim().ToUpperInvariant())
+                .Where(c => c.Length == 2 && c.All(char.IsAsciiLetterUpper))
+                .Distinct(StringComparer.Ordinal)
+                .Take(MaxFilterValues)],
+            SourcesBy = Enum.TryParse<SourceLevel>(query["sources"], ignoreCase: true, out var level) && Enum.IsDefined(level) ? level : SourceLevel.Address,
             Compare = query["compare"] == "1",
         };
     }
@@ -151,6 +174,12 @@ internal sealed record PerformanceQuery
         parameters.AddRange(Types.Select(t => new KeyValuePair<string, string?>("type", t.ToString())));
         parameters.AddRange(Sources.Select(s => new KeyValuePair<string, string?>("source", s)));
         parameters.AddRange(Destinations.Select(d => new KeyValuePair<string, string?>("destination", d)));
+        parameters.AddRange(Networks.Select(n => new KeyValuePair<string, string?>("network", n)));
+        parameters.AddRange(Countries.Select(c => new KeyValuePair<string, string?>("country", c)));
+        if (SourcesBy != SourceLevel.Address)
+        {
+            parameters.Add(new("sources", SourcesBy.ToString().ToLowerInvariant()));
+        }
         if (Compare)
         {
             parameters.Add(new("compare", "1"));
@@ -164,11 +193,19 @@ internal sealed record PerformanceQuery
     /// <summary>This view with the type filter replaced by one type ("show only this").</summary>
     public PerformanceQuery WithType(TrafficType type) => this with { Types = [type] };
 
-    /// <summary>This view with the source filter replaced by one source (sources and destinations are not combined).</summary>
-    public PerformanceQuery WithSource(string source) => this with { Sources = [source], Destinations = [] };
+    /// <summary>This view with the source filter replaced by one source (only one source filter applies at a time).</summary>
+    public PerformanceQuery WithSource(string source) => WithoutSourceFilters() with { Sources = [source] };
 
     /// <summary>This view with the destination filter replaced by one destination.</summary>
-    public PerformanceQuery WithDestination(string destination) => this with { Destinations = [destination], Sources = [] };
+    public PerformanceQuery WithDestination(string destination) => WithoutSourceFilters() with { Destinations = [destination] };
+
+    /// <summary>This view with the network filter replaced by one network.</summary>
+    public PerformanceQuery WithNetwork(string network) => WithoutSourceFilters() with { Networks = [network] };
+
+    /// <summary>This view with the country filter replaced by one country.</summary>
+    public PerformanceQuery WithCountry(string country) => WithoutSourceFilters() with { Countries = [country] };
+
+    public PerformanceQuery WithoutSourceFilters() => this with { Sources = [], Destinations = [], Networks = [], Countries = [] };
 
     /// <summary>This view for a fixed period (the period of a history view kept as it is).</summary>
     public PerformanceQuery WithPeriod(DateTimeOffset from, DateTimeOffset to) => this with { Period = Custom, From = from, To = to };
@@ -187,6 +224,16 @@ internal sealed record PerformanceReport(
     long SourceTotal = 0,
     long DestinationTotal = 0)
 {
+    /// <summary>The networks with the most bad requests.</summary>
+    public IReadOnlyList<LiveSourceCount> TopNetworks { get; init; } = [];
+
+    /// <summary>The countries with the most bad requests (with a country database).</summary>
+    public IReadOnlyList<LiveSourceCount> TopCountries { get; init; } = [];
+
+    public long NetworkTotal { get; init; }
+
+    public long CountryTotal { get; init; }
+
     /// <summary>Response time percentiles per bucket (per minute and coarser).</summary>
     public IReadOnlyList<LatencyPoint> Latency { get; init; } = [];
 
@@ -229,8 +276,8 @@ internal sealed record PerformanceReport(
 
         var (from, to) = query.Range(now);
         var tier = query.IsLive ? MetricsTier.Second : SqliteMetricsStore.ChooseTier(from, to, now, retention);
-        var byTop = query.Sources.Count > 0 || query.Destinations.Count > 0;
-        var request = new TrafficQuery(from, to, tier, byTop ? null : query.Route, query.Types, query.Sources, query.Destinations);
+        var request = new TrafficQuery(
+            from, to, tier, query.HasSourceFilter ? null : query.Route, query.Types, query.Sources, query.Destinations, query.Networks, query.Countries);
         var series = await store.ReadSeriesAsync(request, cancellationToken).ConfigureAwait(false);
 
         IReadOnlyList<TrafficBucket>? previous = null;
@@ -254,6 +301,10 @@ internal sealed record PerformanceReport(
             from, to, series.Count > 0 && series[0].Seconds > 1 && tier == MetricsTier.Second ? MetricsTier.Minute : tier,
             series, previous, kinds, sources, destinations, sourceTotal, destinationTotal)
         {
+            TopNetworks = await store.ReadTopNetworksAsync(request, TopSources, cancellationToken).ConfigureAwait(false),
+            TopCountries = await store.ReadTopCountriesAsync(request, TopSources, cancellationToken).ConfigureAwait(false),
+            NetworkTotal = await store.ReadNetworkTotalAsync(request, cancellationToken).ConfigureAwait(false),
+            CountryTotal = await store.ReadCountryTotalAsync(request, cancellationToken).ConfigureAwait(false),
             Latency = latency,
             LatencySummary = latencySummary,
             Backends = backends,
@@ -303,6 +354,19 @@ internal sealed record PerformanceReport(
     }
 }
 
+/// <summary>How the sources of bad traffic are listed.</summary>
+internal enum SourceLevel
+{
+    /// <summary>Client IP addresses.</summary>
+    Address,
+
+    /// <summary>Networks: IPv4 /24, IPv6 /48.</summary>
+    Network,
+
+    /// <summary>Countries (with a country database).</summary>
+    Country,
+}
+
 /// <summary>Names and request log links of the kinds of traffic.</summary>
 internal static class PerformanceText
 {
@@ -341,11 +405,33 @@ internal static class PerformanceText
             : name;
 
     /// <summary>
+    /// The text every address of an IPv4 /24 network starts with ("198.51.100."); null for other networks (IPv6
+    /// addresses are written in shortened forms, so a prefix does not find them reliably).
+    /// </summary>
+    public static string? NetworkPrefix(string network)
+    {
+        if (!System.Net.IPNetwork.TryParse(network, out var parsed) || parsed.BaseAddress.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork || parsed.PrefixLength != 24)
+        {
+            return null;
+        }
+
+        var bytes = parsed.BaseAddress.GetAddressBytes();
+        return string.Create(CultureInfo.InvariantCulture, $"{bytes[0]}.{bytes[1]}.{bytes[2]}.");
+    }
+
+    /// <summary>
     /// The request log showing the requests behind a number: same period and route, plus the kind (and source);
     /// null when the request log does not reach back to that period.
     /// </summary>
     public static string? LogUrl(
-        DateTimeOffset from, DateTimeOffset to, DateTimeOffset? oldestLogged, string? route, TrafficType? type = null, string? source = null, string? destination = null)
+        DateTimeOffset from,
+        DateTimeOffset to,
+        DateTimeOffset? oldestLogged,
+        string? route,
+        TrafficType? type = null,
+        string? source = null,
+        string? destination = null,
+        string? network = null)
     {
         if (oldestLogged is not { } oldest || to <= oldest)
         {
@@ -359,6 +445,12 @@ internal static class PerformanceText
             ["route"] = route,
             ["ip"] = source,
         };
+
+        // A network: the address prefix as search text ("198.51.100." for 198.51.100.0/24; the log has no range filter).
+        if (network is not null && NetworkPrefix(network) is { } prefix)
+        {
+            parameters["q"] = prefix;
+        }
 
         // A destination is "host/path": the host exactly, the path as search text (the log has no exact path filter).
         if (destination is not null && destination.IndexOf('/', StringComparison.Ordinal) is var slash and > 0)

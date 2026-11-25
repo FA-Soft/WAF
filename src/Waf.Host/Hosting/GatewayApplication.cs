@@ -286,7 +286,19 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(store);
         builder.Services.AddSingleton<IMetricsStore>(store);
-        builder.Services.AddSingleton<RequestMetricsWriter>();
+        builder.Services.AddSingleton<CountryDatabase>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<CountryDatabase>());
+        builder.Services.AddSingleton(sp =>
+        {
+            var countries = sp.GetRequiredService<CountryDatabase>();
+            return new RequestMetricsWriter(
+                sp.GetRequiredService<IMetricsStore>(),
+                options,
+                sp.GetRequiredService<TimeProvider>(),
+                sp.GetRequiredService<ILogger<RequestMetricsWriter>>(),
+                sp.GetService<FASoft.Waf.Core.Routing.IRouteFailoverMonitor>(),
+                () => countries.Lookup);
+        });
         builder.Services.AddSingleton<IRequestMetrics>(sp => sp.GetRequiredService<RequestMetricsWriter>());
         builder.Services.AddSingleton<IRequestMetricsMonitor>(sp => sp.GetRequiredService<RequestMetricsWriter>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<RequestMetricsWriter>());

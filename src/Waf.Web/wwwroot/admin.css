@@ -557,3 +557,7 @@ td .badge {
 .row-warning > th, .row-warning > td { background: var(--warn-bg); }
 .failover-periods { margin: 0.25rem 0 0.5rem; padding-left: 1.25rem; }
 .failover-periods li { overflow-wrap: anywhere; }
+.source-levels { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 0.5rem; }
+.source-levels a { padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); background: var(--surface); }
+.source-levels a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.source-actions a + a { margin-left: 0.5rem; }
