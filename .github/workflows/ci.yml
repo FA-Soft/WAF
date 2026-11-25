@@ -58,6 +58,11 @@ jobs:
       - name: Build
         run: dotnet build WafGateway.sln -c "$CONFIGURATION" --no-restore
 
+      - name: Browser for the layout test
+        # LayoutTests opens every admin page in Chromium at phone and desktop width; on Windows it is skipped.
+        if: runner.os == 'Linux'
+        run: pwsh "tests/Waf.IntegrationTests/bin/$CONFIGURATION/net11.0/playwright.ps1" install --with-deps chromium
+
       - name: Test
         id: test
         run: >
