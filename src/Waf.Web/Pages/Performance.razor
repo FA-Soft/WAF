@@ -1,0 +1,415 @@
+@page "/performance"
+@inject IMetricsHistory History
+@inject IGatewayConfigurationService Configurations
+@inject RequestLogMaintenance LogInfo
+@inject TimeProvider Time
+
+<PageTitle>@T("Performance") · @ProductInfo.Name</PageTitle>
+
+<h1>
+    @T("Performance")
+    <HelpTip Title="@T("Performance")">
+        <p>@T("How many public requests the gateway handles, and how many of them are good, bad or failed. Good: forwarded, redirected or answered. Bad: blocked, rate limited, refused (fail-closed) or without a route. Failed: no backend answered. Live shows the last minutes, updated every second; the other periods come from the traffic history, which keeps older data coarser (per second for 3 days, up to per month for 3 years).")</p>
+    </HelpTip>
+</h1>
+
+@if (History.Store is null)
+{
+    <div class="alert alert-warning" role="status">@TM("The traffic counts are switched off in the host settings (<code>Gateway:Metrics:Enabled</code>).")</div>
+}
+else if (_report is { } report)
+{
+    <nav class="period-tabs" aria-label="@T("Period")">
+        <a href="@(_query with { Period = PerformanceQuery.Live, From = null, To = null, Compare = false }).Url()" aria-current="@(_query.IsLive ? "page" : null)">@T("Live")</a>
+        @foreach (var (value, label, _) in PerformanceQuery.Periods)
+        {
+            <a href="@(_query with { Period = value, From = null, To = null }).Url()" aria-current="@(_query.Period == value ? "page" : null)">@T(label)</a>
+        }
+        @if (_query.Period == PerformanceQuery.Custom)
+        {
+            <a href="@_query.Url()" aria-current="page">@T("Custom")</a>
+        }
+    </nav>
+
+    <form method="get" action="performance" class="perf-filter" role="search" aria-label="@T("Filter the traffic")">
+        @if (!_query.IsLive)
+        {
+            <input type="hidden" name="period" value="@_query.Period" />
+        }
+        @if (_query.Period == PerformanceQuery.Custom)
+        {
+            <input type="hidden" name="from" value="@_query.From!.Value.ToUnixTimeSeconds()" />
+            <input type="hidden" name="to" value="@_query.To!.Value.ToUnixTimeSeconds()" />
+        }
+        <div class="field-row">
+            <div class="field">
+                <label for="perf-route">@T("Route")</label>
+                <select id="perf-route" name="route">
+                    <option value="" selected="@(_query.Route is null)">@T("All routes")</option>
+                    @foreach (var route in _routes)
+                    {
+                        <option value="@route" selected="@(_query.Route == route)">@route</option>
+                    }
+                </select>
+            </div>
+            @if (!_query.IsLive)
+            {
+                <div class="field">
+                    <label for="perf-source">@T("Sources")</label>
+                    <input id="perf-source" name="source" value="@string.Join(", ", _query.Sources)" placeholder="203.0.113.7, 2001:db8::1" aria-describedby="perf-source-help" />
+                    <small id="perf-source-help" class="help">@T("Client IP addresses, separated by commas. Shows only their bad requests.")</small>
+                </div>
+                <div class="field field-check">
+                    <label><input type="checkbox" name="compare" value="1" checked="@_query.Compare" /> @T("Compare with the previous period")</label>
+                </div>
+            }
+        </div>
+        @if (!_query.IsLive && _typeChoices.Count > 0)
+        {
+            <details class="perf-types" open="@(_query.Types.Count > 0)">
+                <summary>@T("Kinds of traffic") @(_query.Types.Count > 0 ? T("({0} selected)", _query.Types.Count) : string.Empty)</summary>
+                <div class="check-list">
+                    @foreach (var type in _typeChoices)
+                    {
+                        <label><input type="checkbox" name="type" value="@type.ToString()" checked="@_query.Types.Contains(type)" /> @TypeLabel(type)</label>
+                    }
+                </div>
+            </details>
+        }
+        <div class="actions">
+            <button type="submit" class="button">@T("Apply")</button>
+            @if (_query.IsFiltered || _query.Compare)
+            {
+                <a class="button button-secondary" href="@(new PerformanceQuery { Period = _query.Period, From = _query.From, To = _query.To }).Url()">@T("Clear filters")</a>
+            }
+        </div>
+    </form>
+
+    @if (!_query.IsLive)
+    {
+        <details class="perf-custom">
+            <summary>@T("Custom period")</summary>
+            <form method="get" action="performance" class="perf-custom-form" data-local-range>
+                <input type="hidden" name="period" value="custom" />
+                @foreach (var (name, value) in _query.Parameters().Where(p => p.Key is not ("period" or "from" or "to")))
+                {
+                    <input type="hidden" name="@name" value="@value" />
+                }
+                <div class="field-row">
+                    <div class="field">
+                        <label for="perf-from">@T("From")</label>
+                        <input id="perf-from" name="from" type="datetime-local" value="@report.From.UtcDateTime.ToString("yyyy-MM-ddTHH:mm", Culture)" required />
+                    </div>
+                    <div class="field">
+                        <label for="perf-to">@T("To")</label>
+                        <input id="perf-to" name="to" type="datetime-local" value="@report.To.UtcDateTime.ToString("yyyy-MM-ddTHH:mm", Culture)" required />
+                    </div>
+                    <div class="field"><button type="submit" class="button button-secondary">@T("Show")</button></div>
+                </div>
+                <p class="muted" data-tz-note>@T("Times in UTC.")</p>
+            </form>
+        </details>
+    }
+
+    @if ((_query.Sources.Count > 0 || _query.Destinations.Count > 0) && _query.Route is not null)
+    {
+        <div class="alert alert-info" role="status">@T("Sources and destinations are counted without their route, so the route filter does not apply while they are selected.")</div>
+    }
+    @if (_query.Destinations.Count > 0)
+    {
+        <div class="alert alert-info" role="status">
+            @T("Only bad requests to {0}.", string.Join(", ", _query.Destinations))
+            <a href="@((_query with { Destinations = [] }).Url())">@T("Show all destinations")</a>
+        </div>
+    }
+    @if (_query.IsLive)
+    {
+        <p class="muted">@T("The live view counts requests in the second they complete. Filters for kinds and sources apply to the other periods.")</p>
+    }
+
+    <section class="cards" aria-label="@T("Figures")" id="perf-figures">
+        <div class="card">
+            <h2>@(_query.IsLive ? T("Requests per second") : T("Requests"))</h2>
+            <p class="metric" data-live="total">@(_query.IsLive ? "–" : report.Total.ToString("N0", CultureInfo.CurrentCulture))</p>
+            <p class="muted">@(_query.IsLive ? T("completed in the last second") : T("{0} per second on average", report.PerSecond.ToString("N1", CultureInfo.CurrentCulture)))</p>
+        </div>
+        <div class="card">
+            <h2>@T("Peak")</h2>
+            <p class="metric" data-live="peak">@(report.Peak?.ToString("N0", CultureInfo.CurrentCulture) ?? "–")</p>
+            <p class="muted">@(_query.IsLive ? T("busiest second of the last 5 minutes") : report.Peak is null ? T("not known with filters") : T("requests in the busiest second"))</p>
+        </div>
+        <div class="card">
+            <h2>@T("Bad")</h2>
+            <p class="metric" data-live="bad-share">@report.Share(report.Bad).ToString("P1", CultureInfo.CurrentCulture)</p>
+            <p class="muted">@Requests(report.Bad, LogUrl(report, "show", nameof(LogView.Blocked)))</p>
+        </div>
+        <div class="card">
+            <h2>@T("Failed")</h2>
+            <p class="metric" data-live="failed-share">@report.Share(report.Failed).ToString("P1", CultureInfo.CurrentCulture)</p>
+            <p class="muted">@Requests(report.Failed, LogUrl(report, "show", nameof(LogView.Errors)))</p>
+        </div>
+    </section>
+
+    <figure class="perf-chart-figure">
+        <figcaption>
+            @if (_query.IsLive)
+            {
+                @T("Requests per second, last 5 minutes")
+            }
+            else if (report.Tier == MetricsTier.Second)
+            {
+                @T("Requests per second")
+            }
+            else
+            {
+                @T("Requests per second (average {0})", PerformanceText.Tier(report.Tier))
+            }
+            · <span data-tz>@T("times in UTC")</span>
+            @if (!_query.IsLive)
+            {
+                <span class="muted"> · @T("Drag across the chart to zoom in.")</span>
+            }
+        </figcaption>
+        <div id="perf-chart" class="perf-chart" role="img" aria-label="@ChartSummary(report)"
+             data-chart="@report.ChartJson(_query.IsLive, _query.Route)" data-hub="hubs/traffic"
+             data-text-good="@T("Good")" data-text-bad="@T("Bad")" data-text-failed="@T("Failed")"
+             data-text-peak="@T("Peak")" data-text-previous="@T("Previous period")" data-text-time="@T("Time")"
+             data-text-connecting="@T("Connecting…")" data-text-live="@T("Live, updated every second")"
+             data-text-reconnecting="@T("Reconnecting…")" data-text-ended="@T("Your session ended. Reload the page to sign in again.")"
+             data-text-zone="@T("times in {0}", "{0}")"
+             data-text-show-as="@T("Show as")" data-text-pie="@T("Chart")" data-text-table="@T("Table")" data-text-other="@T("Other")"></div>
+        <p class="muted live-status" data-live="status" role="status" data-state="off">@T("The chart needs JavaScript; the table below has the same numbers.")</p>
+    </figure>
+
+    <details class="perf-table">
+        <summary>@T("Show as table")</summary>
+        @{ var rows = report.Series.Where(b => b.Total > 0).ToList(); }
+        @if (rows.Count == 0)
+        {
+            <p class="muted">@T("No requests in this period.")</p>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th scope="col">@T("Time")</th><th scope="col">@T("Good")</th><th scope="col">@T("Bad")</th><th scope="col">@T("Failed")</th><th scope="col">@T("Total")</th><th scope="col">@T("Peak")</th></tr></thead>
+                    <tbody>
+                        @foreach (var bucket in rows.TakeLast(MaxTableRows))
+                        {
+                            <tr>
+                                <th scope="row"><time datetime="@Iso(bucket.Start)" data-local>@Utc(bucket.Start)</time></th>
+                                <td>@bucket.Good.ToString("N0", CultureInfo.CurrentCulture)</td>
+                                <td>@bucket.Bad.ToString("N0", CultureInfo.CurrentCulture)</td>
+                                <td>@bucket.Failed.ToString("N0", CultureInfo.CurrentCulture)</td>
+                                <td>@bucket.Total.ToString("N0", CultureInfo.CurrentCulture)</td>
+                                <td>@(bucket.Peak?.ToString("N0", CultureInfo.CurrentCulture) ?? "–")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (rows.Count > MaxTableRows)
+            {
+                <p class="muted">@T("The last {0} of {1} rows; the CSV file has all of them.", MaxTableRows, rows.Count)</p>
+            }
+        }
+    </details>
+
+    <div class="two-columns">
+        <section aria-labelledby="kinds-heading">
+            <h2 id="kinds-heading">@T("Bad traffic by kind")</h2>
+            @{ var bad = report.Kinds.Where(k => k.Outcome == TrafficOutcome.Bad || k.Kind == TrafficKind.WouldBeBlocked).ToList(); }
+            @if (bad.Count == 0)
+            {
+                <p class="muted">@T("No bad requests in this period.")</p>
+            }
+            else
+            {
+                <div class="table-scroll">
+                    <table data-pie data-total="@bad.Sum(k => k.Count)">
+                        <thead><tr><th scope="col">@T("Kind")</th><th scope="col">@T("Requests")</th><th scope="col">@T("Share")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr></thead>
+                        <tbody>
+                            @foreach (var kind in bad)
+                            {
+                                var type = new TrafficType(kind.Kind, kind.Name.Length == 0 ? null : kind.Name);
+                                <tr data-count="@kind.Count">
+                                    <th scope="row">@TypeLabel(type)</th>
+                                    <td>@Number(kind.Count, LogUrl(report, type))</td>
+                                    <td>@report.Share(kind.Count).ToString("P1", CultureInfo.CurrentCulture)</td>
+                                    <td>@if (!_query.IsLive) { <a href="@_query.WithType(type).Url()">@T("Only this")</a> }</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section aria-labelledby="sources-heading">
+            <h2 id="sources-heading">@T("Sources of bad traffic")</h2>
+            <p class="muted">@T("Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet.")</p>
+            @if (report.Sources.Count == 0)
+            {
+                <p class="muted">@T("No sources in this period (sources are kept per minute and coarser).")</p>
+            }
+            else
+            {
+                <div class="table-scroll">
+                    <table data-pie data-total="@report.SourceTotal">
+                        <thead><tr><th scope="col">@T("Client IP")</th><th scope="col">@T("Bad requests")</th><th scope="col">@T("Share")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr></thead>
+                        <tbody>
+                            @{ var badTotal = Math.Max(1, report.SourceTotal); }
+                            @foreach (var source in report.Sources)
+                            {
+                                <tr data-count="@source.Count">
+                                    <th scope="row"><code>@source.Source</code></th>
+                                    <td>@Number(source.Count, PerformanceText.LogUrl(report.From, report.To, _oldestLogged, null, null, source.Source))</td>
+                                    <td>@(((double)source.Count / badTotal).ToString("P1", CultureInfo.CurrentCulture))</td>
+                                    <td>@if (!_query.IsLive) { <a href="@_query.WithSource(source.Source).Url()">@T("Only this")</a> }</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+
+    <section aria-labelledby="destinations-heading">
+        <h2 id="destinations-heading">@T("Requested destinations of bad traffic")</h2>
+        <p class="muted">@T("Host name and path (without the query string) that bad requests asked for, stored per minute like the sources.")</p>
+        @if (report.TopDestinations.Count == 0)
+        {
+            <p class="muted">@T("No destinations in this period.")</p>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="perf-destinations" data-pie data-total="@report.DestinationTotal">
+                    <thead><tr><th scope="col">@T("Destination")</th><th scope="col">@T("Bad requests")</th><th scope="col">@T("Share")</th><th scope="col"><span class="visually-hidden">@T("Actions")</span></th></tr></thead>
+                    <tbody>
+                        @{ var badRequests = Math.Max(1, report.DestinationTotal); }
+                        @foreach (var destination in report.TopDestinations)
+                        {
+                            <tr data-count="@destination.Count">
+                                <th scope="row"><code>@destination.Source</code></th>
+                                <td>@Number(destination.Count, PerformanceText.LogUrl(report.From, report.To, _oldestLogged, null, null, null, destination.Source))</td>
+                                <td>@(((double)destination.Count / badRequests).ToString("P1", CultureInfo.CurrentCulture))</td>
+                                <td>@if (!_query.IsLive) { <a href="@_query.WithDestination(destination.Source).Url()">@T("Only this")</a> }</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <p>
+        <a href="@_query.Url("performance/export.csv")" download>@T("Download as CSV")</a>
+        @if (_oldestLogged is null)
+        {
+            <span class="muted"> · @T("The request log has no entries, so the numbers do not link to it.")</span>
+        }
+        else if (report.To <= _oldestLogged)
+        {
+            <span class="muted"> · @T("The request log no longer has the entries of this period.")</span>
+        }
+    </p>
+}
+
+@code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    private const int MaxTableRows = 500;
+    private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
+
+    private PerformanceQuery _query = new();
+    private PerformanceReport? _report;
+    private IReadOnlyList<string> _routes = [];
+    private List<TrafficType> _typeChoices = [];
+    private DateTimeOffset? _oldestLogged;
+
+    private string? Route => _query.Sources.Count > 0 || _query.Destinations.Count > 0 ? null : _query.Route;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _query = HttpContext is null ? new PerformanceQuery() : PerformanceQuery.Parse(HttpContext.Request.Query);
+        var active = await Configurations.GetActiveAsync(CancellationToken.None);
+        _routes = active?.Configuration.Routes.Select(r => r.Name).Order(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        if (History.Store is not { } store)
+        {
+            return;
+        }
+
+        _report = await PerformanceReport.BuildAsync(store, History.Retention, _query, Time.GetUtcNow(), CancellationToken.None);
+        _typeChoices = [.. _report.Kinds
+            .Where(k => k.Outcome == TrafficOutcome.Bad || k.Kind == TrafficKind.WouldBeBlocked)
+            .Select(k => new TrafficType(k.Kind, k.Name.Length == 0 ? null : k.Name))
+            .Concat(_query.Types)
+            .Distinct()];
+        try
+        {
+            _oldestLogged = (await LogInfo.GetInfoAsync(CancellationToken.None))?.Oldest;
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            _oldestLogged = null; // events.db is being created
+        }
+    }
+
+    private string? LogUrl(PerformanceReport report, TrafficType type) =>
+        PerformanceText.LogUrl(report.From, report.To, _oldestLogged, Route, type);
+
+    /// <summary>The request log for the period and route, with one more filter.</summary>
+    private string? LogUrl(PerformanceReport report, string name, string value) =>
+        PerformanceText.LogUrl(report.From, report.To, _oldestLogged, Route) is { } url
+            ? Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(url, name, value)
+            : null;
+
+    private static string TypeLabel(TrafficType type) =>
+        type.Name is null ? PerformanceText.Kind(type.Kind) : $"{PerformanceText.Kind(type.Kind)}: {PerformanceText.Name(type.Kind, type.Name)}";
+
+    private static RenderFragment Number(long count, string? url) => builder =>
+    {
+        var text = count.ToString("N0", CultureInfo.CurrentCulture);
+        if (url is null)
+        {
+            builder.AddContent(0, text);
+            return;
+        }
+
+        builder.OpenElement(1, "a");
+        builder.AddAttribute(2, "href", url);
+        builder.AddAttribute(3, "title", T("Show these requests in the request log"));
+        builder.AddContent(4, text);
+        builder.CloseElement();
+    };
+
+    private static RenderFragment Requests(long count, string? url) => builder =>
+    {
+        var text = Plural(count, "{0} request", "{0} requests");
+        if (url is null)
+        {
+            builder.AddContent(0, text);
+            return;
+        }
+
+        builder.OpenElement(1, "a");
+        builder.AddAttribute(2, "href", url);
+        builder.AddAttribute(3, "title", T("Show these requests in the request log"));
+        builder.AddContent(4, text);
+        builder.CloseElement();
+    };
+
+    private static string Iso(long start) => DateTimeOffset.FromUnixTimeSeconds(start).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", Culture);
+
+    private static string Utc(long start) => DateTimeOffset.FromUnixTimeSeconds(start).UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", Culture) + " UTC";
+
+    private static string ChartSummary(PerformanceReport report) => T(
+        "Chart of requests per second: {0} requests, of which {1} good, {2} bad and {3} failed. The table below has the numbers.",
+        report.Total.ToString("N0", CultureInfo.CurrentCulture),
+        report.Good.ToString("N0", CultureInfo.CurrentCulture),
+        report.Bad.ToString("N0", CultureInfo.CurrentCulture),
+        report.Failed.ToString("N0", CultureInfo.CurrentCulture));
+}

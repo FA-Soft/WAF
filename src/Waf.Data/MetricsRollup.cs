@@ -267,18 +267,7 @@ public sealed partial class SqliteMetricsStore
                     SELECT $tier, {bucket}, MAX(Total), MAX(Good), MAX(Bad), MAX(Failed) FROM TrafficPeaks
                     WHERE Tier = $finer AND {range}
                     GROUP BY {bucket};
-                DELETE FROM SourceCounts WHERE Tier = $tier AND {range};
-                WITH agg AS (
-                        SELECT {bucket} AS B, Source, Kind, Outcome, SUM(Count) AS C FROM SourceCounts
-                        WHERE Tier = $finer AND {range}
-                        GROUP BY {bucket}, Source, Kind),
-                    totals AS (SELECT B, Source, SUM(C) AS T FROM agg WHERE Source <> $other GROUP BY B, Source),
-                    ranked AS (SELECT B, Source, ROW_NUMBER() OVER (PARTITION BY B ORDER BY T DESC, Source) AS R FROM totals)
-                INSERT INTO SourceCounts (Tier, BucketStart, Source, Kind, Outcome, Count)
-                    SELECT $tier, a.B, CASE WHEN r.R <= $top THEN a.Source ELSE $other END, a.Kind, a.Outcome, SUM(a.C)
-                    FROM agg a LEFT JOIN ranked r ON r.B = a.B AND r.Source = a.Source
-                    GROUP BY a.B, CASE WHEN r.R <= $top THEN a.Source ELSE $other END, a.Kind;
-                """;
+                """ + string.Concat(TopTables.Select(t => TopRollupSql(t.Table, t.Column, bucket, range)));
 
         sql += """
             INSERT INTO RollupState (Tier, DoneUntil, DeletedBefore) VALUES ($tier, $to, 0)
@@ -307,11 +296,30 @@ public sealed partial class SqliteMetricsStore
         return Convert.ToInt64(await count.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture);
     }
 
+    /// <summary>
+    /// Rolls up a per-minute table of bad traffic (sources or destinations) into a coarser tier: the top
+    /// <see cref="TrafficCounter.TopSources"/> values per bucket by their total, the rest added up as "other".
+    /// </summary>
+    private static string TopRollupSql(string table, string column, string bucket, string range) => $"""
+        DELETE FROM {table} WHERE Tier = $tier AND {range};
+        WITH agg AS (
+                SELECT {bucket} AS B, {column} AS V, Kind, Outcome, SUM(Count) AS C FROM {table}
+                WHERE Tier = $finer AND {range}
+                GROUP BY {bucket}, {column}, Kind),
+            totals AS (SELECT B, V, SUM(C) AS T FROM agg WHERE V <> $other GROUP BY B, V),
+            ranked AS (SELECT B, V, ROW_NUMBER() OVER (PARTITION BY B ORDER BY T DESC, V) AS R FROM totals)
+        INSERT INTO {table} (Tier, BucketStart, {column}, Kind, Outcome, Count)
+            SELECT $tier, a.B, CASE WHEN r.R <= $top THEN a.V ELSE $other END, a.Kind, a.Outcome, SUM(a.C)
+            FROM agg a LEFT JOIN ranked r ON r.B = a.B AND r.V = a.V
+            GROUP BY a.B, CASE WHEN r.R <= $top THEN a.V ELSE $other END, a.Kind;
+
+        """;
+
     private static async Task<long> DeleteBeforeAsync(SqliteConnection connection, MetricsTier tier, long cutoff, long deletedBefore, CancellationToken cancellationToken)
     {
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         long deleted = 0;
-        foreach (var table in new[] { "TrafficCounts", "SourceCounts", "TrafficPeaks" })
+        foreach (var table in new[] { "TrafficCounts", "SourceCounts", "DestinationCounts", "TrafficPeaks" })
         {
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;

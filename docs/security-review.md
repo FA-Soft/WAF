@@ -124,6 +124,16 @@ event, or at shutdown. The request log (`events.db`) still records every request
   - The browser client is `@microsoft/signalr` 11.0.0, served by the gateway itself, unchanged. Its SHA-256 is
     checked by `LicenseTests`. The Content-Security-Policy stays `script-src 'self'; connect-src 'self'`.
   - Tests: `LiveTrafficTests` (unit and integration).
+- **Performance page (`/performance`, `/performance/export.csv`).**
+  - Signed-in admins only, like every page; the CSV export is a read-only GET (401 without a session).
+  - Every parameter of the address is checked: periods from a fixed list, custom times within ten years and never in
+    the future, kinds from the known list, sources must be IP addresses, at most 20 of each, route names of normal
+    length. Unknown values are ignored. The queries use parameters only.
+  - The CSV holds only times and numbers, so a spreadsheet cannot run anything from it.
+  - The chart data is a JSON attribute that the page's own script reads; everything is written with `textContent`.
+  - The chart library, `uplot` 1.6.32, is served by the gateway itself, unchanged. Its SHA-256 is checked by
+    `LicenseTests`. It uses no `eval` and no inline styles, so the Content-Security-Policy stays strict.
+  - Tests: `PerformancePageTests`, `PerformanceTests`, `MetricsQueryTests`.
 - **Secrets.**
   - Authorization headers, cookie values, request bodies and query strings are not logged; the request log stores the
     path without the query.
@@ -131,14 +141,14 @@ event, or at shutdown. The request log (`events.db`) still records every request
     chosen.
   - The AI API key never leaves the machine.
   - Certificate private keys are encrypted at rest.
-  - The traffic counts (`metrics.db`) store only counts per kind, rule name and route, and the client IPs of bad
-    requests: no hosts, paths, headers or bodies.
+  - The traffic counts (`metrics.db`) store only counts per kind, rule name and route, and for bad requests the
+    client IP and the requested host and path (as the request log does): no query strings, headers or bodies.
 - **Traffic counts cannot be used to exhaust memory or disk.** Counts wait in memory up to a fixed limit
   (`Gateway:Metrics:MaxPendingCounts`); beyond it requests are still served but not counted (and that is counted).
-  Sources are limited to 100 per minute plus "other", and in memory to a fifth of that limit, so an attack from many
-  addresses cannot grow either. Counting never blocks or throws on the request path (`TrafficMetricsTests`). On disk,
+  Sources and requested destinations are each limited to 100 per minute plus "other", and in memory to a fifth of
+  that limit, so an attack from many addresses or a scan of many paths cannot grow either. Counting never blocks or throws on the request path (`TrafficMetricsTests`). On disk,
   every tier is removed after its retention (at most three years by default; ten years is the hard limit), and the
-  coarser tiers keep the top 100 sources plus "other" as well (`MetricsRollupTests`).
+  coarser tiers keep the top 100 sources and destinations plus "other" as well (`MetricsRollupTests`).
 - **Proxy.**
   - `X-Forwarded-For/Proto/Host` are always overwritten, and a client's `Forwarded` header is removed.
   - The client IP comes from forwarded headers only when the request comes from a trusted proxy.

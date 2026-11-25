@@ -225,6 +225,40 @@ only, and watch the request log for "would be blocked" entries for a while. Then
 
 ## 6. Watch the traffic
 
+### Performance
+
+The **Performance** page shows how much traffic the gateway handles, and how much of it is good, bad or failed:
+
+- **Live** (the default): requests per second for the last five minutes, updated every second, with the current
+  figures (requests per second, the busiest second, % bad, % failed). Choose a route to watch only that route.
+- **History**: the last hour, 24 hours, 7 days, 30 days, 3 months, year or 3 years, or a custom period. The chart says
+  which resolution it shows ("average per minute"): the longer the period, the coarser, as the traffic history keeps
+  older data (per second for 3 days, up to per month for 3 years). **Drag across the chart** to zoom in on a range;
+  it then loads the finest data still kept for it. **Compare with the previous period** adds the period before as a
+  dashed line, for example this week against last week.
+- **Bad traffic by kind** (per rule, attack category, rate limit, fail-closed, no route), **sources of bad
+  traffic** (client IPs) and the **requested destinations** (host and path, for example a scanner probing
+  `www.example.com/wp-login.php`), with their share. **Only this** narrows the page to one kind, source or
+  destination. Each is shown as a pie chart (the 7 largest parts and "other", each named with its count and
+  share); **Chart / Table** switches all three to the table and back, and the page remembers your choice in this
+  browser. You can also
+  pick several kinds, type client IPs, or choose a route. The filters are in the address, so a view can be
+  bookmarked or shared.
+- **Every number links to the request log**, showing the same requests (same period, route and kind), as long as
+  the request log still has them (see Log retention).
+- **Download as CSV** saves the shown series. **Show as table** lists the numbers of the chart (also for screen
+  readers).
+
+Times are shown in your browser's time zone, which the chart names. The bad part of the chart is hatched and the
+failed part dotted, so they can be told apart without colour. The page works on a phone; without JavaScript it shows
+the tables instead of the chart.
+
+![Performance, live](images/admin-performance-live.png)
+
+![Performance, the last hour](images/admin-performance-history.png)
+
+### Request log
+
 The **Request log** shows every request, newest first. You can:
 
 - filter by time, by what happened (blocked, would be blocked, forwarded, no route, server errors), by client, host,

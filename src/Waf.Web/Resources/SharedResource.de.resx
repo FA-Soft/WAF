@@ -21,6 +21,7 @@
   <data name="(not set)" xml:space="preserve"><value>(nicht gesetzt)</value></data>
   <data name="(optional)" xml:space="preserve"><value>(optional)</value></data>
   <data name="(the name cannot be changed because rules may refer to it)" xml:space="preserve"><value>(der Name kann nicht geändert werden, weil Regeln sich darauf beziehen können)</value></data>
+  <data name="({0} selected)" xml:space="preserve"><value>({0} ausgewählt)</value></data>
   <data name="0 MB" xml:space="preserve"><value>0 MB</value></data>
   <data name="10 to 3600; empty: every 60 seconds." xml:space="preserve"><value>10 bis 3600; leer: alle 60 Sekunden.</value></data>
   <data name="365 is the usual value. 0 tells browsers to forget it." xml:space="preserve"><value>365 ist der übliche Wert. 0 lässt Browser es vergessen.</value></data>
@@ -123,6 +124,7 @@
   <data name="All other sessions were signed out." xml:space="preserve"><value>Alle anderen Sitzungen wurden abgemeldet.</value></data>
   <data name="All requests" xml:space="preserve"><value>Alle Anfragen</value></data>
   <data name="All requests for your site's host names go to one web server, e.g. IIS or nginx on your network." xml:space="preserve"><value>Alle Anfragen für die Hostnamen Ihrer Website gehen an einen Webserver, z. B. IIS oder nginx in Ihrem Netzwerk.</value></data>
+  <data name="All routes" xml:space="preserve"><value>Alle Routen</value></data>
   <data name="Allow (skip further checks)" xml:space="preserve"><value>Erlauben (weitere Prüfungen überspringen)</value></data>
   <data name="Allow a false positive" xml:space="preserve"><value>Einen Fehlalarm erlauben</value></data>
   <data name="Allow between 1 and 1,000,000 requests." xml:space="preserve"><value>Erlauben Sie zwischen 1 und 1.000.000 Anfragen.</value></data>
@@ -184,12 +186,16 @@
   <data name="Backend errors" xml:space="preserve"><value>Backend-Fehler</value></data>
   <data name="Backend errors since the start" xml:space="preserve"><value>Backend-Fehler seit dem Start</value></data>
   <data name="Backend line {0} ('{1}'): {2}" xml:space="preserve"><value>Backend-Zeile {0} („{1}“): {2}</value></data>
+  <data name="Backend timeout (504)" xml:space="preserve"><value>Backend-Zeitüberschreitung (504)</value></data>
   <data name="Backend unavailable" xml:space="preserve"><value>Backend nicht verfügbar</value></data>
   <data name="Backends" xml:space="preserve"><value>Backends</value></data>
   <data name="Backup and import" xml:space="preserve"><value>Sicherung und Import</value></data>
   <data name="Backup file (.zip)" xml:space="preserve"><value>Sicherungsdatei (.zip)</value></data>
   <data name="Backup restored." xml:space="preserve"><value>Sicherung wiederhergestellt.</value></data>
   <data name="Backups, downloads and cleanup" xml:space="preserve"><value>Sicherungen, Downloads und Bereinigung</value></data>
+  <data name="Bad" xml:space="preserve"><value>Schlecht</value></data>
+  <data name="Bad requests" xml:space="preserve"><value>Schlechte Anfragen</value></data>
+  <data name="Bad traffic by kind" xml:space="preserve"><value>Schlechter Verkehr nach Art</value></data>
   <data name="Before" xml:space="preserve"><value>Vorher</value></data>
   <data name="Before an address can be registered:" xml:space="preserve"><value>Bevor eine Adresse registriert werden kann:</value></data>
   <data name="Block" xml:space="preserve"><value>Blockieren</value></data>
@@ -208,6 +214,8 @@
   <data name="Blocked (403) by rule '{0}'." xml:space="preserve"><value>Blockiert (403) durch Regel „{0}“.</value></data>
   <data name="Blocked (403): {0} detected." xml:space="preserve"><value>Blockiert (403): {0} erkannt.</value></data>
   <data name="Blocked (403, 429, 503)" xml:space="preserve"><value>Blockiert (403, 429, 503)</value></data>
+  <data name="Blocked by a rule" xml:space="preserve"><value>Durch eine Regel blockiert</value></data>
+  <data name="Blocked by attack detection" xml:space="preserve"><value>Durch Angriffserkennung blockiert</value></data>
   <data name="Blocks are enforced." xml:space="preserve"><value>Blockierungen werden durchgesetzt.</value></data>
   <data name="Blocks are logged, not enforced." xml:space="preserve"><value>Blockierungen werden protokolliert, nicht durchgesetzt.</value></data>
   <data name="Body" xml:space="preserve"><value>Inhalt</value></data>
@@ -243,6 +251,8 @@
   <data name="Changed configuration in appsettings ignored (not imported)." xml:space="preserve"><value>Geänderte Konfiguration in appsettings ignoriert (nicht importiert).</value></data>
   <data name="Changes made after the backup was taken are no longer in the history (they stay in the copy of the database)." xml:space="preserve"><value>Änderungen nach dem Erstellen der Sicherung sind nicht mehr im Verlauf (sie bleiben in der Kopie der Datenbank).</value></data>
   <data name="Changing address (DHCP)" xml:space="preserve"><value>Wechselnde Adresse (DHCP)</value></data>
+  <data name="Chart" xml:space="preserve"><value>Diagramm</value></data>
+  <data name="Chart of requests per second: {0} requests, of which {1} good, {2} bad and {3} failed. The table below has the numbers." xml:space="preserve"><value>Diagramm der Anfragen pro Sekunde: {0} Anfragen, davon {1} gut, {2} schlecht und {3} fehlgeschlagen. Die Tabelle unten enthält die Zahlen.</value></data>
   <data name="Check every (seconds)" xml:space="preserve"><value>Prüfen alle (Sekunden)</value></data>
   <data name="Check every field and replace the example values with your own: nothing is saved until you press the button at the bottom." xml:space="preserve"><value>Prüfen Sie jedes Feld und ersetzen Sie die Beispielwerte durch Ihre eigenen: Nichts wird gespeichert, bis Sie unten auf die Schaltfläche klicken.</value></data>
   <data name="Check that the host name points to this gateway and that port 80 is reachable from the internet." xml:space="preserve"><value>Prüfen Sie, ob der Hostname auf dieses Gateway zeigt und Port 80 aus dem Internet erreichbar ist.</value></data>
@@ -268,12 +278,14 @@
   <data name="Client" xml:space="preserve"><value>Client</value></data>
   <data name="Client IP" xml:space="preserve"><value>Client-IP</value></data>
   <data name="Client IP address" xml:space="preserve"><value>IP-Adresse des Clients</value></data>
+  <data name="Client IP addresses, separated by commas. Shows only their bad requests." xml:space="preserve"><value>Client-IP-Adressen, durch Kommas getrennt. Zeigt nur ihre schlechten Anfragen.</value></data>
   <data name="Clients must send a valid X-Api-Key header." xml:space="preserve"><value>Clients müssen einen gültigen X-Api-Key-Header senden.</value></data>
   <data name="Code" xml:space="preserve"><value>Code</value></data>
   <data name="Color theme" xml:space="preserve"><value>Farbschema</value></data>
   <data name="Command injection" xml:space="preserve"><value>Befehlsinjektion</value></data>
   <data name="Command injection detection" xml:space="preserve"><value>Erkennung von Befehlsinjektion</value></data>
   <data name="Commercial SEO crawlers only cost bandwidth." xml:space="preserve"><value>Kommerzielle SEO-Crawler kosten nur Bandbreite.</value></data>
+  <data name="Compare with the previous period" xml:space="preserve"><value>Mit dem vorherigen Zeitraum vergleichen</value></data>
   <data name="Compared with version {0}." xml:space="preserve"><value>Verglichen mit Version {0}.</value></data>
   <data name="Comparison" xml:space="preserve"><value>Vergleich</value></data>
   <data name="Complete the settings above, then press &quot;Update preview&quot;." xml:space="preserve"><value>Vervollständigen Sie die Einstellungen oben und klicken Sie dann auf „Vorschau aktualisieren“.</value></data>
@@ -301,6 +313,8 @@
   <data name="Cross-site scripting" xml:space="preserve"><value>Cross-Site-Scripting</value></data>
   <data name="Cross-site scripting detection" xml:space="preserve"><value>Erkennung von Cross-Site-Scripting</value></data>
   <data name="Current password" xml:space="preserve"><value>Aktuelles Passwort</value></data>
+  <data name="Custom" xml:space="preserve"><value>Benutzerdefiniert</value></data>
+  <data name="Custom period" xml:space="preserve"><value>Benutzerdefinierter Zeitraum</value></data>
   <data name="Dark" xml:space="preserve"><value>Dunkel</value></data>
   <data name="Dashboard" xml:space="preserve"><value>Übersicht</value></data>
   <data name="Delete" xml:space="preserve"><value>Löschen</value></data>
@@ -319,6 +333,7 @@
   <data name="Describe a change in a sentence. A Claude model proposes it; the gateway checks the proposal strictly and shows you the differences. Nothing is applied until you approve it, and an applied proposal can be undone in one click." xml:space="preserve"><value>Beschreiben Sie eine Änderung in einem Satz. Ein Claude-Modell schlägt sie vor; das Gateway prüft den Vorschlag streng und zeigt Ihnen die Unterschiede. Nichts wird angewendet, bevor Sie zustimmen, und ein angewendeter Vorschlag lässt sich mit einem Klick rückgängig machen.</value></data>
   <data name="Describe a request and see what the firewall would do with it, without sending anything. Rules and attack detection run exactly as for real traffic; rate limits are not counted." xml:space="preserve"><value>Beschreiben Sie eine Anfrage und sehen Sie, was die Firewall damit täte, ohne etwas zu senden. Regeln und Angriffserkennung laufen genau wie bei echtem Verkehr; Ratenlimits werden nicht gezählt.</value></data>
   <data name="Description" xml:space="preserve"><value>Beschreibung</value></data>
+  <data name="Destination" xml:space="preserve"><value>Ziel</value></data>
   <data name="Detail" xml:space="preserve"><value>Detail</value></data>
   <data name="Details" xml:space="preserve"><value>Details</value></data>
   <data name="Details and restore" xml:space="preserve"><value>Details und Wiederherstellen</value></data>
@@ -343,12 +358,14 @@
   <data name="Discarded by {0} without applying it." xml:space="preserve"><value>Von {0} verworfen, ohne ihn anzuwenden.</value></data>
   <data name="Dismiss" xml:space="preserve"><value>Verwerfen</value></data>
   <data name="Done" xml:space="preserve"><value>Erledigt</value></data>
+  <data name="Download as CSV" xml:space="preserve"><value>Als CSV herunterladen</value></data>
   <data name="Download backup (.zip)" xml:space="preserve"><value>Sicherung herunterladen (.zip)</value></data>
   <data name="Download configuration (JSON)" xml:space="preserve"><value>Konfiguration herunterladen (JSON)</value></data>
   <data name="Download version {0} (JSON)" xml:space="preserve"><value>Version {0} herunterladen (JSON)</value></data>
   <data name="Downloads all {0} configuration versions and which one is active, as a .zip file." xml:space="preserve"><value>Lädt alle {0} Konfigurationsversionen und welche aktiv ist als .zip-Datei herunter.</value></data>
   <data name="Downloads the {0} configuration version and which one is active, as a .zip file." xml:space="preserve"><value>Lädt die {0} Konfigurationsversion und welche aktiv ist als .zip-Datei herunter.</value></data>
   <data name="Downloads version {0} (the active configuration) as a JSON file. Older versions can be exported from the &lt;a href=&quot;history&quot;&gt;history&lt;/a&gt;." xml:space="preserve"><value>Lädt Version {0} (die aktive Konfiguration) als JSON-Datei herunter. Ältere Versionen lassen sich im &lt;a href="history"&gt;Verlauf&lt;/a&gt; exportieren.</value></data>
+  <data name="Drag across the chart to zoom in." xml:space="preserve"><value>Über das Diagramm ziehen, um hineinzuzoomen.</value></data>
   <data name="E.g. www.example.com. A host name that has another certificate switches to Let's Encrypt." xml:space="preserve"><value>Z. B. www.example.com. Ein Hostname mit einem anderen Zertifikat wechselt zu Let's Encrypt.</value></data>
   <data name="Each action opens a pre-filled form; nothing changes until you check it and save." xml:space="preserve"><value>Jede Aktion öffnet ein vorausgefülltes Formular; nichts ändert sich, bis Sie es prüfen und speichern.</value></data>
   <data name="Each port gets a label, unique for this machine, such as &lt;em&gt;web&lt;/em&gt; or &lt;em&gt;admin&lt;/em&gt;. Routes use the label (nas · web), so a changed port number is changed here once." xml:space="preserve"><value>Jeder Port erhält eine Bezeichnung, eindeutig für diesen Rechner, etwa &lt;em&gt;web&lt;/em&gt; oder &lt;em&gt;admin&lt;/em&gt;. Routen verwenden die Bezeichnung (nas · web), sodass eine geänderte Portnummer hier einmal geändert wird.</value></data>
@@ -404,15 +421,18 @@
   <data name="Expires soon" xml:space="preserve"><value>Läuft bald ab</value></data>
   <data name="Export the configuration" xml:space="preserve"><value>Die Konfiguration exportieren</value></data>
   <data name="Export this version" xml:space="preserve"><value>Diese Version exportieren</value></data>
+  <data name="Failed" xml:space="preserve"><value>Fehlgeschlagen</value></data>
   <data name="Failover backends" xml:space="preserve"><value>Ausweich-Backends</value></data>
   <data name="Failover line {0} ('{1}') is already a backend above; a failover is another address or target." xml:space="preserve"><value>Ausweich-Zeile {0} („{1}“) ist bereits ein Backend oben; ein Ausweichziel ist eine andere Adresse oder ein anderes Ziel.</value></data>
   <data name="Failover line {0} ('{1}'): {2}" xml:space="preserve"><value>Ausweich-Zeile {0} („{1}“): {2}</value></data>
   <data name="Fair use per visitor." xml:space="preserve"><value>Faire Nutzung pro Besucher.</value></data>
   <data name="False positive of '{0}'. {1}" xml:space="preserve"><value>Fehlalarm von „{0}“. {1}</value></data>
   <data name="False positive: {0} (request log {1})." xml:space="preserve"><value>Fehlalarm: {0} (Anfrageprotokoll {1}).</value></data>
+  <data name="Figures" xml:space="preserve"><value>Kennzahlen</value></data>
   <data name="File on disk" xml:space="preserve"><value>Datei auf dem Datenträger</value></data>
   <data name="Filter the audit log" xml:space="preserve"><value>Das Audit-Protokoll filtern</value></data>
   <data name="Filter the request log" xml:space="preserve"><value>Das Anfrageprotokoll filtern</value></data>
+  <data name="Filter the traffic" xml:space="preserve"><value>Den Verkehr filtern</value></data>
   <data name="Filter with the form; the address bar keeps the filter, so you can bookmark a view. Times are in UTC. Turn on &quot;Live&quot; to see new requests as they arrive." xml:space="preserve"><value>Filtern Sie mit dem Formular; die Adressleiste behält den Filter, sodass Sie eine Ansicht als Lesezeichen speichern können. Zeiten in UTC. Schalten Sie „Live“ ein, um neue Anfragen beim Eintreffen zu sehen.</value></data>
   <data name="Follow the browser's language" xml:space="preserve"><value>Der Sprache des Browsers folgen</value></data>
   <data name="Follow the system setting" xml:space="preserve"><value>Der Systemeinstellung folgen</value></data>
@@ -430,10 +450,12 @@
   <data name="From the service log of the gateway." xml:space="preserve"><value>Aus dem Dienstprotokoll des Gateways.</value></data>
   <data name="Full backup" xml:space="preserve"><value>Vollständige Sicherung</value></data>
   <data name="GET to read a page, POST to send a form." xml:space="preserve"><value>GET, um eine Seite zu lesen, POST, um ein Formular zu senden.</value></data>
+  <data name="Gateway error (500)" xml:space="preserve"><value>Gateway-Fehler (500)</value></data>
   <data name="Give the limit a name, e.g. login-attempts." xml:space="preserve"><value>Geben Sie dem Limit einen Namen, z. B. login-attempts.</value></data>
   <data name="Give the route a name, e.g. website or api." xml:space="preserve"><value>Geben Sie der Route einen Namen, z. B. website oder api.</value></data>
   <data name="Give the rule a name, e.g. block-admin." xml:space="preserve"><value>Geben Sie der Regel einen Namen, z. B. block-admin.</value></data>
   <data name="Give the target a name, e.g. nas." xml:space="preserve"><value>Geben Sie dem Ziel einen Namen, z. B. nas.</value></data>
+  <data name="Good" xml:space="preserve"><value>Gut</value></data>
   <data name="HSTS" xml:space="preserve"><value>HSTS</value></data>
   <data name="HSTS on HTTPS" xml:space="preserve"><value>HSTS bei HTTPS</value></data>
   <data name="HSTS settings changed." xml:space="preserve"><value>HSTS-Einstellungen geändert.</value></data>
@@ -458,7 +480,9 @@
   <data name="Hidden files, backup copies and dumps must never be public." xml:space="preserve"><value>Versteckte Dateien, Sicherungskopien und Dumps dürfen nie öffentlich sein.</value></data>
   <data name="Host" xml:space="preserve"><value>Host</value></data>
   <data name="Host name" xml:space="preserve"><value>Hostname</value></data>
+  <data name="Host name and path (without the query string) that bad requests asked for, stored per minute like the sources." xml:space="preserve"><value>Hostname und Pfad (ohne Query-String), die schlechte Anfragen angefragt haben, pro Minute gespeichert wie die Quellen.</value></data>
   <data name="Host names" xml:space="preserve"><value>Hostnamen</value></data>
+  <data name="How many public requests the gateway handles, and how many of them are good, bad or failed. Good: forwarded, redirected or answered. Bad: blocked, rate limited, refused (fail-closed) or without a route. Failed: no backend answered. Live shows the last minutes, updated every second; the other periods come from the traffic history, which keeps older data coarser (per second for 3 days, up to per month for 3 years)." xml:space="preserve"><value>Wie viele öffentliche Anfragen das Gateway verarbeitet und wie viele davon gut, schlecht oder fehlgeschlagen sind. Gut: weitergeleitet, umgeleitet oder beantwortet. Schlecht: blockiert, begrenzt, abgewiesen (fail-closed) oder ohne Route. Fehlgeschlagen: kein Backend hat geantwortet. Live zeigt die letzten Minuten, jede Sekunde aktualisiert; die anderen Zeiträume stammen aus dem Verkehrsverlauf, der ältere Daten gröber aufbewahrt (pro Sekunde für 3 Tage, bis pro Monat für 3 Jahre).</value></data>
   <data name="I accept the &lt;a href=&quot;https://letsencrypt.org/repository/&quot; rel=&quot;noopener noreferrer&quot; target=&quot;_blank&quot;&gt;Let's Encrypt subscriber agreement&lt;/a&gt;" xml:space="preserve"><value>Ich akzeptiere die &lt;a href="https://letsencrypt.org/repository/" rel="noopener noreferrer" target="_blank"&gt;Abonnentenvereinbarung von Let's Encrypt&lt;/a&gt;</value></data>
   <data name="IP address or host name, e.g. 192.168.1.20 or nas.local. With a MAC address: optional, the address to use until the MAC address is found." xml:space="preserve"><value>IP-Adresse oder Hostname, z. B. 192.168.1.20 oder nas.local. Mit einer MAC-Adresse: optional, die Adresse, die verwendet wird, bis die MAC-Adresse gefunden ist.</value></data>
   <data name="IP allow list" xml:space="preserve"><value>IP-Erlaubnisliste</value></data>
@@ -487,17 +511,22 @@
   <data name="Keep this on for IIS and other servers that host several sites. Off: the backend receives its own address as host name." xml:space="preserve"><value>Lassen Sie dies für IIS und andere Server mit mehreren Websites an. Aus: Das Backend erhält seine eigene Adresse als Hostnamen.</value></data>
   <data name="Kept for" xml:space="preserve"><value>Aufbewahrt</value></data>
   <data name="Key must be ClientIp, ClientIpAndRoute or Route." xml:space="preserve"><value>Key muss ClientIp, ClientIpAndRoute oder Route sein.</value></data>
+  <data name="Kind" xml:space="preserve"><value>Art</value></data>
+  <data name="Kinds of traffic" xml:space="preserve"><value>Arten von Verkehr</value></data>
   <data name="Label" xml:space="preserve"><value>Bezeichnung</value></data>
   <data name="Language" xml:space="preserve"><value>Sprache</value></data>
   <data name="Largest body inspected (bytes)" xml:space="preserve"><value>Größter geprüfter Inhalt (Bytes)</value></data>
   <data name="Last" xml:space="preserve"><value>Zuletzt</value></data>
   <data name="Last 15 minutes" xml:space="preserve"><value>Letzte 15 Minuten</value></data>
   <data name="Last 24 hours" xml:space="preserve"><value>Letzte 24 Stunden</value></data>
+  <data name="Last 3 months" xml:space="preserve"><value>Letzte 3 Monate</value></data>
+  <data name="Last 3 years" xml:space="preserve"><value>Letzte 3 Jahre</value></data>
   <data name="Last 30 days" xml:space="preserve"><value>Letzte 30 Tage</value></data>
   <data name="Last 7 days" xml:space="preserve"><value>Letzte 7 Tage</value></data>
   <data name="Last cleanup" xml:space="preserve"><value>Letzte Bereinigung</value></data>
   <data name="Last hour" xml:space="preserve"><value>Letzte Stunde</value></data>
   <data name="Last rollup" xml:space="preserve"><value>Letzte Verdichtung</value></data>
+  <data name="Last year" xml:space="preserve"><value>Letztes Jahr</value></data>
   <data name="Latency" xml:space="preserve"><value>Latenz</value></data>
   <data name="Let's Encrypt" xml:space="preserve"><value>Let's Encrypt</value></data>
   <data name="Let's Encrypt cannot issue wildcard certificates with HTTP validation; use your own certificate file." xml:space="preserve"><value>Let's Encrypt kann mit HTTP-Validierung keine Wildcard-Zertifikate ausstellen; verwenden Sie eine eigene Zertifikatsdatei.</value></data>
@@ -563,6 +592,7 @@
   <data name="No admin account exists yet. The account you create here signs in to this admin UI." xml:space="preserve"><value>Es gibt noch kein Administratorkonto. Mit dem Konto, das Sie hier anlegen, melden Sie sich bei dieser Verwaltungsoberfläche an.</value></data>
   <data name="No backend (503)" xml:space="preserve"><value>Kein Backend (503)</value></data>
   <data name="No bad requests in the last minute." xml:space="preserve"><value>Keine schlechten Anfragen in der letzten Minute.</value></data>
+  <data name="No bad requests in this period." xml:space="preserve"><value>Keine schlechten Anfragen in diesem Zeitraum.</value></data>
   <data name="No certificate was found in the PEM file (it should contain '-----BEGIN CERTIFICATE-----')." xml:space="preserve"><value>In der PEM-Datei wurde kein Zertifikat gefunden (sie sollte „-----BEGIN CERTIFICATE-----“ enthalten).</value></data>
   <data name="No certificate yet for {0}: add one on the &lt;a href=&quot;certificates&quot;&gt;Certificates&lt;/a&gt; page before redirecting to HTTPS." xml:space="preserve"><value>Noch kein Zertifikat für {0}: Fügen Sie auf der Seite &lt;a href="certificates"&gt;Zertifikate&lt;/a&gt; eines hinzu, bevor Sie zu HTTPS umleiten.</value></data>
   <data name="No certificates uploaded." xml:space="preserve"><value>Keine Zertifikate hochgeladen.</value></data>
@@ -570,6 +600,7 @@
   <data name="No configuration has been activated yet." xml:space="preserve"><value>Es wurde noch keine Konfiguration aktiviert.</value></data>
   <data name="No configuration is active yet, so there is nothing to apply the preset to." xml:space="preserve"><value>Es ist noch keine Konfiguration aktiv, daher gibt es nichts, worauf die Voreinstellung angewendet werden kann.</value></data>
   <data name="No configuration is active yet." xml:space="preserve"><value>Es ist noch keine Konfiguration aktiv.</value></data>
+  <data name="No destinations in this period." xml:space="preserve"><value>Keine Ziele in diesem Zeitraum.</value></data>
   <data name="No entries match the filter." xml:space="preserve"><value>Keine Einträge passen zum Filter.</value></data>
   <data name="No entry." xml:space="preserve"><value>Kein Eintrag.</value></data>
   <data name="No host name has a certificate yet, so HTTPS connections are refused. Upload a certificate and choose its host names." xml:space="preserve"><value>Noch kein Hostname hat ein Zertifikat, daher werden HTTPS-Verbindungen abgelehnt. Laden Sie ein Zertifikat hoch und wählen Sie seine Hostnamen.</value></data>
@@ -577,6 +608,7 @@
   <data name="No proposals yet." xml:space="preserve"><value>Noch keine Vorschläge.</value></data>
   <data name="No rate limits yet. A good start is a general limit per client IP (e.g. 600 per minute) and a strict one for login pages (e.g. 5 POST requests to /login per minute)." xml:space="preserve"><value>Noch keine Ratenlimits. Ein guter Anfang ist ein allgemeines Limit pro Client-IP (z. B. 600 pro Minute) und ein strenges für Anmeldeseiten (z. B. 5 POST-Anfragen an /login pro Minute).</value></data>
   <data name="No requests have been logged yet." xml:space="preserve"><value>Es wurden noch keine Anfragen protokolliert.</value></data>
+  <data name="No requests in this period." xml:space="preserve"><value>Keine Anfragen in diesem Zeitraum.</value></data>
   <data name="No requests match these filters." xml:space="preserve"><value>Keine Anfragen passen zu diesen Filtern.</value></data>
   <data name="No route" xml:space="preserve"><value>Keine Route</value></data>
   <data name="No route (404)" xml:space="preserve"><value>Keine Route (404)</value></data>
@@ -587,6 +619,7 @@
   <data name="No routes yet: every public request gets 404. Add a route to forward traffic to a backend." xml:space="preserve"><value>Noch keine Routen: Jede öffentliche Anfrage erhält 404. Fügen Sie eine Route hinzu, um Verkehr an ein Backend weiterzuleiten.</value></data>
   <data name="No rules yet. Attack detection and rate limits still apply." xml:space="preserve"><value>Noch keine Regeln. Angriffserkennung und Ratenlimits gelten weiterhin.</value></data>
   <data name="No rules yet. Attack detection and rate limits still protect your routes." xml:space="preserve"><value>Noch keine Regeln. Angriffserkennung und Ratenlimits schützen Ihre Routen weiterhin.</value></data>
+  <data name="No sources in this period (sources are kept per minute and coarser)." xml:space="preserve"><value>Keine Quellen in diesem Zeitraum (Quellen werden pro Minute und gröber aufbewahrt).</value></data>
   <data name="No targets yet. Routes forward to addresses such as http://10.0.0.5:8080. Add a target to give a machine and its ports a name that routes can use." xml:space="preserve"><value>Noch keine Ziele. Routen leiten an Adressen wie http://10.0.0.5:8080 weiter. Fügen Sie ein Ziel hinzu, um einem Rechner und seinen Ports einen Namen zu geben, den Routen verwenden können.</value></data>
   <data name="No versions stored yet." xml:space="preserve"><value>Noch keine Versionen gespeichert.</value></data>
   <data name="None" xml:space="preserve"><value>Keine</value></data>
@@ -623,6 +656,7 @@
   <data name="One per line: an address such as http://10.0.0.5:8080, https://backend.local:8443 or 10.0.0.5:8080 (http), or a target and port label such as nas/web (see Targets)." xml:space="preserve"><value>Eines pro Zeile: eine Adresse wie http://10.0.0.5:8080, https://backend.local:8443 oder 10.0.0.5:8080 (http), oder ein Ziel mit Port-Bezeichnung wie nas/web (siehe Ziele).</value></data>
   <data name="One-click presets" xml:space="preserve"><value>Voreinstellungen mit einem Klick</value></data>
   <data name="Only a proposal that was not applied can be discarded." xml:space="preserve"><value>Nur ein nicht angewendeter Vorschlag kann verworfen werden.</value></data>
+  <data name="Only bad requests to {0}." xml:space="preserve"><value>Nur schlechte Anfragen an {0}.</value></data>
   <data name="Only count requests where (optional)" xml:space="preserve"><value>Nur Anfragen zählen, bei denen (optional)</value></data>
   <data name="Only for backends you control on a trusted network, e.g. a local IIS with a self-signed certificate." xml:space="preserve"><value>Nur für Backends, die Sie in einem vertrauenswürdigen Netzwerk kontrollieren, z. B. ein lokaler IIS mit selbstsigniertem Zertifikat.</value></data>
   <data name="Only for devices on the gateway's own network (not behind a router or VPN). Devices with a private (random) Wi-Fi address need that turned off for this network. When the device is not found for 10 minutes, its routes get no traffic until it is back." xml:space="preserve"><value>Nur für Geräte im eigenen Netzwerk des Gateways (nicht hinter einem Router oder VPN). Bei Geräten mit privater (zufälliger) WLAN-Adresse muss diese für dieses Netzwerk ausgeschaltet werden. Wird das Gerät 10 Minuten nicht gefunden, erhalten seine Routen keinen Verkehr, bis es zurück ist.</value></data>
@@ -638,6 +672,7 @@
   <data name="Only record requests to a path, without blocking them, e.g. to see who uses an old URL." xml:space="preserve"><value>Anfragen an einen Pfad nur aufzeichnen, ohne sie zu blockieren, z. B. um zu sehen, wer eine alte URL nutzt.</value></data>
   <data name="Only the host name and optionally a port, without a path, e.g. https://admin.example.com:8443." xml:space="preserve"><value>Nur der Hostname und optional ein Port, ohne Pfad, z. B. https://admin.example.com:8443.</value></data>
   <data name="Only these methods. None ticked: every method." xml:space="preserve"><value>Nur diese Methoden. Nichts angekreuzt: jede Methode.</value></data>
+  <data name="Only this" xml:space="preserve"><value>Nur dies</value></data>
   <data name="Only this client" xml:space="preserve"><value>Nur dieser Client</value></data>
   <data name="Only used when 'When' is 'a header'" xml:space="preserve"><value>Nur verwendet, wenn „Wenn“ auf „ein Header“ steht</value></data>
   <data name="Only your own IP addresses may open a path such as /admin; everyone else gets 403." xml:space="preserve"><value>Nur Ihre eigenen IP-Adressen dürfen einen Pfad wie /admin öffnen; alle anderen erhalten 403.</value></data>
@@ -646,6 +681,7 @@
   <data name="Open your authenticator app, add an account and scan this QR code." xml:space="preserve"><value>Öffnen Sie Ihre Authenticator-App, fügen Sie ein Konto hinzu und scannen Sie diesen QR-Code.</value></data>
   <data name="Optional: with an API key from Anthropic, a Claude model can help you change the configuration. It only proposes changes; nothing is applied without your review." xml:space="preserve"><value>Optional: Mit einem API-Schlüssel von Anthropic kann ein Claude-Modell Ihnen helfen, die Konfiguration zu ändern. Es schlägt nur Änderungen vor; nichts wird ohne Ihre Prüfung angewendet.</value></data>
   <data name="Or paste the JSON" xml:space="preserve"><value>Oder fügen Sie das JSON ein</value></data>
+  <data name="Other" xml:space="preserve"><value>Sonstige</value></data>
   <data name="Other sessions signed out" xml:space="preserve"><value>Andere Sitzungen abgemeldet</value></data>
   <data name="Other templates" xml:space="preserve"><value>Andere Vorlagen</value></data>
   <data name="Outcome" xml:space="preserve"><value>Ergebnis</value></data>
@@ -661,10 +697,14 @@
   <data name="Path prefix" xml:space="preserve"><value>Pfadpräfix</value></data>
   <data name="Path traversal" xml:space="preserve"><value>Path Traversal</value></data>
   <data name="Path traversal detection" xml:space="preserve"><value>Erkennung von Path Traversal</value></data>
+  <data name="Peak" xml:space="preserve"><value>Spitze</value></data>
   <data name="Per" xml:space="preserve"><value>Pro</value></data>
   <data name="Per client IP is usual. Per route for all clients together protects a backend from being overloaded." xml:space="preserve"><value>Pro Client-IP ist üblich. Pro Route für alle Clients zusammen schützt ein Backend vor Überlastung.</value></data>
   <data name="Per client IP. Clients that send more get 429 until they slow down." xml:space="preserve"><value>Pro Client-IP. Clients, die mehr senden, erhalten 429, bis sie langsamer werden.</value></data>
   <data name="Per page" xml:space="preserve"><value>Pro Seite</value></data>
+  <data name="Performance" xml:space="preserve"><value>Leistung</value></data>
+  <data name="Performance and history" xml:space="preserve"><value>Leistung und Verlauf</value></data>
+  <data name="Period" xml:space="preserve"><value>Zeitraum</value></data>
   <data name="PermitLimit must be between 1 and {0} (was {1})." xml:space="preserve"><value>PermitLimit muss zwischen 1 und {0} liegen (war {1}).</value></data>
   <data name="Places where attack detection is switched off, to allow a known false positive. Rules and rate limits still apply there. Add one from a blocked request in the &lt;a href=&quot;logs?show=Blocked&quot;&gt;request log&lt;/a&gt;, or directly." xml:space="preserve"><value>Stellen, an denen die Angriffserkennung ausgeschaltet ist, um einen bekannten Fehlalarm zu erlauben. Regeln und Ratenlimits gelten dort weiterhin. Fügen Sie eine aus einer blockierten Anfrage im &lt;a href="logs?show=Blocked"&gt;Anfrageprotokoll&lt;/a&gt; hinzu oder direkt.</value></data>
   <data name="Port" xml:space="preserve"><value>Port</value></data>
@@ -678,6 +718,7 @@
   <data name="Preview" xml:space="preserve"><value>Vorschau</value></data>
   <data name="Preview: what will change" xml:space="preserve"><value>Vorschau: was sich ändert</value></data>
   <data name="Preview: {0}" xml:space="preserve"><value>Vorschau: {0}</value></data>
+  <data name="Previous period" xml:space="preserve"><value>Vorheriger Zeitraum</value></data>
   <data name="Previous sign-in" xml:space="preserve"><value>Vorherige Anmeldung</value></data>
   <data name="Priority" xml:space="preserve"><value>Priorität</value></data>
   <data name="Private key (PEM only)" xml:space="preserve"><value>Privater Schlüssel (nur PEM)</value></data>
@@ -746,13 +787,18 @@
   <data name="Request log size" xml:space="preserve"><value>Größe des Anfrageprotokolls</value></data>
   <data name="Request logging is switched off in the host settings (&lt;code&gt;Gateway:EventLog:Enabled&lt;/code&gt;)." xml:space="preserve"><value>Das Protokollieren von Anfragen ist in den Host-Einstellungen ausgeschaltet (&lt;code&gt;Gateway:EventLog:Enabled&lt;/code&gt;).</value></data>
   <data name="Request {0}" xml:space="preserve"><value>Anfrage {0}</value></data>
+  <data name="Requested destinations of bad traffic" xml:space="preserve"><value>Angefragte Ziele schlechten Verkehrs</value></data>
   <data name="Requested from Let's Encrypt; this usually takes less than a minute." xml:space="preserve"><value>Bei Let's Encrypt angefordert; das dauert meist weniger als eine Minute.</value></data>
+  <data name="Requests" xml:space="preserve"><value>Anfragen</value></data>
   <data name="Requests for {0}" xml:space="preserve"><value>Anfragen für {0}</value></data>
   <data name="Requests for {0} under {1}" xml:space="preserve"><value>Anfragen für {0} unter {1}</value></data>
+  <data name="Requests from {0} to {1} UTC (from the Performance page)." xml:space="preserve"><value>Anfragen von {0} bis {1} UTC (von der Seite Leistung).</value></data>
   <data name="Requests it handles will get 404 (or go to another matching route). The deletion is stored as a new configuration version, so it can be undone by restoring the previous version." xml:space="preserve"><value>Anfragen, die sie behandelt, erhalten 404 (oder gehen an eine andere passende Route). Das Löschen wird als neue Konfigurationsversion gespeichert und lässt sich durch Wiederherstellen der vorherigen Version rückgängig machen.</value></data>
   <data name="Requests per client" xml:space="preserve"><value>Anfragen pro Client</value></data>
   <data name="Requests per minute" xml:space="preserve"><value>Anfragen pro Minute</value></data>
   <data name="Requests per second" xml:space="preserve"><value>Anfragen pro Sekunde</value></data>
+  <data name="Requests per second (average {0})" xml:space="preserve"><value>Anfragen pro Sekunde (Durchschnitt {0})</value></data>
+  <data name="Requests per second, last 5 minutes" xml:space="preserve"><value>Anfragen pro Sekunde, letzte 5 Minuten</value></data>
   <data name="Requests that got an error because no backend answered: &lt;strong&gt;no backend&lt;/strong&gt; (503, none was healthy), &lt;strong&gt;backend error&lt;/strong&gt; (502, the connection failed or the answer was invalid) and &lt;strong&gt;time-out&lt;/strong&gt; (504). The request log has each request, with the backend that was tried." xml:space="preserve"><value>Anfragen, die einen Fehler erhielten, weil kein Backend antwortete: &lt;strong&gt;kein Backend&lt;/strong&gt; (503, keines war gesund), &lt;strong&gt;Backend-Fehler&lt;/strong&gt; (502, die Verbindung schlug fehl oder die Antwort war ungültig) und &lt;strong&gt;Zeitüberschreitung&lt;/strong&gt; (504). Das Anfrageprotokoll enthält jede Anfrage mit dem versuchten Backend.</value></data>
   <data name="Requests that would be blocked are logged but let through." xml:space="preserve"><value>Anfragen, die blockiert würden, werden protokolliert, aber durchgelassen.</value></data>
   <data name="Requests under /api go to a separate API server; the rest of the site is unaffected." xml:space="preserve"><value>Anfragen unter /api gehen an einen eigenen API-Server; der Rest der Website bleibt unberührt.</value></data>
@@ -821,11 +867,17 @@
   <data name="Settings" xml:space="preserve"><value>Einstellungen</value></data>
   <data name="Settings.Hsts.Preload needs IncludeSubDomains and a MaxAgeSeconds of at least 31536000 (one year)." xml:space="preserve"><value>Settings.Hsts.Preload erfordert IncludeSubDomains und ein MaxAgeSeconds von mindestens 31536000 (ein Jahr).</value></data>
   <data name="Setup token" xml:space="preserve"><value>Einrichtungstoken</value></data>
+  <data name="Share" xml:space="preserve"><value>Anteil</value></data>
   <data name="Share of the size limit in use" xml:space="preserve"><value>Genutzter Anteil der Größengrenze</value></data>
   <data name="Show" xml:space="preserve"><value>Anzeigen</value></data>
+  <data name="Show all destinations" xml:space="preserve"><value>Alle Ziele anzeigen</value></data>
+  <data name="Show as" xml:space="preserve"><value>Anzeigen als</value></data>
   <data name="Show as configuration" xml:space="preserve"><value>Als Konfiguration anzeigen</value></data>
+  <data name="Show as table" xml:space="preserve"><value>Als Tabelle anzeigen</value></data>
   <data name="Show the proposal as it came back" xml:space="preserve"><value>Den Vorschlag so anzeigen, wie er zurückkam</value></data>
   <data name="Show the summary of the current configuration" xml:space="preserve"><value>Die Zusammenfassung der aktuellen Konfiguration anzeigen</value></data>
+  <data name="Show the time range instead" xml:space="preserve"><value>Stattdessen den Zeitraum anzeigen</value></data>
+  <data name="Show these requests in the request log" xml:space="preserve"><value>Diese Anfragen im Anfrageprotokoll anzeigen</value></data>
   <data name="Shown on the error, e.g. Planned maintenance until 14:00. One line, at most 300 characters." xml:space="preserve"><value>Wird beim Fehler angezeigt, z. B. Geplante Wartung bis 14:00. Eine Zeile, höchstens 300 Zeichen.</value></data>
   <data name="Sign in" xml:space="preserve"><value>Anmelden</value></data>
   <data name="Sign in at &lt;code&gt;{0}&lt;/code&gt;. Until you sign in, every other address there answers &quot;not found&quot;." xml:space="preserve"><value>Melden Sie sich unter &lt;code&gt;{0}&lt;/code&gt; an. Bis Sie angemeldet sind, antwortet dort jede andere Adresse mit „nicht gefunden“.</value></data>
@@ -850,7 +902,11 @@
   <data name="Skip to content" xml:space="preserve"><value>Zum Inhalt springen</value></data>
   <data name="Slow down password guessing." xml:space="preserve"><value>Passwort-Raten verlangsamen.</value></data>
   <data name="Slow down password guessing: limit login attempts per client IP." xml:space="preserve"><value>Passwort-Raten verlangsamen: Anmeldeversuche pro Client-IP begrenzen.</value></data>
+  <data name="Sources" xml:space="preserve"><value>Quellen</value></data>
+  <data name="Sources and destinations are counted without their route, so the route filter does not apply while they are selected." xml:space="preserve"><value>Quellen und Ziele werden ohne ihre Route gezählt, daher gilt der Routenfilter nicht, solange sie ausgewählt sind.</value></data>
+  <data name="Sources are stored per minute, about a minute after it ends, so the last minute is not in this list yet." xml:space="preserve"><value>Quellen werden pro Minute gespeichert, etwa eine Minute nach deren Ende, daher fehlt die letzte Minute noch in dieser Liste.</value></data>
   <data name="Sources of bad requests, last minute" xml:space="preserve"><value>Quellen schlechter Anfragen, letzte Minute</value></data>
+  <data name="Sources of bad traffic" xml:space="preserve"><value>Quellen schlechten Verkehrs</value></data>
   <data name="Spread requests over two servers; a server that fails its health check gets no traffic until it recovers." xml:space="preserve"><value>Anfragen auf zwei Server verteilen; ein Server, der seine Statusprüfung nicht besteht, erhält keinen Verkehr, bis er sich erholt.</value></data>
   <data name="Start an IP block list with this address." xml:space="preserve"><value>Eine IP-Sperrliste mit dieser Adresse beginnen.</value></data>
   <data name="Start short (a day) and raise it to a year once everything works over HTTPS. 0 tells browsers to forget it. &lt;strong&gt;Subdomains&lt;/strong&gt; extends it to every subdomain; &lt;strong&gt;preload&lt;/strong&gt; asks to be built into browsers (hstspreload.org) and is very hard to undo." xml:space="preserve"><value>Beginnen Sie kurz (ein Tag) und erhöhen Sie auf ein Jahr, sobald alles über HTTPS funktioniert. 0 lässt Browser es vergessen. &lt;strong&gt;Subdomains&lt;/strong&gt; dehnt es auf jede Subdomain aus; &lt;strong&gt;Preload&lt;/strong&gt; beantragt die Aufnahme in Browser (hstspreload.org) und ist sehr schwer rückgängig zu machen.</value></data>
@@ -871,6 +927,7 @@
   <data name="Switches on detection of SQL injection, cross-site scripting, path traversal, command injection and attack tools, and adds two rules: one blocks requests for hidden files and leftovers that should never be public (.git, .env, backup copies such as index.php.bak, dumps such as backup.zip), one blocks the TRACE and TRACK methods that are only used to probe servers." xml:space="preserve"><value>Schaltet die Erkennung von SQL-Injection, Cross-Site-Scripting, Path Traversal, Befehlsinjektion und Angriffswerkzeugen ein und fügt zwei Regeln hinzu: Eine blockiert Anfragen nach versteckten Dateien und Überbleibseln, die nie öffentlich sein dürfen (.git, .env, Sicherungskopien wie index.php.bak, Dumps wie backup.zip), die andere blockiert die Methoden TRACE und TRACK, die nur zum Abtasten von Servern dienen.</value></data>
   <data name="System" xml:space="preserve"><value>System</value></data>
   <data name="TRACE and TRACK are only used to probe servers." xml:space="preserve"><value>TRACE und TRACK dienen nur zum Abtasten von Servern.</value></data>
+  <data name="Table" xml:space="preserve"><value>Tabelle</value></data>
   <data name="Target #{0}" xml:space="preserve"><value>Ziel Nr. {0}</value></data>
   <data name="Target '{0}'" xml:space="preserve"><value>Ziel „{0}“</value></data>
   <data name="Target '{0}' deleted (version {1})." xml:space="preserve"><value>Ziel „{0}“ gelöscht (Version {1}).</value></data>
@@ -915,6 +972,7 @@
   <data name="The certificate was not uploaded." xml:space="preserve"><value>Das Zertifikat wurde nicht hochgeladen.</value></data>
   <data name="The certificate was uploaded; its private key is stored encrypted. Now choose the host names that use it." xml:space="preserve"><value>Das Zertifikat wurde hochgeladen; sein privater Schlüssel ist verschlüsselt gespeichert. Wählen Sie jetzt die Hostnamen, die es verwenden.</value></data>
   <data name="The change was not applied." xml:space="preserve"><value>Die Änderung wurde nicht angewendet.</value></data>
+  <data name="The chart needs JavaScript; the table below has the same numbers." xml:space="preserve"><value>Das Diagramm benötigt JavaScript; die Tabelle unten enthält dieselben Zahlen.</value></data>
   <data name="The code is not correct. Check that the app shows the account just added, and use the current code." xml:space="preserve"><value>Der Code ist falsch. Prüfen Sie, ob die App das gerade hinzugefügte Konto anzeigt, und verwenden Sie den aktuellen Code.</value></data>
   <data name="The code is not correct. Codes change every 30 seconds; use the current one." xml:space="preserve"><value>Der Code ist falsch. Codes ändern sich alle 30 Sekunden; verwenden Sie den aktuellen.</value></data>
   <data name="The configuration changed after this proposal was applied (version {0} is running now). To undo it anyway, restore version {1} on the history page." xml:space="preserve"><value>Die Konfiguration hat sich geändert, nachdem dieser Vorschlag angewendet wurde (jetzt läuft Version {0}). Um ihn trotzdem rückgängig zu machen, stellen Sie auf der Verlaufsseite Version {1} wieder her.</value></data>
@@ -946,6 +1004,8 @@
   <data name="The host names this certificate is valid for, and the route host names it covers. A host name that has another certificate now switches to this one." xml:space="preserve"><value>Die Hostnamen, für die dieses Zertifikat gilt, und die Routen-Hostnamen, die es abdeckt. Ein Hostname mit einem anderen Zertifikat wechselt zu diesem.</value></data>
   <data name="The key contains spaces or line breaks; paste it again." xml:space="preserve"><value>Der Schlüssel enthält Leerzeichen oder Zeilenumbrüche; fügen Sie ihn erneut ein.</value></data>
   <data name="The key works: Anthropic accepted it." xml:space="preserve"><value>Der Schlüssel funktioniert: Anthropic hat ihn akzeptiert.</value></data>
+  <data name="The last {0} of {1} rows; the CSV file has all of them." xml:space="preserve"><value>Die letzten {0} von {1} Zeilen; die CSV-Datei enthält alle.</value></data>
+  <data name="The live view counts requests in the second they complete. Filters for kinds and sources apply to the other periods." xml:space="preserve"><value>Die Live-Ansicht zählt Anfragen in der Sekunde, in der sie abgeschlossen werden. Filter nach Art und Quelle gelten für die anderen Zeiträume.</value></data>
   <data name="The log could not be read: {0}" xml:space="preserve"><value>Das Protokoll konnte nicht gelesen werden: {0}</value></data>
   <data name="The log entry no longer exists; the form is not pre-filled." xml:space="preserve"><value>Der Protokolleintrag existiert nicht mehr; das Formular ist nicht vorausgefüllt.</value></data>
   <data name="The machine" xml:space="preserve"><value>Der Rechner</value></data>
@@ -970,7 +1030,9 @@
   <data name="The proposal is not valid JSON: {0}" xml:space="preserve"><value>Der Vorschlag ist kein gültiges JSON: {0}</value></data>
   <data name="The rate limit was not deleted." xml:space="preserve"><value>Das Ratenlimit wurde nicht gelöscht.</value></data>
   <data name="The rate limit was not saved." xml:space="preserve"><value>Das Ratenlimit wurde nicht gespeichert.</value></data>
+  <data name="The request log has no entries, so the numbers do not link to it." xml:space="preserve"><value>Das Anfrageprotokoll hat keine Einträge, daher verweisen die Zahlen nicht darauf.</value></data>
   <data name="The request log is kept in events.db in the data folder. A background job checks it every minute and removes the oldest entries when they are older than the age limit, or when the log grows close to its size limit. The file never grows beyond the size limit; space of removed entries is reused for new ones." xml:space="preserve"><value>Das Anfrageprotokoll liegt in events.db im Datenordner. Ein Hintergrundjob prüft es jede Minute und entfernt die ältesten Einträge, wenn sie älter als die Altersgrenze sind oder das Protokoll nahe an seine Größengrenze kommt. Die Datei wächst nie über die Größengrenze; der Platz entfernter Einträge wird für neue wiederverwendet.</value></data>
+  <data name="The request log no longer has the entries of this period." xml:space="preserve"><value>Das Anfrageprotokoll enthält die Einträge dieses Zeitraums nicht mehr.</value></data>
   <data name="The route this request would match. Some rules only apply to certain routes." xml:space="preserve"><value>Die Route, zu der diese Anfrage passen würde. Manche Regeln gelten nur für bestimmte Routen.</value></data>
   <data name="The route was not deleted." xml:space="preserve"><value>Die Route wurde nicht gelöscht.</value></data>
   <data name="The route was not saved." xml:space="preserve"><value>Die Route wurde nicht gespeichert.</value></data>
@@ -986,6 +1048,7 @@
   <data name="The site name in the address, e.g. www.example.com." xml:space="preserve"><value>Der Name der Website in der Adresse, z. B. www.example.com.</value></data>
   <data name="The target was not deleted." xml:space="preserve"><value>Das Ziel wurde nicht gelöscht.</value></data>
   <data name="The target was not saved." xml:space="preserve"><value>Das Ziel wurde nicht gespeichert.</value></data>
+  <data name="The traffic counts are switched off in the host settings (&lt;code&gt;Gateway:Metrics:Enabled&lt;/code&gt;)." xml:space="preserve"><value>Die Verkehrszählung ist in den Host-Einstellungen ausgeschaltet (&lt;code&gt;Gateway:Metrics:Enabled&lt;/code&gt;).</value></data>
   <data name="The traffic counts of the performance dashboard are kept in metrics.db in the data folder, apart from the request log. The older the data, the coarser it is kept: per second for the last days, then per minute, hour, day, week and month. A background job adds up completed periods into the coarser ones every minute and removes what is older than its tier keeps, so the file stays small. The tiers are host settings (Gateway:Metrics:Retention)." xml:space="preserve"><value>Die Verkehrszählungen des Leistungs-Dashboards liegen in metrics.db im Datenordner, getrennt vom Anfrageprotokoll. Je älter die Daten, desto gröber werden sie aufbewahrt: pro Sekunde für die letzten Tage, danach pro Minute, Stunde, Tag, Woche und Monat. Ein Hintergrundjob addiert jede Minute abgeschlossene Zeiträume in die gröberen Stufen und entfernt, was älter ist als die Stufe aufbewahrt, damit die Datei klein bleibt. Die Stufen sind Host-Einstellungen (Gateway:Metrics:Retention).</value></data>
   <data name="The uploaded certificate is not in the certificate store (deleted, or a backup was restored without secrets). Upload it again." xml:space="preserve"><value>Das hochgeladene Zertifikat ist nicht im Zertifikatsspeicher (gelöscht, oder eine Sicherung wurde ohne Geheimnisse wiederhergestellt). Laden Sie es erneut hoch.</value></data>
   <data name="The user name or password is not correct." xml:space="preserve"><value>Benutzername oder Passwort ist falsch.</value></data>
@@ -1024,12 +1087,15 @@
   <data name="Time (UTC)" xml:space="preserve"><value>Zeit (UTC)</value></data>
   <data name="Time-out (504)" xml:space="preserve"><value>Zeitüberschreitung (504)</value></data>
   <data name="Time-out (seconds)" xml:space="preserve"><value>Zeitlimit (Sekunden)</value></data>
+  <data name="Times in UTC." xml:space="preserve"><value>Zeiten in UTC.</value></data>
   <data name="Tip: name a machine and its ports once under &lt;a href=&quot;targets&quot;&gt;Targets&lt;/a&gt;, then use it here, so a changed address is changed in one place." xml:space="preserve"><value>Tipp: Benennen Sie einen Rechner und seine Ports einmal unter &lt;a href="targets"&gt;Ziele&lt;/a&gt; und verwenden Sie ihn dann hier, damit eine geänderte Adresse an einer Stelle angepasst wird.</value></data>
   <data name="Tip: set a health check path below. Without one, a backend that stops answering (instead of refusing connections) is only noticed by failing requests, and a stopped backend is tried again every half minute." xml:space="preserve"><value>Tipp: Legen Sie unten einen Pfad für die Statusprüfung fest. Ohne ihn wird ein Backend, das nicht mehr antwortet (statt Verbindungen abzulehnen), nur an fehlschlagenden Anfragen bemerkt, und ein gestopptes Backend wird jede halbe Minute erneut versucht.</value></data>
+  <data name="To" xml:space="preserve"><value>Bis</value></data>
   <data name="Too many failed attempts from your address: signing in is blocked for another minute." xml:space="preserve"><value>Zu viele Fehlversuche von Ihrer Adresse: Die Anmeldung ist noch eine Minute gesperrt.</value></data>
   <data name="Too many failed attempts from your address: signing in is blocked for another {0} minutes." xml:space="preserve"><value>Zu viele Fehlversuche von Ihrer Adresse: Die Anmeldung ist noch {0} Minuten gesperrt.</value></data>
   <data name="Too many failed attempts: this account is locked for another minute. Try again later." xml:space="preserve"><value>Zu viele Fehlversuche: Dieses Konto ist noch eine Minute gesperrt. Versuchen Sie es später erneut.</value></data>
   <data name="Too many failed attempts: this account is locked for another {0} minutes. Try again later." xml:space="preserve"><value>Zu viele Fehlversuche: Dieses Konto ist noch {0} Minuten gesperrt. Versuchen Sie es später erneut.</value></data>
+  <data name="Total" xml:space="preserve"><value>Gesamt</value></data>
   <data name="Traffic counts" xml:space="preserve"><value>Verkehrszählung</value></data>
   <data name="Traffic history" xml:space="preserve"><value>Verkehrsverlauf</value></data>
   <data name="Traffic history size" xml:space="preserve"><value>Größe des Verkehrsverlaufs</value></data>
@@ -1141,6 +1207,7 @@
   <data name="With two-factor sign-in, signing in needs your password and a 6-digit code from an authenticator app on your phone (for example Microsoft Authenticator, Google Authenticator or 1Password). Someone who learns your password still cannot sign in. Remote access to the admin UI requires it." xml:space="preserve"><value>Mit der Zwei-Faktor-Anmeldung brauchen Sie zum Anmelden Ihr Passwort und einen 6-stelligen Code aus einer Authenticator-App auf Ihrem Telefon (zum Beispiel Microsoft Authenticator, Google Authenticator oder 1Password). Wer Ihr Passwort kennt, kann sich trotzdem nicht anmelden. Der Fernzugriff auf die Verwaltungsoberfläche setzt sie voraus.</value></data>
   <data name="Without a key, everything AI-related is off and the gateway sends nothing anywhere." xml:space="preserve"><value>Ohne Schlüssel ist alles mit KI aus, und das Gateway sendet nichts irgendwohin.</value></data>
   <data name="Without this option they are replaced by &quot;{0}&quot;; importing the file here keeps the current values. Only include them when you store the file safely." xml:space="preserve"><value>Ohne diese Option werden sie durch „{0}“ ersetzt; beim Import der Datei hier bleiben die aktuellen Werte erhalten. Schließen Sie sie nur ein, wenn Sie die Datei sicher aufbewahren.</value></data>
+  <data name="Would be blocked" xml:space="preserve"><value>Würde blockiert</value></data>
   <data name="Would be blocked (detection only)" xml:space="preserve"><value>Würden blockiert (nur erkennen)</value></data>
   <data name="Would block" xml:space="preserve"><value>Würde blockieren</value></data>
   <data name="Write the message on one line." xml:space="preserve"><value>Schreiben Sie die Nachricht in eine Zeile.</value></data>
@@ -1175,9 +1242,10 @@
   <data name="at least one port is required." xml:space="preserve"><value>mindestens ein Port ist erforderlich.</value></data>
   <data name="at least one value is required." xml:space="preserve"><value>mindestens ein Wert ist erforderlich.</value></data>
   <data name="attack tool" xml:space="preserve"><value>Angriffswerkzeug</value></data>
-  <data name="bad" xml:space="preserve"><value>schlecht</value></data>
+  <data name="busiest second of the last 5 minutes" xml:space="preserve"><value>stärkste Sekunde der letzten 5 Minuten</value></data>
   <data name="changed" xml:space="preserve"><value>geändert</value></data>
   <data name="command injection" xml:space="preserve"><value>Befehlsinjektion</value></data>
+  <data name="completed in the last second" xml:space="preserve"><value>in der letzten Sekunde abgeschlossen</value></data>
   <data name="contains" xml:space="preserve"><value>enthält</value></data>
   <data name="cross-site scripting" xml:space="preserve"><value>Cross-Site-Scripting</value></data>
   <data name="day" xml:space="preserve"><value>Tag</value></data>
@@ -1199,10 +1267,8 @@
   <data name="expired on {0}; browsers refuse it." xml:space="preserve"><value>am {0} abgelaufen; Browser lehnen es ab.</value></data>
   <data name="expires in {0} day." xml:space="preserve"><value>läuft in {0} Tag ab.</value></data>
   <data name="expires in {0} days." xml:space="preserve"><value>läuft in {0} Tagen ab.</value></data>
-  <data name="failed" xml:space="preserve"><value>fehlgeschlagen</value></data>
   <data name="first-run setup" xml:space="preserve"><value>Ersteinrichtung</value></data>
   <data name="give it a label, e.g. web or admin." xml:space="preserve"><value>geben Sie ihm eine Bezeichnung, z. B. web oder admin.</value></data>
-  <data name="good" xml:space="preserve"><value>gut</value></data>
   <data name="hour" xml:space="preserve"><value>Stunde</value></data>
   <data name="https:// and a host name, optionally with a port of its own, e.g. https://admin.example.com or https://admin.example.com:8443." xml:space="preserve"><value>https:// und ein Hostname, optional mit eigenem Port, z. B. https://admin.example.com oder https://admin.example.com:8443.</value></data>
   <data name="https://admin.example.com" xml:space="preserve"><value>https://admin.example.com</value></data>
@@ -1221,6 +1287,7 @@
   <data name="no certificate could be loaded; HTTPS connections for it are refused." xml:space="preserve"><value>es konnte kein Zertifikat geladen werden; HTTPS-Verbindungen dafür werden abgelehnt.</value></data>
   <data name="none" xml:space="preserve"><value>keine</value></data>
   <data name="not forwarded" xml:space="preserve"><value>nicht weitergeleitet</value></data>
+  <data name="not known with filters" xml:space="preserve"><value>mit Filtern nicht bekannt</value></data>
   <data name="not seen yet" xml:space="preserve"><value>noch nicht gesehen</value></data>
   <data name="nothing yet" xml:space="preserve"><value>noch nichts</value></data>
   <data name="of at most {0} MB ({1})" xml:space="preserve"><value>von höchstens {0} MB ({1})</value></data>
@@ -1234,8 +1301,14 @@
   <data name="path, host, IP, rule or detail" xml:space="preserve"><value>Pfad, Host, IP, Regel oder Detail</value></data>
   <data name="per client IP" xml:space="preserve"><value>pro Client-IP</value></data>
   <data name="per client IP and route" xml:space="preserve"><value>pro Client-IP und Route</value></data>
+  <data name="per day" xml:space="preserve"><value>pro Tag</value></data>
+  <data name="per hour" xml:space="preserve"><value>pro Stunde</value></data>
+  <data name="per minute" xml:space="preserve"><value>pro Minute</value></data>
+  <data name="per month" xml:space="preserve"><value>pro Monat</value></data>
   <data name="per route for all clients together" xml:space="preserve"><value>pro Route für alle Clients zusammen</value></data>
   <data name="per route, for all clients together" xml:space="preserve"><value>pro Route, für alle Clients zusammen</value></data>
+  <data name="per second" xml:space="preserve"><value>pro Sekunde</value></data>
+  <data name="per week" xml:space="preserve"><value>pro Woche</value></data>
   <data name="port must be between 1 and 65535 (was {0})." xml:space="preserve"><value>der Port muss zwischen 1 und 65535 liegen (war {0}).</value></data>
   <data name="priority must be 0 or higher (was {0})." xml:space="preserve"><value>die Priorität muss 0 oder höher sein (war {0}).</value></data>
   <data name="rate limit '{0}'" xml:space="preserve"><value>Ratenlimit „{0}“</value></data>
@@ -1243,6 +1316,7 @@
   <data name="redirecting to HTTPS needs host names, each with a certificate." xml:space="preserve"><value>die Umleitung zu HTTPS braucht Hostnamen, jeweils mit einem Zertifikat.</value></data>
   <data name="request {0}" xml:space="preserve"><value>Anfrage {0}</value></data>
   <data name="requests counted since start" xml:space="preserve"><value>Anfragen seit dem Start gezählt</value></data>
+  <data name="requests in the busiest second" xml:space="preserve"><value>Anfragen in der stärksten Sekunde</value></data>
   <data name="route '{0}' does not exist." xml:space="preserve"><value>die Route „{0}“ existiert nicht.</value></data>
   <data name="rule '{0}'" xml:space="preserve"><value>Regel „{0}“</value></data>
   <data name="scheme must be 'http' or 'https' (was '{0}')." xml:space="preserve"><value>das Schema muss „http“ oder „https“ sein (war „{0}“).</value></data>
@@ -1282,6 +1356,8 @@
   <data name="the user agent" xml:space="preserve"><value>der User-Agent</value></data>
   <data name="the {0} header" xml:space="preserve"><value>der Header {0}</value></data>
   <data name="there is no target '{0}'." xml:space="preserve"><value>es gibt kein Ziel „{0}“.</value></data>
+  <data name="times in UTC" xml:space="preserve"><value>Zeiten in UTC</value></data>
+  <data name="times in {0}" xml:space="preserve"><value>Zeiten in {0}</value></data>
   <data name="translations of the message for visitors need the English message too (it is the fallback)." xml:space="preserve"><value>Übersetzungen der Nachricht für Besucher brauchen auch die englische Nachricht (sie ist der Rückfall).</value></data>
   <data name="unknown category." xml:space="preserve"><value>unbekannte Kategorie.</value></data>
   <data name="unknown field." xml:space="preserve"><value>unbekanntes Feld.</value></data>
@@ -1316,10 +1392,13 @@
   <data name="{0} is used by route {1}. Use a host name of its own for the admin UI." xml:space="preserve"><value>{0} wird von Route {1} verwendet. Verwenden Sie einen eigenen Hostnamen für die Verwaltungsoberfläche.</value></data>
   <data name="{0} not counted" xml:space="preserve"><value>{0} nicht gezählt</value></data>
   <data name="{0} of 5" xml:space="preserve"><value>{0} von 5</value></data>
+  <data name="{0} per second on average" xml:space="preserve"><value>durchschnittlich {0} pro Sekunde</value></data>
   <data name="{0} recovery code left" xml:space="preserve"><value>{0} Wiederherstellungscode übrig</value></data>
   <data name="{0} recovery codes left" xml:space="preserve"><value>{0} Wiederherstellungscodes übrig</value></data>
   <data name="{0} removed" xml:space="preserve"><value>{0} entfernt</value></data>
+  <data name="{0} request" xml:space="preserve"><value>{0} Anfrage</value></data>
   <data name="{0} request per {1} {2}" xml:space="preserve"><value>{0} Anfrage pro {1} {2}</value></data>
+  <data name="{0} requests" xml:space="preserve"><value>{0} Anfragen</value></data>
   <data name="{0} requests per {1} {2}" xml:space="preserve"><value>{0} Anfragen pro {1} {2}</value></data>
   <data name="{0} seconds" xml:space="preserve"><value>{0} Sekunden</value></data>
   <data name="{0} secret value (header conditions, such as API keys)." xml:space="preserve"><value>{0} geheimer Wert (Header-Bedingungen wie API-Schlüssel).</value></data>

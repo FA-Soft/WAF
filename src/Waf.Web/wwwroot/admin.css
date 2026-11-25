@@ -515,3 +515,42 @@ td .badge {
 .live-sources li { overflow-wrap: anywhere; }
 .live-status[data-state="live"]::before { content: "● "; color: var(--ok); }
 .live-status[data-state="reconnecting"]::before, .live-status[data-state="ended"]::before { content: "● "; color: var(--warn); }
+
+/* Performance page (performance.js draws the chart with uPlot). */
+.period-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 1rem; }
+.period-tabs a { padding: 0.35rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); text-decoration: none; }
+.period-tabs a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.perf-filter, .perf-custom { margin-bottom: 1rem; }
+.perf-filter .field-check { align-self: end; }
+.perf-types summary, .perf-custom summary, .perf-table summary { cursor: pointer; }
+.check-list { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0.5rem 0; }
+.perf-chart-figure { margin: 1rem 0; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.perf-chart-figure figcaption { margin-bottom: 0.5rem; font-weight: 600; }
+.perf-chart { min-height: 220px; width: 100%; overflow: hidden; }
+.perf-chart .u-legend { color: var(--text); font-size: 0.875rem; }
+.perf-chart .u-select { background: rgba(31, 95, 191, 0.15); }
+.two-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem 2rem; margin: 1rem 0; }
+.two-columns td { white-space: nowrap; }
+.perf-destinations th code { overflow-wrap: anywhere; white-space: normal; }
+.perf-destinations td { white-space: nowrap; }
+
+/* Pie charts of the breakdowns (performance.js): dark enough for white labels, visible in both themes. */
+:root {
+    --pie-1: #1f5fbf;
+    --pie-2: #b3261e;
+    --pie-3: #1d7a46;
+    --pie-4: #8e44ad;
+    --pie-5: #b35900;
+    --pie-6: #0e7c86;
+    --pie-7: #7a5c00;
+    --pie-8: #4b5563;
+}
+.view-switch { display: flex; gap: 0.25rem; margin: 0 0 0.75rem; }
+.view-switch .button { padding: 0.25rem 0.75rem; }
+.view-switch .button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.pie-block { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.pie-block[hidden], .table-scroll[hidden] { display: none; }
+.pie-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; min-width: min(100%, 14rem); flex: 1; }
+.pie-legend li { display: grid; grid-template-columns: 0.9rem 1fr auto; gap: 0.5rem; align-items: baseline; overflow-wrap: anywhere; }
+.pie-swatch { width: 0.9rem; height: 0.9rem; border-radius: 3px; align-self: center; }
+.pie-figures { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }

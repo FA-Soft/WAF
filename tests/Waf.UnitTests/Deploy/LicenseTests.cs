@@ -35,6 +35,18 @@ public sealed class LicenseTests
         Assert.Contains("@microsoft/signalr", Read("THIRD-PARTY-NOTICES.md"), StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("uPlot.iife.min.js", "19c8d4c6ad88929a79f4ae49d6f7161566dfd0ba3d15cc495e974f787eb78f1f")]
+    [InlineData("uPlot.min.css", "df630c6a8d6f8eeaff264b50f73ce5b114f646ffd9a0bb74f049b0a00135fa04")]
+    public void The_vendored_chart_library_is_unchanged_and_licensed(string file, string sha256)
+    {
+        var folder = Path.Combine(RepositoryRoot(), "src", "Waf.Web", "wwwroot", "lib", "uplot");
+        Assert.Equal(sha256, Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(folder, file)))));
+        Assert.Contains(sha256, File.ReadAllText(Path.Combine(folder, "README.md")), StringComparison.Ordinal);
+        Assert.Contains("The MIT License (MIT)", File.ReadAllText(Path.Combine(folder, "LICENSE")), StringComparison.Ordinal);
+        Assert.Contains("uplot 1.6.32", Read("THIRD-PARTY-NOTICES.md"), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void The_license_is_proprietary_to_FA_Soft()
     {

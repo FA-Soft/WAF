@@ -81,6 +81,12 @@ public interface IMetricsHistory
 
     /// <summary>Size of metrics.db and the stored range of each tier; null when switched off.</summary>
     Task<MetricsStorageStatus?> GetStatusAsync(CancellationToken cancellationToken);
+
+    /// <summary>The traffic history, for the Performance page; null when switched off.</summary>
+    SqliteMetricsStore? Store { get; }
+
+    /// <summary>How long each tier is kept (host settings).</summary>
+    MetricsRetention Retention { get; }
 }
 
 /// <summary>Traffic history that is switched off.</summary>
@@ -91,4 +97,8 @@ public sealed class DisabledMetricsHistory : IMetricsHistory
     public MetricsMaintenanceResult? LastRun => null;
 
     public Task<MetricsStorageStatus?> GetStatusAsync(CancellationToken cancellationToken) => Task.FromResult<MetricsStorageStatus?>(null);
+
+    public SqliteMetricsStore? Store => null;
+
+    public MetricsRetention Retention { get; } = new();
 }
