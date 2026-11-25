@@ -9,6 +9,7 @@
   <data name="'Match' is missing." xml:space="preserve"><value>'Match' ontbreekt.</value></data>
   <data name="'ResolveIntervalSeconds' only applies with a MAC address." xml:space="preserve"><value>'ResolveIntervalSeconds' geldt alleen met een MAC-adres.</value></data>
   <data name="'{0}' is not a MAC address. Use e.g. aa:bb:cc:dd:ee:ff." xml:space="preserve"><value>'{0}' is geen MAC-adres. Gebruik bijv. aa:bb:cc:dd:ee:ff.</value></data>
+  <data name="'{0}' is not a language for the message for visitors (use nl, fr or de)." xml:space="preserve"><value>'{0}' is geen taal voor het bericht voor bezoekers (gebruik nl, fr of de).</value></data>
   <data name="'{0}' is not a supported regular expression: {1}" xml:space="preserve"><value>'{0}' is geen ondersteunde reguliere expressie: {1}</value></data>
   <data name="'{0}' is not a valid HTTP method (use e.g. GET, POST)." xml:space="preserve"><value>'{0}' is geen geldige HTTP-methode (gebruik bijv. GET, POST).</value></data>
   <data name="'{0}' is not a valid IP address or host name." xml:space="preserve"><value>'{0}' is geen geldig IP-adres of geldige hostnaam.</value></data>
@@ -333,6 +334,7 @@
   <data name="Detection-only mode" xml:space="preserve"><value>Modus alleen detectie</value></data>
   <data name="Detection-only mode switched off." xml:space="preserve"><value>Modus alleen detectie uitgezet.</value></data>
   <data name="Detection-only mode switched on." xml:space="preserve"><value>Modus alleen detectie aangezet.</value></data>
+  <data name="Deutsch" xml:space="preserve"><value>Deutsch</value></data>
   <data name="Disable" xml:space="preserve"><value>Uitschakelen</value></data>
   <data name="Disabled" xml:space="preserve"><value>Uitgeschakeld</value></data>
   <data name="Discard" xml:space="preserve"><value>Verwerpen</value></data>
@@ -375,6 +377,7 @@
   <data name="Enter the 6-digit code the app now shows." xml:space="preserve"><value>Voer de 6-cijferige code in die de app nu toont.</value></data>
   <data name="Enter the 6-digit code." xml:space="preserve"><value>Voer de 6-cijferige code in.</value></data>
   <data name="Enter the API key." xml:space="preserve"><value>Voer de API-sleutel in.</value></data>
+  <data name="Enter the English message too: visitors in other languages get it." xml:space="preserve"><value>Voer ook het Engelse bericht in: bezoekers in andere talen krijgen dat.</value></data>
   <data name="Enter the client's IP address, e.g. 203.0.113.10." xml:space="preserve"><value>Voer het IP-adres van de client in, bijv. 203.0.113.10.</value></data>
   <data name="Enter the code your authenticator app shows." xml:space="preserve"><value>Voer de code in die uw authenticator-app toont.</value></data>
   <data name="Enter the code." xml:space="preserve"><value>Voer de code in.</value></data>
@@ -418,6 +421,7 @@
   <data name="Forwarded" xml:space="preserve"><value>Doorgestuurd</value></data>
   <data name="Forwarded to" xml:space="preserve"><value>Doorgestuurd naar</value></data>
   <data name="Forwards to" xml:space="preserve"><value>Stuurt door naar</value></data>
+  <data name="Français" xml:space="preserve"><value>Français</value></data>
   <data name="Free certificates, requested and renewed automatically (30 days before they expire). Let's Encrypt checks that you control the host name by fetching a file over plain HTTP: the host name must point to this gateway and port 80 must be reachable from the internet. Wildcard host names need your own certificate." xml:space="preserve"><value>Gratis certificaten, automatisch aangevraagd en vernieuwd (30 dagen voor ze verlopen). Let's Encrypt controleert of u de hostnaam beheert door een bestand op te halen via gewoon HTTP: de hostnaam moet naar deze gateway wijzen en poort 80 moet bereikbaar zijn vanaf het internet. Wildcard-hostnamen hebben een eigen certificaat nodig.</value></data>
   <data name="From" xml:space="preserve"><value>Vanaf</value></data>
   <data name="From the request log (request {0})." xml:space="preserve"><value>Uit het verzoekenlogboek (verzoek {0}).</value></data>
@@ -538,6 +542,7 @@
   <data name="Model" xml:space="preserve"><value>Model</value></data>
   <data name="More filters" xml:space="preserve"><value>Meer filters</value></data>
   <data name="Name" xml:space="preserve"><value>Naam</value></data>
+  <data name="Nederlands" xml:space="preserve"><value>Nederlands</value></data>
   <data name="Needs subdomains and at least 365 days." xml:space="preserve"><value>Vereist subdomeinen en minstens 365 dagen.</value></data>
   <data name="New password" xml:space="preserve"><value>Nieuw wachtwoord</value></data>
   <data name="New password again" xml:space="preserve"><value>Nieuw wachtwoord nogmaals</value></data>
@@ -1079,6 +1084,7 @@
   <data name="View in the request log" xml:space="preserve"><value>Bekijken in het verzoekenlogboek</value></data>
   <data name="View the configuration history" xml:space="preserve"><value>De configuratiegeschiedenis bekijken</value></data>
   <data name="View the history" xml:space="preserve"><value>De geschiedenis bekijken</value></data>
+  <data name="Visitors whose browser prefers Dutch, French or German get the message in their language; empty: the message above." xml:space="preserve"><value>Bezoekers van wie de browser de voorkeur geeft aan Nederlands, Frans of Duits, krijgen het bericht in hun taal; leeg: het bericht hierboven.</value></data>
   <data name="WAF event" xml:space="preserve"><value>WAF-gebeurtenis</value></data>
   <data name="Waiting for review" xml:space="preserve"><value>Wacht op beoordeling</value></data>
   <data name="Website" xml:space="preserve"><value>Website</value></data>
@@ -1229,6 +1235,7 @@
   <data name="the label '{0}' is used twice." xml:space="preserve"><value>het label '{0}' wordt twee keer gebruikt.</value></data>
   <data name="the label is used by more than one port of this target." xml:space="preserve"><value>het label wordt door meer dan één poort van dit doel gebruikt.</value></data>
   <data name="the label may only contain letters, digits, '-', '_' and '.'." xml:space="preserve"><value>het label mag alleen letters, cijfers, '-', '_' en '.' bevatten.</value></data>
+  <data name="the message for visitors in '{0}' must be one line of at most {1} characters." xml:space="preserve"><value>het bericht voor bezoekers in '{0}' moet één regel van hoogstens {1} tekens zijn.</value></data>
   <data name="the message for visitors must be one line of at most {0} characters." xml:space="preserve"><value>het bericht voor bezoekers moet één regel van hoogstens {0} tekens zijn.</value></data>
   <data name="the method" xml:space="preserve"><value>de methode</value></data>
   <data name="the name is used by more than one rate limit." xml:space="preserve"><value>de naam wordt door meer dan één snelheidslimiet gebruikt.</value></data>
@@ -1247,6 +1254,7 @@
   <data name="the user agent" xml:space="preserve"><value>de user agent</value></data>
   <data name="the {0} header" xml:space="preserve"><value>de header {0}</value></data>
   <data name="there is no target '{0}'." xml:space="preserve"><value>er is geen doel '{0}'.</value></data>
+  <data name="translations of the message for visitors need the English message too (it is the fallback)." xml:space="preserve"><value>vertalingen van het bericht voor bezoekers vereisen ook het Engelse bericht (dat is de terugval).</value></data>
   <data name="unknown category." xml:space="preserve"><value>onbekende categorie.</value></data>
   <data name="unknown field." xml:space="preserve"><value>onbekend veld.</value></data>
   <data name="unknown operator." xml:space="preserve"><value>onbekende vergelijking.</value></data>

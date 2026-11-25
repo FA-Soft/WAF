@@ -137,7 +137,9 @@ A route says which requests go to which backend. **Routes → Add a route**:
   path as well, so a backend that stops answering is noticed quickly.
 - **Message for visitors** (optional): a line such as "Planned maintenance until 14:00", shown when no backend
   answers. Visitors then get a short error page ("This site is temporarily unavailable"); programs get the same error
-  as JSON, XML or a SOAP fault. It never shows your internal addresses; the request log has the details.
+  as JSON, XML or a SOAP fault. It never shows your internal addresses; the request log has the details. The fields
+  **Nederlands**, **Français** and **Deutsch** hold the message for visitors whose browser prefers that language;
+  others get the message above. The error page itself is always in the visitor's language.
 - **Send the original host name to the backend** (on by default): the backend sees the visitor's `Host` header, as IIS
   host bindings expect.
 

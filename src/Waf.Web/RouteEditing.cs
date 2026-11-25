@@ -104,6 +104,24 @@ internal sealed class RouteFormModel : IValidatableObject
     [StringLength(ProxyRouteValidator.MaxErrorMessageLength, ErrorMessage = "Keep the message to 300 characters or fewer.")]
     public string? ErrorMessage { get; set; }
 
+    /// <summary>The message for visitors whose browser prefers Dutch; empty: the English message.</summary>
+    [StringLength(ProxyRouteValidator.MaxErrorMessageLength, ErrorMessage = "Keep the message to 300 characters or fewer.")]
+    public string? ErrorMessageNl { get; set; }
+
+    /// <summary>The message for visitors whose browser prefers French; empty: the English message.</summary>
+    [StringLength(ProxyRouteValidator.MaxErrorMessageLength, ErrorMessage = "Keep the message to 300 characters or fewer.")]
+    public string? ErrorMessageFr { get; set; }
+
+    /// <summary>The message for visitors whose browser prefers German; empty: the English message.</summary>
+    [StringLength(ProxyRouteValidator.MaxErrorMessageLength, ErrorMessage = "Keep the message to 300 characters or fewer.")]
+    public string? ErrorMessageDe { get; set; }
+
+    /// <summary>The translated messages that are filled in: language → text.</summary>
+    private IEnumerable<(string Language, string Text, string Field)> ErrorMessageTranslations() =>
+        new[] { ("nl", ErrorMessageNl, nameof(ErrorMessageNl)), ("fr", ErrorMessageFr, nameof(ErrorMessageFr)), ("de", ErrorMessageDe, nameof(ErrorMessageDe)) }
+            .Where(t => !string.IsNullOrWhiteSpace(t.Item2))
+            .Select(t => (t.Item1, t.Item2!.Trim(), t.Item3));
+
     [Range(1, 3600, ErrorMessage = "Use a value between 1 and 3600 seconds.")]
     public int HealthCheckIntervalSeconds { get; set; } = 10;
 
@@ -171,6 +189,19 @@ internal sealed class RouteFormModel : IValidatableObject
             yield return new ValidationResult("Write the message on one line.", [nameof(ErrorMessage)]);
         }
 
+        foreach (var (_, text, field) in ErrorMessageTranslations())
+        {
+            if (text.Any(char.IsControl))
+            {
+                yield return new ValidationResult("Write the message on one line.", [field]);
+            }
+            else if (string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                yield return new ValidationResult("Enter the English message too: visitors in other languages get it.", [nameof(ErrorMessage)]);
+                break;
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(HealthCheckPath) && HealthCheckPath.Trim()[0] != '/')
         {
             yield return new ValidationResult("The health check path must start with /, e.g. /health.", [nameof(HealthCheckPath)]);
@@ -216,6 +247,9 @@ internal sealed class RouteFormModel : IValidatableObject
             HealthCheckIntervalSeconds = route.HealthCheck.IntervalSeconds,
             HealthCheckTimeoutSeconds = route.HealthCheck.TimeoutSeconds,
             ErrorMessage = route.ErrorMessage,
+            ErrorMessageNl = route.ErrorMessageTranslations?.TryGetValue("nl", out var nl) == true ? nl : null,
+            ErrorMessageFr = route.ErrorMessageTranslations?.TryGetValue("fr", out var fr) == true ? fr : null,
+            ErrorMessageDe = route.ErrorMessageTranslations?.TryGetValue("de", out var de) == true ? de : null,
         };
     }
 
@@ -230,6 +264,10 @@ internal sealed class RouteFormModel : IValidatableObject
             AllowInvalidBackendCertificate = AllowInvalidBackendCertificate,
             Https = new RouteHttpsOptions { RedirectHttp = RedirectHttp, Hsts = Hsts },
             ErrorMessage = string.IsNullOrWhiteSpace(ErrorMessage) ? null : ErrorMessage.Trim(),
+            // Only the languages that are filled in; none: no translations at all (the configuration stays as it was).
+            ErrorMessageTranslations = ErrorMessageTranslations().Any()
+                ? ErrorMessageTranslations().ToDictionary(t => t.Language, t => t.Text, StringComparer.Ordinal)
+                : null,
             HealthCheck = new RouteHealthCheckOptions
             {
                 Path = string.IsNullOrWhiteSpace(HealthCheckPath) ? null : HealthCheckPath.Trim(),

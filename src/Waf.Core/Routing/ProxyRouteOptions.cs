@@ -47,6 +47,12 @@ public sealed class ProxyRouteOptions
     /// error response, in every format.
     /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Optional translations of <see cref="ErrorMessage"/> for visitors whose browser prefers Dutch, French or German:
+    /// language code (<c>nl</c>, <c>fr</c>, <c>de</c>) → text. Other visitors get the English <see cref="ErrorMessage"/>.
+    /// </summary>
+    public IDictionary<string, string>? ErrorMessageTranslations { get; set; }
 }
 
 /// <summary>How a route enforces HTTPS.</summary>

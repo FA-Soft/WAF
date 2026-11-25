@@ -47,6 +47,14 @@ Rules:
    placeholders that differ from the English text, and an interpolated string (`T($"…")`) used as a key.
    The integration test `TranslatedPagesTests` renders every page for a German browser and fails on English text.
 
+## Texts for website visitors
+
+The answers visitors get from the gateway itself (the error page when no backend answers, the problem details and
+SOAP Faults, and the short 403, 429 and 503 texts) are translated too, in `src/Waf.Proxy/VisitorTexts.cs`. Visitors have
+no account, so the language comes from the browser's `Accept-Language`, with English as the fallback. A route's
+message for visitors can be entered per language (`ErrorMessageTranslations`). These texts are unreviewed as well.
+`VisitorLanguageTests` checks that every visitor text has all languages with the same placeholders.
+
 ## What stays English
 
 - Data the user entered: names, descriptions, host names, comments.

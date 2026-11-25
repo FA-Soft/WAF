@@ -274,3 +274,7 @@ Not part of the admin UI: what a visitor's browser shows when no backend of a ro
 ![Error page](images/error-page.png)
 
 ![Error page in the dark theme](images/error-page-dark.png)
+
+The same page for a visitor whose browser prefers Dutch (also French and German; English otherwise):
+
+![Error page in Dutch](images/error-page-nl.png)

@@ -105,7 +105,7 @@ public class BackendErrorTests
         Assert.Null(problem.Element(ns + "message"));
     }
 
-    private static XmlSchemaSet Schemas(params string[] files)
+    internal static XmlSchemaSet Schemas(params string[] files)
     {
         var set = new XmlSchemaSet { XmlResolver = null };
         foreach (var file in files)
@@ -118,7 +118,7 @@ public class BackendErrorTests
         return set;
     }
 
-    private static XDocument Validated(string body, XmlSchemaSet schemas)
+    internal static XDocument Validated(string body, XmlSchemaSet schemas)
     {
         var document = XDocument.Parse(body);
         var errors = new List<string>();
@@ -169,8 +169,8 @@ public class BackendErrorTests
         Assert.Contains("This site is temporarily unavailable.", body, StringComparison.Ordinal);
         Assert.Contains("Please try again in a few minutes.", body, StringComparison.Ordinal);
         Assert.Contains("&lt;b&gt;Maintenance&lt;/b&gt; &amp; more", body, StringComparison.Ordinal);
-        Assert.Contains("Error 503 · Service Unavailable", body, StringComparison.Ordinal);
-        Assert.Contains("Request ID 0HNABC:00000001 · 2026-11-24T10:42:07Z", body, StringComparison.Ordinal);
+        Assert.Contains("Error 503 · Service Unavailable", System.Net.WebUtility.HtmlDecode(body), StringComparison.Ordinal);
+        Assert.Contains("Request ID 0HNABC:00000001 · 2026-11-24T10:42:07Z", System.Net.WebUtility.HtmlDecode(body), StringComparison.Ordinal);
         Assert.Contains("prefers-color-scheme: dark", body, StringComparison.Ordinal);
         Assert.DoesNotContain("<script", body, StringComparison.OrdinalIgnoreCase);
     }

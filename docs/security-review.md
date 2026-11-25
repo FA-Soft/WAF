@@ -120,7 +120,9 @@ event, or at shutdown. The request log (`events.db`) still records every request
   - Error responses when no backend answers (502, 503, 504, and SOAP Faults) never contain backend addresses,
     ports, route or target names, or exception texts; those go to the request log only. They are not cached
     (`no-store`), and the HTML page has no scripts and a `default-src 'none'` Content Security Policy. Tests:
-    `BackendErrorTests` (unit and integration, every format).
+    `BackendErrorTests` (unit and integration, every format). The same holds in every visitor language (English,
+    Dutch, French, German): only the texts change, and responses carry `Vary: Accept-Language` so a shared cache
+    cannot mix languages (`VisitorLanguageTests`).
   - Only TLS 1.2 and 1.3 are accepted.
   - A host name without a certificate gets no TLS handshake, so no default certificate is ever served.
 - **Service accounts.**

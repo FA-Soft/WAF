@@ -25,6 +25,9 @@ public sealed partial class WafMiddleware(
     /// <summary>Body of 403 responses. Deliberately generic: no rule names or reasons for attackers.</summary>
     public const string ForbiddenMessage = "Forbidden. The request was blocked by the web application firewall.";
 
+    /// <summary>Body of 429 responses (in English; visitors get it in their language).</summary>
+    public const string TooManyRequestsMessage = "Too many requests. Please slow down.";
+
     public async Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -104,8 +107,7 @@ public sealed partial class WafMiddleware(
             Publish(request, WafEventKind.RateLimited, rate.RuleName!, StatusCodes.Status429TooManyRequests);
             context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
             context.Response.Headers.RetryAfter = ((int)rate.RetryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
-            context.Response.ContentType = "text/plain; charset=utf-8";
-            await context.Response.WriteAsync("Too many requests. Please slow down.", context.RequestAborted).ConfigureAwait(false);
+            await VisitorTexts.WritePlainAsync(context, TooManyRequestsMessage).ConfigureAwait(false);
             return false;
         }
 
@@ -151,8 +153,7 @@ public sealed partial class WafMiddleware(
     private static Task RespondForbiddenAsync(HttpContext context)
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
-        context.Response.ContentType = "text/plain; charset=utf-8";
-        return context.Response.WriteAsync(ForbiddenMessage, context.RequestAborted);
+        return VisitorTexts.WritePlainAsync(context, ForbiddenMessage);
     }
 
     private void Publish(HttpContextWafRequest request, WafEventKind kind, string ruleName, int status, string? detail = null)
@@ -199,8 +200,7 @@ public sealed class FailClosedGuardMiddleware(RequestDelegate next, WafEngineHol
 
         context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
         context.Response.Headers.RetryAfter = RetryAfterSeconds.ToString(CultureInfo.InvariantCulture);
-        context.Response.ContentType = "text/plain; charset=utf-8";
-        return context.Response.WriteAsync(UnavailableMessage, context.RequestAborted);
+        return VisitorTexts.WritePlainAsync(context, UnavailableMessage);
     }
 }
 
