@@ -66,10 +66,11 @@ public sealed class RequestLogFeature(DateTimeOffset startedAt, long startTimest
 }
 
 /// <summary>
-/// Records every public request in the request log when its response is complete. Never delays a request:
-/// the entry is handed to <see cref="IRequestLog"/>, which only queues it.
+/// Records every public request in the request log and the traffic counts when its response is complete. Never
+/// delays a request: the entry is handed to <see cref="IRequestLog"/>, which only queues it, and to
+/// <see cref="IRequestMetrics"/>, which only increments a counter in memory.
 /// </summary>
-public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog log, TimeProvider time)
+public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog log, IRequestMetrics metrics, TimeProvider time)
 {
     public const int MaxHostLength = 255;
     public const int MaxPathLength = 2048;
@@ -96,7 +97,9 @@ public sealed class RequestLoggingMiddleware(RequestDelegate next, IRequestLog l
         }
         finally
         {
-            log.Write(CreateEntry(context, feature, failed, time.GetElapsedTime(feature.StartTimestamp)));
+            var entry = CreateEntry(context, feature, failed, time.GetElapsedTime(feature.StartTimestamp));
+            metrics.Record(entry, failed);
+            log.Write(entry);
         }
     }
 

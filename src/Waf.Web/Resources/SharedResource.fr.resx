@@ -391,6 +391,7 @@
   <data name="Error page" xml:space="preserve"><value>Page d'erreur</value></data>
   <data name="Every change to the configuration is kept as a numbered version. Only checked, working configurations become active; the active one is marked. Open a version to see what it changed, to restore it or to export it." xml:space="preserve"><value>Chaque modification de la configuration est conservée comme une version numérotée. Seules les configurations vérifiées et fonctionnelles deviennent actives ; l'active est signalée. Ouvrez une version pour voir ce qu'elle a changé, la restaurer ou l'exporter.</value></data>
   <data name="Every configuration version has an entry here, with the routes, rules and settings it changed. Single failed sign-in attempts are in the &lt;a href=&quot;account/history&quot;&gt;login history&lt;/a&gt;." xml:space="preserve"><value>Chaque version de configuration a une entrée ici, avec les routes, règles et réglages qu'elle a modifiés. Les tentatives de connexion échouées isolées sont dans l'&lt;a href="account/history"&gt;historique des connexions&lt;/a&gt;.</value></data>
+  <data name="Every public request is counted per second (good, bad or failed) and stored in metrics.db every few seconds, for the performance dashboard. If storing cannot keep up, counts are dropped rather than slowing down requests; the number shows here." xml:space="preserve"><value>Chaque requête publique est comptée par seconde (bonne, mauvaise ou en échec) et enregistrée dans metrics.db toutes les quelques secondes, pour le tableau de bord des performances. Si l'enregistrement ne suit pas, des comptages sont abandonnés plutôt que de ralentir les requêtes ; leur nombre s'affiche ici.</value></data>
   <data name="Every public request is recorded in events.db, in the background. If the disk cannot keep up, entries are dropped rather than slowing down requests; the count shows here." xml:space="preserve"><value>Chaque requête publique est enregistrée dans events.db, en arrière-plan. Si le disque ne suit pas, des entrées sont abandonnées plutôt que de ralentir les requêtes ; leur nombre s'affiche ici.</value></data>
   <data name="Every public request: who sent it, where it went and what the firewall did. Query strings, headers, cookies and bodies are not stored; for a detected attack only the matching fragment is kept." xml:space="preserve"><value>Chaque requête publique : qui l'a envoyée, où elle est allée et ce que le pare-feu a fait. Les chaînes de requête, en-têtes, cookies et corps ne sont pas stockés ; pour une attaque détectée, seul le fragment correspondant est conservé.</value></data>
   <data name="Every request" xml:space="preserve"><value>Toutes les requêtes</value></data>
@@ -853,6 +854,7 @@
   <data name="Switch on every attack detector and block probes for hidden files and unusual methods." xml:space="preserve"><value>Activer tous les détecteurs d'attaques et bloquer les sondages de fichiers cachés et de méthodes inhabituelles.</value></data>
   <data name="Switch on: only log" xml:space="preserve"><value>Activer : journaliser seulement</value></data>
   <data name="Switched off in the host settings (Gateway:EventLog:Enabled)." xml:space="preserve"><value>Désactivé dans les réglages de l'hôte (Gateway:EventLog:Enabled).</value></data>
+  <data name="Switched off in the host settings (Gateway:Metrics:Enabled)." xml:space="preserve"><value>Désactivé dans les réglages de l'hôte (Gateway:Metrics:Enabled).</value></data>
   <data name="Switches on detection of SQL injection, cross-site scripting, path traversal, command injection and attack tools, and adds two rules: one blocks requests for hidden files and leftovers that should never be public (.git, .env, backup copies such as index.php.bak, dumps such as backup.zip), one blocks the TRACE and TRACK methods that are only used to probe servers." xml:space="preserve"><value>Active la détection des injections SQL, du cross-site scripting, des traversées de chemin, des injections de commandes et des outils d'attaque, et ajoute deux règles : l'une bloque les requêtes vers des fichiers cachés et des restes qui ne doivent jamais être publics (.git, .env, copies de sauvegarde comme index.php.bak, dumps comme backup.zip), l'autre bloque les méthodes TRACE et TRACK, qui ne servent qu'à sonder les serveurs.</value></data>
   <data name="System" xml:space="preserve"><value>Système</value></data>
   <data name="TRACE and TRACK are only used to probe servers." xml:space="preserve"><value>TRACE et TRACK ne servent qu'à sonder les serveurs.</value></data>
@@ -1014,6 +1016,7 @@
   <data name="Too many failed attempts from your address: signing in is blocked for another {0} minutes." xml:space="preserve"><value>Trop de tentatives échouées depuis votre adresse : la connexion est bloquée encore {0} minutes.</value></data>
   <data name="Too many failed attempts: this account is locked for another minute. Try again later." xml:space="preserve"><value>Trop de tentatives échouées : ce compte est verrouillé encore une minute. Réessayez plus tard.</value></data>
   <data name="Too many failed attempts: this account is locked for another {0} minutes. Try again later." xml:space="preserve"><value>Trop de tentatives échouées : ce compte est verrouillé encore {0} minutes. Réessayez plus tard.</value></data>
+  <data name="Traffic counts" xml:space="preserve"><value>Comptage du trafic</value></data>
   <data name="Trusted proxies" xml:space="preserve"><value>Proxys de confiance</value></data>
   <data name="Trusted proxy '{0}'" xml:space="preserve"><value>Proxy de confiance « {0} »</value></data>
   <data name="Try it without risk: matches are logged as &quot;would block&quot; and the requests continue. Switch it off later in the editor." xml:space="preserve"><value>Essayez sans risque : les correspondances sont journalisées comme « bloquerait » et les requêtes continuent. Désactivez-le plus tard dans l'éditeur.</value></data>
@@ -1215,6 +1218,7 @@
   <data name="redirecting to HTTPS needs a certificate for {0}. Add one on the Certificates page first." xml:space="preserve"><value>rediriger vers HTTPS exige un certificat pour {0}. Ajoutez-en d'abord un sur la page Certificats.</value></data>
   <data name="redirecting to HTTPS needs host names, each with a certificate." xml:space="preserve"><value>rediriger vers HTTPS exige des noms d'hôte, chacun avec un certificat.</value></data>
   <data name="request {0}" xml:space="preserve"><value>la requête {0}</value></data>
+  <data name="requests counted since start" xml:space="preserve"><value>requêtes comptées depuis le démarrage</value></data>
   <data name="route '{0}' does not exist." xml:space="preserve"><value>la route « {0} » n'existe pas.</value></data>
   <data name="rule '{0}'" xml:space="preserve"><value>la règle « {0} »</value></data>
   <data name="scheme must be 'http' or 'https' (was '{0}')." xml:space="preserve"><value>le schéma doit être « http » ou « https » (était « {0} »).</value></data>
@@ -1280,6 +1284,7 @@
   <data name="{0} has no certificate any more (version {1})." xml:space="preserve"><value>{0} n'a plus de certificat (version {1}).</value></data>
   <data name="{0} is already covered by this list." xml:space="preserve"><value>{0} est déjà couverte par cette liste.</value></data>
   <data name="{0} is used by route {1}. Use a host name of its own for the admin UI." xml:space="preserve"><value>{0} est utilisé par la route {1}. Utilisez un nom d'hôte propre pour l'interface d'administration.</value></data>
+  <data name="{0} not counted" xml:space="preserve"><value>{0} non comptées</value></data>
   <data name="{0} of 5" xml:space="preserve"><value>{0} sur 5</value></data>
   <data name="{0} recovery code left" xml:space="preserve"><value>{0} code de récupération restant</value></data>
   <data name="{0} recovery codes left" xml:space="preserve"><value>{0} codes de récupération restants</value></data>

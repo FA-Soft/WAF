@@ -404,6 +404,31 @@ The **request log** page shows it, newest first: filter by time range, what happ
 }
 ```
 
+### Traffic counts
+
+Besides the request log, every public request is **counted per second** for the performance dashboard (milestone M13), in a separate database `metrics.db` in the data folder. The counts do not depend on the request log: they are kept also when request logging is off or skips forwarded requests. Each request is counted as one of three groups, with its kind:
+
+| Group | Kinds |
+|---|---|
+| **Good** | forwarded to a backend; redirected to HTTPS; answered by the gateway (Let's Encrypt challenge); *would be blocked*: forwarded, but a rule, attack check or rate limit in detection-only mode matched (counted separately, so trying out rules is visible) |
+| **Bad** | blocked by a rule (per rule); blocked by attack detection (per category); rate limited (per limit); refused because the firewall was unavailable (fail-closed); no route (404) |
+| **Failed** | not the visitor's fault: no backend (503), backend error (502), backend timeout (504), gateway error (500) |
+
+Per second, the counts are kept per kind, rule/category/limit and route. For bad requests the **source** (client IP, as resolved with the trusted proxies) is kept per minute, as the 100 sources with the most bad requests in that minute plus "other", so an attack from many addresses cannot blow up the database (client IPs are the only personal data in `metrics.db`; no paths, hosts or headers are stored). Each request is counted in the second it arrived (like the request log's timestamp), so the counts per second match the request log.
+
+Counting never slows requests down: a request only increments a counter in memory (lock-free). A background writer stores the completed seconds every few seconds in one transaction (SQLite, write-ahead logging), so an SD card is not written for every request. When too many counts are waiting or storing fails, counts are **dropped and counted**; the dashboard's **Traffic counts** card shows how many, and a warning is logged at most once a minute. On shutdown everything counted is written; after a crash or power failure, at most the last flush interval is lost. `metrics.db` is runtime data, like `events.db`: it is not part of configuration versions, exports or backups. Host settings (in `appsettings.json`, not part of the configuration versions):
+
+```json
+"Gateway": {
+  "Metrics": {
+    "Enabled": true,               // false: no traffic counts at all
+    "DatabasePath": "",            // empty: metrics.db in the data folder; a relative path is relative to it
+    "FlushIntervalSeconds": 5,     // 1 to 60: how often counts are written
+    "MaxPendingCounts": 100000     // counts that may wait in memory (1000 to 10,000,000)
+  }
+}
+```
+
 ## Installation
 
 ### Windows
@@ -463,7 +488,7 @@ What `install.sh` does:
 
 - **A dedicated user.** The system user `wafgateway` (no login shell, no home folder of its own) runs the service; nothing runs as root.
 - **Program files** go to `/opt/wafgateway`, owned by root and read-only for the service. The package is self-contained: no .NET runtime needs to be installed. The installer refuses a package for the wrong processor (an x64 package on a Pi).
-- **Folders.** Data in `/var/lib/wafgateway` (mode `0750`, owned by `wafgateway`: `config.db`, `identity.db`, `events.db`, the data protection keys); optional settings in `/etc/wafgateway/appsettings.json` (owned by root, readable by the service, not writable by it).
+- **Folders.** Data in `/var/lib/wafgateway` (mode `0750`, owned by `wafgateway`: `config.db`, `identity.db`, `events.db`, `metrics.db`, the data protection keys); optional settings in `/etc/wafgateway/appsettings.json` (owned by root, readable by the service, not writable by it).
 - **The systemd unit** `wafgateway.service` (from `deploy/linux/wafgateway.service`) starts at boot, restarts after a failure, and tells systemd when the listeners are up (`Type=notify`). Logs go to the journal: `journalctl -u wafgateway`.
 - **`wafctl`** is on the `PATH` (`/usr/local/bin/wafctl`). Run it with `sudo`: it switches to the `wafgateway` user, so files it writes stay the service's (`sudo wafctl status`).
 - **Start.** The installer starts the service and waits until the admin UI answers. If another program (nginx, Apache) holds port 80 or 443, the service is installed but not started, and the installer shows which program it is. Add that web server as a route on another port, then `sudo systemctl start wafgateway`.
@@ -527,6 +552,8 @@ Choose the limit from what the gateway really uses on your site: `systemctl stat
 
 Restart the service after changing it (`sudo systemctl restart wafgateway`). With `FlushIntervalSeconds`, a power failure loses at most that many seconds of the request log; the configuration database is not affected. Lower the **Log retention** size (for example 200 MB) so the log stays small.
 
+**Fewer writes: the traffic counts.** `metrics.db` gets at most one small transaction every 5 seconds, however busy the site is (see [Traffic counts](#traffic-counts)). For even fewer writes, set `"Metrics": { "FlushIntervalSeconds": 30 }` under `Gateway`; a power failure then loses at most the last 30 seconds of counts.
+
 **The journal.** The gateway's own messages go to the systemd journal, which Ubuntu keeps on disk. To keep it in memory only (lost at reboot), set `Storage=volatile` and, for example, `RuntimeMaxUse=50M` in `/etc/systemd/journald.conf`, then `sudo systemctl restart systemd-journald`.
 
 **An SSD for the data folder.** An SSD on USB 3 (or NVMe on a Pi 5) lasts far longer than an SD card and is faster. Best: boot the whole system from the SSD (Raspberry Pi Imager writes the image to it; Pi 4 and 5 boot from USB). Otherwise, mount an SSD partition on the data folder, so nothing else changes:
@@ -588,7 +615,7 @@ wafctl status                                # data folder, active configuration
 src/Waf.Core      Domain models, interfaces, configuration schema
 src/Waf.Engine    Rule evaluation, attack detectors, rate limiter
 src/Waf.Proxy     YARP integration, middleware, certificates, ACME
-src/Waf.Data      EF Core (config.db, events.db, identity.db), migrations
+src/Waf.Data      EF Core (config.db, events.db, identity.db), migrations; metrics.db
 src/Waf.Ai        AI provider interface and proposal schema
 src/Waf.Web       Blazor UI, identity, log viewer, sample library
 src/Waf.Host      Startup, Kestrel, service hosting

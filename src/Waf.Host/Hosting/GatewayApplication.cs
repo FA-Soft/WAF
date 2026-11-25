@@ -109,6 +109,7 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<WafEngineHolder>();
         builder.Services.AddSingleton<IWafEventSink, LoggingWafEventSink>();
         AddRequestLog(builder, storagePaths);
+        AddRequestMetrics(builder, storagePaths);
         builder.Services.AddSingleton<InMemoryAcmeChallengeStore>();
         builder.Services.AddSingleton<IAcmeChallengeStore>(sp => sp.GetRequiredService<InMemoryAcmeChallengeStore>());
         builder.Services.AddSingleton(builder.Configuration.GetSection(FailoverOptions.SectionName).Get<FailoverOptions>() ?? new FailoverOptions());
@@ -259,6 +260,34 @@ internal static partial class GatewayApplication
         builder.Services.AddSingleton<IRequestLog>(sp => sp.GetRequiredService<RequestLogWriter>());
         builder.Services.AddSingleton<IRequestLogMonitor>(sp => sp.GetRequiredService<RequestLogWriter>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<RequestLogWriter>());
+    }
+
+    /// <summary>The traffic counts (metrics.db), or counts that count nothing when they are switched off.</summary>
+    private static void AddRequestMetrics(WebApplicationBuilder builder, StoragePaths paths)
+    {
+        var options = builder.Configuration.GetSection(MetricsOptions.SectionName).Get<MetricsOptions>() ?? new MetricsOptions();
+        var errors = options.Validate();
+        if (errors.Count > 0)
+        {
+            throw new OptionsValidationException(MetricsOptions.SectionName, typeof(MetricsOptions), errors);
+        }
+
+        if (!options.Enabled)
+        {
+            builder.Services.AddSingleton<NullRequestMetrics>();
+            builder.Services.AddSingleton<IRequestMetrics>(sp => sp.GetRequiredService<NullRequestMetrics>());
+            builder.Services.AddSingleton<IRequestMetricsMonitor>(sp => sp.GetRequiredService<NullRequestMetrics>());
+            return;
+        }
+
+        var store = new SqliteMetricsStore(SqliteMetricsStore.ResolvePath(paths, options.DatabasePath));
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton(store);
+        builder.Services.AddSingleton<IMetricsStore>(store);
+        builder.Services.AddSingleton<RequestMetricsWriter>();
+        builder.Services.AddSingleton<IRequestMetrics>(sp => sp.GetRequiredService<RequestMetricsWriter>());
+        builder.Services.AddSingleton<IRequestMetricsMonitor>(sp => sp.GetRequiredService<RequestMetricsWriter>());
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<RequestMetricsWriter>());
     }
 
     /// <summary>

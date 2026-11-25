@@ -91,8 +91,9 @@ The badge at the top right always shows what the firewall is doing:
 ![Dashboard](images/admin-dashboard.png)
 
 The dashboard shows the active configuration version and who made it, your routes, rules, rate limits and attack
-detection in plain language, the request log's counters, and warnings: certificates that expire within 30 days,
-dropped log entries, two-factor sign-in still off, a route running on its failover backend, a target that is not
+detection in plain language, the counters of the request log and of the traffic counts (requests counted per second
+for the performance dashboard), and warnings: certificates that expire within 30 days,
+dropped log entries or counts, two-factor sign-in still off, a route running on its failover backend, a target that is not
 found, or an `appsettings.json` that was edited after the first start.
 
 ## 4. Put a site behind the gateway

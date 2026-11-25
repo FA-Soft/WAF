@@ -391,6 +391,7 @@
   <data name="Error page" xml:space="preserve"><value>Foutpagina</value></data>
   <data name="Every change to the configuration is kept as a numbered version. Only checked, working configurations become active; the active one is marked. Open a version to see what it changed, to restore it or to export it." xml:space="preserve"><value>Elke wijziging van de configuratie wordt bewaard als genummerde versie. Alleen gecontroleerde, werkende configuraties worden actief; de actieve is gemarkeerd. Open een versie om te zien wat ze wijzigde, om ze terug te zetten of te exporteren.</value></data>
   <data name="Every configuration version has an entry here, with the routes, rules and settings it changed. Single failed sign-in attempts are in the &lt;a href=&quot;account/history&quot;&gt;login history&lt;/a&gt;." xml:space="preserve"><value>Elke configuratieversie heeft hier een regel, met de routes, regels en instellingen die ze wijzigde. Afzonderlijke mislukte aanmeldpogingen staan in de &lt;a href="account/history"&gt;aanmeldgeschiedenis&lt;/a&gt;.</value></data>
+  <data name="Every public request is counted per second (good, bad or failed) and stored in metrics.db every few seconds, for the performance dashboard. If storing cannot keep up, counts are dropped rather than slowing down requests; the number shows here." xml:space="preserve"><value>Elke openbare aanvraag wordt per seconde geteld (goed, slecht of mislukt) en om de paar seconden opgeslagen in metrics.db, voor het prestatiedashboard. Als het opslaan het niet bijhoudt, vervallen tellingen in plaats van dat aanvragen trager worden; het aantal staat hier.</value></data>
   <data name="Every public request is recorded in events.db, in the background. If the disk cannot keep up, entries are dropped rather than slowing down requests; the count shows here." xml:space="preserve"><value>Elk publiek verzoek wordt op de achtergrond vastgelegd in events.db. Als de schijf het niet bijhoudt, worden regels weggelaten in plaats van verzoeken te vertragen; het aantal staat hier.</value></data>
   <data name="Every public request: who sent it, where it went and what the firewall did. Query strings, headers, cookies and bodies are not stored; for a detected attack only the matching fragment is kept." xml:space="preserve"><value>Elk publiek verzoek: wie het stuurde, waar het naartoe ging en wat de firewall deed. Querystrings, headers, cookies en inhoud worden niet bewaard; voor een gedetecteerde aanval blijft alleen het overeenkomende fragment bewaard.</value></data>
   <data name="Every request" xml:space="preserve"><value>Elk verzoek</value></data>
@@ -853,6 +854,7 @@
   <data name="Switch on every attack detector and block probes for hidden files and unusual methods." xml:space="preserve"><value>Alle aanvalsdetectoren aanzetten en verkenningen naar verborgen bestanden en ongebruikelijke methoden blokkeren.</value></data>
   <data name="Switch on: only log" xml:space="preserve"><value>Aanzetten: alleen loggen</value></data>
   <data name="Switched off in the host settings (Gateway:EventLog:Enabled)." xml:space="preserve"><value>Uitgezet in de hostinstellingen (Gateway:EventLog:Enabled).</value></data>
+  <data name="Switched off in the host settings (Gateway:Metrics:Enabled)." xml:space="preserve"><value>Uitgezet in de hostinstellingen (Gateway:Metrics:Enabled).</value></data>
   <data name="Switches on detection of SQL injection, cross-site scripting, path traversal, command injection and attack tools, and adds two rules: one blocks requests for hidden files and leftovers that should never be public (.git, .env, backup copies such as index.php.bak, dumps such as backup.zip), one blocks the TRACE and TRACK methods that are only used to probe servers." xml:space="preserve"><value>Zet de detectie aan van SQL-injectie, cross-site scripting, path traversal, commando-injectie en aanvalstools, en voegt twee regels toe: één blokkeert verzoeken naar verborgen bestanden en restanten die nooit openbaar mogen zijn (.git, .env, back-upkopieën zoals index.php.bak, dumps zoals backup.zip), de andere blokkeert de methoden TRACE en TRACK, die alleen worden gebruikt om servers af te tasten.</value></data>
   <data name="System" xml:space="preserve"><value>Systeem</value></data>
   <data name="TRACE and TRACK are only used to probe servers." xml:space="preserve"><value>TRACE en TRACK worden alleen gebruikt om servers af te tasten.</value></data>
@@ -1014,6 +1016,7 @@
   <data name="Too many failed attempts from your address: signing in is blocked for another {0} minutes." xml:space="preserve"><value>Te veel mislukte pogingen vanaf uw adres: aanmelden is nog {0} minuten geblokkeerd.</value></data>
   <data name="Too many failed attempts: this account is locked for another minute. Try again later." xml:space="preserve"><value>Te veel mislukte pogingen: dit account is nog een minuut vergrendeld. Probeer het later opnieuw.</value></data>
   <data name="Too many failed attempts: this account is locked for another {0} minutes. Try again later." xml:space="preserve"><value>Te veel mislukte pogingen: dit account is nog {0} minuten vergrendeld. Probeer het later opnieuw.</value></data>
+  <data name="Traffic counts" xml:space="preserve"><value>Verkeerstellingen</value></data>
   <data name="Trusted proxies" xml:space="preserve"><value>Vertrouwde proxy's</value></data>
   <data name="Trusted proxy '{0}'" xml:space="preserve"><value>Vertrouwde proxy '{0}'</value></data>
   <data name="Try it without risk: matches are logged as &quot;would block&quot; and the requests continue. Switch it off later in the editor." xml:space="preserve"><value>Probeer het zonder risico: overeenkomsten worden gelogd als "zou blokkeren" en de verzoeken gaan door. Zet het later uit in de editor.</value></data>
@@ -1215,6 +1218,7 @@
   <data name="redirecting to HTTPS needs a certificate for {0}. Add one on the Certificates page first." xml:space="preserve"><value>doorverwijzen naar HTTPS vereist een certificaat voor {0}. Voeg er eerst een toe op de pagina Certificaten.</value></data>
   <data name="redirecting to HTTPS needs host names, each with a certificate." xml:space="preserve"><value>doorverwijzen naar HTTPS vereist hostnamen, elk met een certificaat.</value></data>
   <data name="request {0}" xml:space="preserve"><value>verzoek {0}</value></data>
+  <data name="requests counted since start" xml:space="preserve"><value>aanvragen geteld sinds de start</value></data>
   <data name="route '{0}' does not exist." xml:space="preserve"><value>route '{0}' bestaat niet.</value></data>
   <data name="rule '{0}'" xml:space="preserve"><value>regel '{0}'</value></data>
   <data name="scheme must be 'http' or 'https' (was '{0}')." xml:space="preserve"><value>het schema moet 'http' of 'https' zijn (was '{0}').</value></data>
@@ -1280,6 +1284,7 @@
   <data name="{0} has no certificate any more (version {1})." xml:space="preserve"><value>{0} heeft geen certificaat meer (versie {1}).</value></data>
   <data name="{0} is already covered by this list." xml:space="preserve"><value>{0} valt al onder deze lijst.</value></data>
   <data name="{0} is used by route {1}. Use a host name of its own for the admin UI." xml:space="preserve"><value>{0} wordt gebruikt door route {1}. Gebruik een eigen hostnaam voor de beheeromgeving.</value></data>
+  <data name="{0} not counted" xml:space="preserve"><value>{0} niet geteld</value></data>
   <data name="{0} of 5" xml:space="preserve"><value>{0} van 5</value></data>
   <data name="{0} recovery code left" xml:space="preserve"><value>{0} herstelcode over</value></data>
   <data name="{0} recovery codes left" xml:space="preserve"><value>{0} herstelcodes over</value></data>
