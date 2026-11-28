@@ -1,3 +1,10 @@
+# Self-hosted Windows runner: set the Actions variable WINDOWS_RUNNER to "self-hosted" (Settings > Secrets and
+# variables > Actions > Variables, repository or organization) and the Windows legs of "Build & test" and "Publish
+# smoke check" run on the runner labelled [self-hosted, Windows, X64]. Unset (or any other value): windows-latest.
+# Job and artifact names stay the same either way, so required status checks keep matching.
+#   The runner needs Git for Windows (bash on PATH: the default shell below) and Python 3 as "python"; an organization
+#   runner's group must allow this repository. Jobs queue while the runner is busy; if it is offline, clear the variable.
+#   "Windows installer" stays on windows-latest: it installs IIS (Windows Server only) and the service on the machine.
 name: CI
 
 on:
@@ -27,7 +34,8 @@ defaults:
 jobs:
   build-test:
     name: Build & test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    # windows-latest becomes the self-hosted Windows runner when WINDOWS_RUNNER is "self-hosted" (see the top).
+    runs-on: ${{ (matrix.os == 'windows-latest' && vars.WINDOWS_RUNNER == 'self-hosted') && fromJSON('["self-hosted","Windows","X64"]') || matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -180,7 +188,8 @@ jobs:
   publish:
     name: Publish smoke check (${{ matrix.rid }})
     needs: build-test
-    runs-on: ${{ matrix.os }}
+    # windows-latest becomes the self-hosted Windows runner when WINDOWS_RUNNER is "self-hosted" (see the top).
+    runs-on: ${{ (matrix.os == 'windows-latest' && vars.WINDOWS_RUNNER == 'self-hosted') && fromJSON('["self-hosted","Windows","X64"]') || matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false

@@ -51,6 +51,7 @@ jobs:
       matrix:
         include:
           - rid: win-x64
+            # Always GitHub-hosted (not the self-hosted runner of ci.yml): the smoke test hides the machine's .NET.
             os: windows-latest
             file: WafGateway-win-x64.zip
           - rid: linux-arm64
