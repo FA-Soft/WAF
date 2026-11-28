@@ -5,6 +5,7 @@
 #   The runner needs Git for Windows (bash on PATH: the default shell below) and Python 3 as "python"; an organization
 #   runner's group must allow this repository. Jobs queue while the runner is busy; if it is offline, clear the variable.
 #   "Windows installer" stays on windows-latest: it installs IIS (Windows Server only) and the service on the machine.
+#   Linux jobs always run on GitHub-hosted runners (ubuntu-latest): only windows-latest is ever switched.
 name: CI
 
 on:
